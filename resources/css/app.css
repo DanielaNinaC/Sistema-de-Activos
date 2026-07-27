@@ -1,0 +1,49 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* ── Global form styling ─────────────────────────────────── */
+
+/* Inputs don't stretch full-width — panel background stays untouched */
+#main-content input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]),
+#main-content select,
+#main-content textarea {
+    max-width: 28rem; /* ~448px */
+}
+
+/* Rounder, slightly refined inputs across the entire app */
+#main-content input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="file"]),
+#main-content select,
+#main-content textarea {
+    border-radius: 0.625rem !important; /* ~rounded-lg+ */
+    border-color: #e2e8f0; /* slate-200 */
+    background-color: #f8fafc; /* slate-50 */
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#main-content input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="file"]):focus,
+#main-content select:focus,
+#main-content textarea:focus {
+    border-color: #6366f1; /* indigo-500 */
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    outline: none;
+}
+
+/* File inputs get the same rounding */
+#main-content input[type="file"] {
+    border-radius: 0.625rem !important;
+}
+
+/* Buttons inside forms: slightly more rounded */
+#main-content form button[type="submit"],
+#main-content form .bg-blue-600 {
+    border-radius: 0.625rem;
+}
