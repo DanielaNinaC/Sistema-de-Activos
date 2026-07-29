@@ -1,88 +1,312 @@
 @extends('layouts.principal')
 
-@section('title','Registrar Activo - Activos Tecnológicos')
+@section('title', 'Registrar Activo - Activos Tecnológicos')
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
     <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition" aria-label="Volver a la pantalla anterior" title="Volver">
+        <a href="{{ route('admin.activos.inventario') }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver a la pantalla anterior" title="Volver">
             <span aria-hidden="true">&#8592;</span>
         </a>
         <div>
-            <h2 class="text-2xl font-semibold">Registrar Activo Tecnológico</h2>
-            <p class="text-sm text-gray-500">Captura los datos del nuevo activo para incorporarlo al inventario</p>
+            <h2 class="text-2xl font-semibold text-slate-900">Registrar Activo Tecnológico</h2>
+            <p class="text-sm text-slate-500">Captura los datos del nuevo activo para incorporarlo al inventario</p>
         </div>
     </div>
 
     @if(session('success'))
-        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
-            {{ session('success') }}
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-sm font-medium">{{ session('success') }}</span>
         </div>
     @endif
 
-    <div class="bg-white rounded-lg p-5 shadow max-w-6xl mx-auto">
-        <h3 class="text-lg font-medium mb-4">Formulario de registro</h3>
-        <form method="POST" action="{{ route('admin.activos.registrar.store') }}" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    @if ($errors->any())
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 space-y-1 shadow-sm">
+            <div class="font-semibold text-sm">Por favor corrige los siguientes errores:</div>
+            <ul class="list-disc list-inside text-xs space-y-0.5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
+        <h3 class="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-3">Formulario de Registro</h3>
+        
+        <form method="POST" action="{{ route('admin.activos.registrar.store') }}" class="grid grid-cols-1 md:grid-cols-2 gap-5" id="formRegistrarActivo">
             @csrf
+
+            <!-- Categoría -->
             <div>
-                <label class="block text-sm mb-1">Categoría</label>
-                <select name="fk_id_categoria" class="w-full border px-3 py-2.5 text-sm rounded" required>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Categoría *</label>
+                <select name="fk_id_categoria" id="selectCategoria" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
                     <option value="">Seleccione una categoría</option>
                     @foreach($categorias as $categoria)
-                        <option value="{{ $categoria->id_categoria }}">{{ $categoria->nombre_categoria }}</option>
+                        <option value="{{ $categoria->id_categoria }}" data-nombre="{{ strtolower($categoria->nombre_categoria) }}" {{ old('fk_id_categoria') == $categoria->id_categoria ? 'selected' : '' }}>
+                            {{ $categoria->nombre_categoria }}
+                        </option>
                     @endforeach
                 </select>
             </div>
+
+            <!-- Ubicación -->
             <div>
-                <label class="block text-sm mb-1">Ubicación</label>
-                <select name="fk_id_ubicacion" class="w-full border px-3 py-2.5 text-sm rounded" required>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Ubicación *</label>
+                <select name="fk_id_ubicacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
                     <option value="">Seleccione una ubicación</option>
                     @foreach($ubicaciones as $ubicacion)
-                        <option value="{{ $ubicacion->id_ubicacion }}">{{ $ubicacion->seccion }} - {{ $ubicacion->aula }}</option>
+                        <option value="{{ $ubicacion->id_ubicacion }}" {{ old('fk_id_ubicacion') == $ubicacion->id_ubicacion ? 'selected' : '' }}>
+                            {{ $ubicacion->seccion }} - {{ $ubicacion->aula }}
+                        </option>
                     @endforeach
                 </select>
             </div>
+
+            <!-- Código Patrimonial -->
             <div>
-                <label class="block text-sm mb-1">Código patrimonial</label>
-                <input name="codigo_patrimonial" class="w-full border px-3 py-2.5 text-sm rounded" required />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Código Patrimonial *</label>
+                <input name="codigo_patrimonial" value="{{ old('codigo_patrimonial') }}" placeholder="Ej: ACT-00123" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required />
             </div>
+
+            <!-- Nombre del Equipo -->
             <div>
-                <label class="block text-sm mb-1">Nombre del equipo</label>
-                <input name="nombre_equipo" class="w-full border px-3 py-2.5 text-sm rounded" required />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Nombre del Equipo *</label>
+                <input name="nombre_equipo" value="{{ old('nombre_equipo') }}" placeholder="Ej: Computadora i7 Laboratorio 1" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required />
             </div>
+
+            <!-- Marca -->
             <div>
-                <label class="block text-sm mb-1">Marca</label>
-                <input name="marca" class="w-full border px-3 py-2.5 text-sm rounded" />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Marca</label>
+                <input name="marca" value="{{ old('marca') }}" placeholder="Ej: Dell, HP, Epson, Cisco" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             </div>
+
+            <!-- Modelo -->
             <div>
-                <label class="block text-sm mb-1">Modelo</label>
-                <input name="modelo" class="w-full border px-3 py-2.5 text-sm rounded" />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Modelo</label>
+                <input name="modelo" value="{{ old('modelo') }}" placeholder="Ej: OptiPlex 7090, PowerEdge" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             </div>
+
+            <!-- Fecha de Adquisición con Calendario -->
             <div>
-                <label class="block text-sm mb-1">Fecha de adquisición</label>
-                <input name="fecha_adquisicion" type="number" min="1900" max="2099" class="w-full border px-3 py-2.5 text-sm rounded" />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Fecha de Adquisición</label>
+                <input type="date" name="fecha_adquisicion" value="{{ old('fecha_adquisicion') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition cursor-pointer" />
             </div>
+
+            <!-- Estado Operativo -->
             <div>
-                <label class="block text-sm mb-1">Estado operativo</label>
-                <input name="estado_operativo" class="w-full border px-3 py-2.5 text-sm rounded" value="Operativo" required />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Estado Operativo *</label>
+                <select name="estado_operativo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                    <option value="Operativo" {{ old('estado_operativo', 'Operativo') == 'Operativo' ? 'selected' : '' }}>Operativo</option>
+                    <option value="En Mantenimiento" {{ old('estado_operativo') == 'En Mantenimiento' ? 'selected' : '' }}>En Mantenimiento</option>
+                    <option value="Inoperativo" {{ old('estado_operativo') == 'Inoperativo' ? 'selected' : '' }}>Inoperativo</option>
+                    <option value="De Baja" {{ old('estado_operativo') == 'De Baja' ? 'selected' : '' }}>De Baja</option>
+                </select>
             </div>
+
+            <!-- Etapa Ciclo de Vida -->
             <div>
-                <label class="block text-sm mb-1">Etapa ciclo de vida</label>
-                <input name="etapa_ciclo_vida" class="w-full border px-3 py-2.5 text-sm rounded" value="Operación" required />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Etapa Ciclo de Vida *</label>
+                <select name="etapa_ciclo_vida" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                    <option value="Operación" {{ old('etapa_ciclo_vida', 'Operación') == 'Operación' ? 'selected' : '' }}>Operación</option>
+                    <option value="Mantenimiento" {{ old('etapa_ciclo_vida') == 'Mantenimiento' ? 'selected' : '' }}>Mantenimiento</option>
+                    <option value="Renovación / Retiro" {{ old('etapa_ciclo_vida') == 'Renovación / Retiro' ? 'selected' : '' }}>Renovación / Retiro</option>
+                </select>
             </div>
+
+            <!-- Criticidad Institucional -->
             <div>
-                <label class="block text-sm mb-1">Criticidad institucional</label>
-                <input name="criticidad_institucional" class="w-full border px-3 py-2.5 text-sm rounded" />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Criticidad Institucional</label>
+                <select name="criticidad_institucional" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                    <option value="">Seleccione criticidad</option>
+                    <option value="Alta" {{ old('criticidad_institucional') == 'Alta' ? 'selected' : '' }}>Alta</option>
+                    <option value="Media" {{ old('criticidad_institucional') == 'Media' ? 'selected' : '' }}>Media</option>
+                    <option value="Baja" {{ old('criticidad_institucional') == 'Baja' ? 'selected' : '' }}>Baja</option>
+                </select>
             </div>
+
+            <!-- ===== SECCIÓN DINÁMICA: COMPUTADORA ===== -->
+            <div id="secComputadora" class="md:col-span-2 hidden bg-slate-50 border border-blue-100 rounded-2xl p-5 space-y-4">
+                <div class="flex items-center gap-2 text-blue-700 font-semibold text-sm border-b border-blue-100 pb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span>Especificaciones de Computadora / PC</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Procesador</label>
+                        <input type="text" name="procesador" value="{{ old('procesador') }}" placeholder="Ej: Intel Core i7 12700K" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Memoria RAM (GB)</label>
+                        <input type="number" name="ram_gb" value="{{ old('ram_gb') }}" placeholder="Ej: 16" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Disco Sólido SSD (GB)</label>
+                        <input type="number" name="disco_solido_gb" value="{{ old('disco_solido_gb') }}" placeholder="Ej: 512" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Disco Rígido HDD (GB)</label>
+                        <input type="number" name="disco_rigido_gb" value="{{ old('disco_rigido_gb') }}" placeholder="Ej: 1000" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Sistema Operativo</label>
+                        <input type="text" name="sistema_operativo" value="{{ old('sistema_operativo') }}" placeholder="Ej: Windows 11 Pro" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-blue-100">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Componentes y Periféricos Incluidos (Sí / No)</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        <label class="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
+                            <input type="checkbox" name="monitor" value="1" {{ old('monitor') ? 'checked' : '' }} class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                            <span class="text-xs font-semibold text-slate-700">Monitor</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
+                            <input type="checkbox" name="teclado_mouse" value="1" {{ old('teclado_mouse') ? 'checked' : '' }} class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                            <span class="text-xs font-semibold text-slate-700">Teclado / Mouse</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
+                            <input type="checkbox" name="camara_web" value="1" {{ old('camara_web') ? 'checked' : '' }} class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                            <span class="text-xs font-semibold text-slate-700">Cámara Web</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
+                            <input type="checkbox" name="parlantes" value="1" {{ old('parlantes') ? 'checked' : '' }} class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                            <span class="text-xs font-semibold text-slate-700">Parlantes</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition">
+                            <input type="checkbox" name="lector" value="1" {{ old('lector') ? 'checked' : '' }} class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                            <span class="text-xs font-semibold text-slate-700">Lector</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SECCIÓN DINÁMICA: EQUIPO DE RED ===== -->
+            <div id="secEquipoRed" class="md:col-span-2 hidden bg-slate-50 border border-emerald-100 rounded-2xl p-5 space-y-4">
+                <div class="flex items-center gap-2 text-emerald-700 font-semibold text-sm border-b border-emerald-100 pb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <span>Especificaciones de Equipo de Red / Servidor / Impresora</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Dirección IP</label>
+                        <input type="text" name="direccion_ip" value="{{ old('direccion_ip') }}" placeholder="Ej: 192.168.1.50" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Versión de Firmware</label>
+                        <input type="text" name="version_firmware" value="{{ old('version_firmware') }}" placeholder="Ej: v2.4.1" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SECCIÓN DINÁMICA: PROYECTOR ===== -->
+            <div id="secProyector" class="md:col-span-2 hidden bg-slate-50 border border-amber-100 rounded-2xl p-5 space-y-4">
+                <div class="flex items-center gap-2 text-amber-700 font-semibold text-sm border-b border-amber-100 pb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Especificaciones de Proyector Multimedia</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Tipo de Cable / Conectividad</label>
+                        <input type="text" name="tipo_cable" value="{{ old('tipo_cable') }}" placeholder="Ej: HDMI, VGA, USB-C, Inalámbrico" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Calidad de Imagen / Lúmenes</label>
+                        <input type="number" name="calidad_imagen" value="{{ old('calidad_imagen') }}" placeholder="Ej: 3600" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observaciones -->
             <div class="md:col-span-2">
-                <label class="block text-sm mb-1">Observaciones</label>
-                <textarea name="observaciones" rows="3" class="w-full border px-3 py-2.5 text-sm rounded"></textarea>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Observaciones</label>
+                <textarea name="observaciones" rows="3" placeholder="Información adicional relevante del activo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">{{ old('observaciones') }}</textarea>
             </div>
-            <div class="md:col-span-2 flex justify-end gap-3">
-                <a href="{{ route('admin.activos.inventario') }}" class="inline-flex items-center px-4 py-2.5 rounded text-sm border border-gray-300 text-gray-700 hover:bg-gray-50">Ver inventario</a>
-                <button class="bg-blue-600 text-white px-4 py-2.5 rounded text-sm">Guardar activo</button>
+
+            <!-- Botones de Acción -->
+            <div class="md:col-span-2 flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <a href="{{ route('admin.activos.inventario') }}" class="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition">
+                    Ver inventario
+                </a>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition shadow-md shadow-blue-200">
+                    Guardar Activo
+                </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    (function () {
+        function initDynamicSections() {
+            var selectCategoria = document.getElementById('selectCategoria');
+            var secComp = document.getElementById('secComputadora');
+            var secRed = document.getElementById('secEquipoRed');
+            var secProy = document.getElementById('secProyector');
+
+            if (!selectCategoria) return;
+
+            function toggleDynamicSections() {
+                var selectedOpt = selectCategoria.options[selectCategoria.selectedIndex];
+                var nombreCat = selectedOpt ? (selectedOpt.getAttribute('data-nombre') || selectedOpt.text.toLowerCase()) : '';
+
+                // Ocultar todas las secciones dinámicas
+                if (secComp) secComp.classList.add('hidden');
+                if (secRed) secRed.classList.add('hidden');
+                if (secProy) secProy.classList.add('hidden');
+
+                // Evaluar según el nombre de la categoría elegida
+                if (
+                    nombreCat.includes('computadora') ||
+                    nombreCat.includes('computador') ||
+                    nombreCat.includes('ordenador') ||
+                    nombreCat.includes('pc') ||
+                    nombreCat.includes('laptop') ||
+                    nombreCat.includes('desktop') ||
+                    nombreCat.includes('escritorio')
+                ) {
+                    if (secComp) secComp.classList.remove('hidden');
+                } else if (
+                    nombreCat.includes('red') ||
+                    nombreCat.includes('servidor') ||
+                    nombreCat.includes('switch') ||
+                    nombreCat.includes('router') ||
+                    nombreCat.includes('impresora') ||
+                    nombreCat.includes('printer')
+                ) {
+                    if (secRed) secRed.classList.remove('hidden');
+                } else if (nombreCat.includes('proyector')) {
+                    if (secProy) secProy.classList.remove('hidden');
+                }
+            }
+
+            selectCategoria.removeEventListener('change', toggleDynamicSections);
+            selectCategoria.addEventListener('change', toggleDynamicSections);
+            toggleDynamicSections();
+        }
+
+        // Ejecutar inmediatamente si el DOM ya fue cargado (SPA / Turbo navigation)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDynamicSections);
+        } else {
+            initDynamicSections();
+        }
+
+        // Delegación de eventos global como respaldo
+        document.addEventListener('change', function (e) {
+            if (e.target && e.target.id === 'selectCategoria') {
+                initDynamicSections();
+            }
+        });
+    })();
+</script>
 @endsection

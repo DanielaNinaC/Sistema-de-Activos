@@ -9,9 +9,11 @@ Route::get('/', function () {
 });
 
 // Rutas para usuarios no autenticados (Invitados)
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+Route::middleware(['web'])->group(function () {
+    Route::middleware('guest')->group(function () {
+        Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+        Route::post('/login', [AuthController::class, 'login']);
+    });
     Route::get('/captcha-image', [AuthController::class, 'generateCaptchaImage'])->name('captcha.image');
 });
 
@@ -26,16 +28,26 @@ Route::middleware('auth')->group(function () {
         Route::prefix('admin')->name('admin.')->group(function(){
             Route::get('/', [App\Http\Controllers\Admin\AdministracionController::class, 'index'])->name('administracion.index');
             Route::get('/activos/inventario', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'index'])->name('activos.inventario');
+            Route::get('/activos/detalles/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'show'])->name('activos.show');
+            Route::get('/activos/editar/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'edit'])->name('activos.edit');
+            Route::put('/activos/actualizar/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'update'])->name('activos.update');
             Route::get('/activos/registrar-activo', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'create'])->name('activos.registrar');
             Route::post('/activos/inventario', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'store'])->name('activos.inventario.store');
             Route::post('/activos/registrar-activo', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'store'])->name('activos.registrar.store');
             Route::get('/activos/categorias', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'categorias'])->name('activos.categorias');
+            Route::get('/activos/categorias/{id}/equipos', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'activosPorCategoria'])->name('activos.categorias.equipos');
             Route::post('/activos/categorias', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'storeCategoria'])->name('activos.categorias.store');
+            Route::put('/activos/categorias/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'updateCategoria'])->name('activos.categorias.update');
             Route::get('/activos/ubicaciones', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'ubicaciones'])->name('activos.ubicaciones');
+            Route::get('/activos/ubicaciones/{id}/equipos', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'activosPorUbicacion'])->name('activos.ubicaciones.equipos');
             Route::post('/activos/ubicaciones', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'storeUbicacion'])->name('activos.ubicaciones.store');
+            Route::put('/activos/ubicaciones/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'updateUbicacion'])->name('activos.ubicaciones.update');
             Route::get('/incidentes/registrar', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'incidentesIndex'])->name('incidentes.registrar');
             Route::post('/incidentes/registrar', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'incidentesStore'])->name('incidentes.registrar.store');
+            Route::get('/incidentes/seguimiento', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'incidentesSeguimiento'])->name('incidentes.seguimiento');
             Route::get('/incidentes/historial', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'incidentesHistorial'])->name('incidentes.historial');
+            Route::get('/incidentes/detalles/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'incidentesShow'])->name('incidentes.show');
+            Route::put('/incidentes/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'incidentesUpdate'])->name('incidentes.update');
             Route::get('/mantenimiento/programar', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoIndex'])->name('mantenimiento.programar');
             Route::post('/mantenimiento/programar', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoStore'])->name('mantenimiento.programar.store');
             Route::get('/mantenimiento/historial', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoHistorial'])->name('mantenimiento.historial');

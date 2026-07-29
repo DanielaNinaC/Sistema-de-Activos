@@ -15,18 +15,27 @@ class ProcesoActivoController extends Controller
 {
     public function incidentesIndex()
     {
-        $incidentes = Incidente::with(['activo', 'usuarioReporta'])
-            ->orderByDesc('fecha_incidente')
-            ->paginate(15);
+        $activos = ActivoTecnologico::with(['categoria', 'ubicacion'])->orderBy('nombre_equipo')->get();
+        $usuarios = Usuario::with('rol')->orderBy('nombre')->get();
 
-        $activos = ActivoTecnologico::orderBy('id_activo')->get();
-        $usuarios = Usuario::orderBy('nombre')->get();
-
-        return view('incidentes.registrar', compact('incidentes', 'activos', 'usuarios'));
+        return view('incidentes.registrar', compact('activos', 'usuarios'));
     }
 
     public function incidentesStore(Request $request)
     {
+        if ($request->filled('usuario_reporta_nombre') && !$request->filled('fk_id_usuario_reporta')) {
+            $nombreInput = trim($request->input('usuario_reporta_nombre'));
+            $usuario = Usuario::whereRaw("CONCAT(nombre, ' ', COALESCE(apellido, '')) LIKE ?", ["%{$nombreInput}%"])
+                ->orWhere('nombre', 'like', "%{$nombreInput}%")
+                ->first();
+
+            if ($usuario) {
+                $request->merge(['fk_id_usuario_reporta' => $usuario->id_usuario]);
+            } else {
+                $request->merge(['fk_id_usuario_reporta' => auth()->id() ?? (Usuario::first()->id_usuario ?? null)]);
+            }
+        }
+
         $data = $request->validate([
             'fk_id_activo' => 'required|integer|exists:activos_tecnologicos,id_activo',
             'fk_id_usuario_reporta' => 'required|integer|exists:usuarios,id_usuario',
@@ -35,20 +44,45 @@ class ProcesoActivoController extends Controller
             'estado_incidente' => 'required|string|max:255',
         ]);
 
-        Incidente::create($data);
+        Incidente::create([
+            'fk_id_activo' => $data['fk_id_activo'],
+            'fk_id_usuario_reporta' => $data['fk_id_usuario_reporta'],
+            'fecha_incidente' => $data['fecha_incidente'],
+            'descripcion_falla' => $data['descripcion_falla'],
+            'estado_incidente' => $data['estado_incidente'],
+        ]);
 
-        return redirect()->route('admin.incidentes.registrar')->with('success', 'Incidente registrado con éxito');
+        return redirect()->route('admin.incidentes.seguimiento')->with('success', 'Incidente registrado con éxito. Ahora puede realizar su seguimiento.');
     }
 
-    public function incidentesHistorial(Request $request)
+    public function incidentesSeguimiento(Request $request)
     {
-        $query = Incidente::with(['activo', 'usuarioReporta']);
+        $query = Incidente::with(['activo.categoria', 'activo.ubicacion', 'usuarioReporta.rol'])
+            ->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado', 'resuelto', 'cerrado']);
 
         if ($buscar = $request->input('buscar')) {
             $query->where(function ($q) use ($buscar) {
                 $q->where('estado_incidente', 'like', "%{$buscar}%")
                   ->orWhere('descripcion_falla', 'like', "%{$buscar}%")
-                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%"))
+                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%")->orWhere('codigo_patrimonial', 'like', "%{$buscar}%"))
+                  ->orWhereHas('usuarioReporta', fn($u) => $u->where('nombre', 'like', "%{$buscar}%"));
+            });
+        }
+
+        $incidentes = $query->orderByDesc('fecha_incidente')->paginate(15)->withQueryString();
+
+        return view('incidentes.seguimiento', compact('incidentes'));
+    }
+
+    public function incidentesHistorial(Request $request)
+    {
+        $query = Incidente::with(['activo.categoria', 'activo.ubicacion', 'usuarioReporta.rol']);
+
+        if ($buscar = $request->input('buscar')) {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('estado_incidente', 'like', "%{$buscar}%")
+                  ->orWhere('descripcion_falla', 'like', "%{$buscar}%")
+                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%")->orWhere('codigo_patrimonial', 'like', "%{$buscar}%"))
                   ->orWhereHas('usuarioReporta', fn($u) => $u->where('nombre', 'like', "%{$buscar}%"));
             });
         }
@@ -56,6 +90,27 @@ class ProcesoActivoController extends Controller
         $incidentes = $query->orderByDesc('fecha_incidente')->paginate(15)->withQueryString();
 
         return view('incidentes.historial', compact('incidentes'));
+    }
+
+    public function incidentesShow($id)
+    {
+        $incidente = Incidente::with(['activo.categoria', 'activo.ubicacion', 'usuarioReporta.rol'])->findOrFail($id);
+
+        return view('incidentes.show', compact('incidente'));
+    }
+
+    public function incidentesUpdate(Request $request, $id)
+    {
+        $incidente = Incidente::findOrFail($id);
+
+        $data = $request->validate([
+            'estado_incidente' => 'required|string|max:255',
+            'descripcion_falla' => 'nullable|string',
+        ]);
+
+        $incidente->update($data);
+
+        return redirect()->back()->with('success', 'Estado del incidente actualizado con éxito');
     }
 
     public function mantenimientoIndex()

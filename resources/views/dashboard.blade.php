@@ -7,7 +7,8 @@
     $categoriaMax = max((int) ($activosPorCategoria->max('total') ?? 1), 1);
     $estadoMax = max((int) ($activosPorEstado->max('total') ?? 1), 1);
     $alertaBadge = fn ($tipo) => match (strtolower($tipo)) {
-        'roja', 'naranja' => 'bg-orange-100 text-orange-800',
+        'roja' => 'bg-red-100 text-red-800',
+        'naranja' => 'bg-orange-100 text-orange-800',
         'amarilla' => 'bg-yellow-100 text-yellow-800',
         default => 'bg-slate-100 text-slate-700',
     };

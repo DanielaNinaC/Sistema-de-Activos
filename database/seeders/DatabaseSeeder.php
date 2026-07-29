@@ -27,18 +27,43 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $rolAdmin = Rol::findOrFail(1);
-
-        Usuario::updateOrCreate(
-            ['correo' => 'admin@ejemplo.com'],
+        $usuarios = [
             [
-                'fk_id_rol' => $rolAdmin->id_rol,
+                'id_usuario' => 1,
+                'fk_id_rol' => 1,
                 'nombre' => 'Franco',
                 'apellido' => 'Admin',
                 'correo' => 'admin@ejemplo.com',
                 'contrasena' => Hash::make('password123'),
                 'estado' => true,
-            ]
-        );
+            ],
+            [
+                'id_usuario' => 2,
+                'fk_id_rol' => 2,
+                'nombre' => 'Carlos',
+                'apellido' => 'Soporte',
+                'correo' => 'soporte@ejemplo.com',
+                'contrasena' => Hash::make('password123'),
+                'estado' => true,
+            ],
+            [
+                'id_usuario' => 3,
+                'fk_id_rol' => 3,
+                'nombre' => 'María',
+                'apellido' => 'Directora',
+                'correo' => 'director@ejemplo.com',
+                'contrasena' => Hash::make('password123'),
+                'estado' => true,
+            ],
+        ];
+
+        foreach ($usuarios as $usr) {
+            Usuario::updateOrCreate(
+                ['correo' => $usr['correo']],
+                $usr
+            );
+        }
+
+        $this->call(DatosPruebaSeeder::class);
     }
 }

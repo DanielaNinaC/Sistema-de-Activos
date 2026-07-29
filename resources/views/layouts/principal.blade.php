@@ -111,8 +111,8 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" class="submenu-arrow h-5 w-5 transform transition-transform text-white/90" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 8l4 4 4-4" clip-rule="evenodd" /></svg>
                                 </div>
                                 <div class="submenu hidden mt-1 pl-3" data-submenu-panel="incidentes">
-                                    <a href="{{ route('admin.incidentes.registrar') }}" class="block p-2 rounded hover:bg-white/5">Registrar</a>
-                                    <a href="{{ route('admin.incidentes.historial') }}" class="block p-2 rounded hover:bg-white/5">Consultar</a>
+                                    <a href="{{ route('admin.incidentes.registrar') }}" class="block p-2 rounded hover:bg-white/5">Registrar Incidente</a>
+                                    <a href="{{ route('admin.incidentes.seguimiento') }}" class="block p-2 rounded hover:bg-white/5">Seguimiento de Incidentes</a>
                                     <a href="{{ route('admin.incidentes.historial') }}" class="block p-2 rounded hover:bg-white/5">Historial</a>
                                 </div>
                             </div>

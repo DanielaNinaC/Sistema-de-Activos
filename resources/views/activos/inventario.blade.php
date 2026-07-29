@@ -1,73 +1,164 @@
 @extends('layouts.principal')
 
-@section('title','Inventario - Activos Tecnológicos')
+@section('title', 'Inventario - Activos Tecnológicos')
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
-    <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition" aria-label="Volver a la pantalla anterior" title="Volver">
-            <span aria-hidden="true">&#8592;</span>
-        </a>
-        <div>
-            <h2 class="text-2xl font-semibold">Inventario de Activos Tecnológicos</h2>
-            <p class="text-sm text-gray-500">Registro y consulta de los activos tecnológicos de la institución</p>
+    {{-- Encabezado con Botón de Registro --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver a la pantalla anterior" title="Volver">
+                <span aria-hidden="true">&#8592;</span>
+            </a>
+            <div>
+                <h2 class="text-2xl font-semibold text-slate-900">Inventario de Activos Tecnológicos</h2>
+                <p class="text-sm text-slate-500">Registro y consulta de los activos tecnológicos de la institución</p>
+            </div>
         </div>
+
+        <a href="{{ route('admin.activos.registrar') }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-200 self-start sm:self-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Registrar Nuevo Activo
+        </a>
     </div>
 
+    {{-- Alerta de éxito --}}
     @if(session('success'))
-        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
-            {{ session('success') }}
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-sm font-medium">{{ session('success') }}</span>
         </div>
     @endif
 
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-        <form method="GET" action="{{ route('admin.activos.inventario') }}" class="flex items-center gap-2 flex-1 max-w-md">
+    {{-- Barra de Búsqueda --}}
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <form method="GET" action="{{ route('admin.activos.inventario') }}" class="flex flex-col sm:flex-row gap-3">
             <div class="relative flex-1">
-                <input type="text" name="buscar" value="{{ request('buscar') }}" placeholder="Buscar por código, equipo, categoría, ubicación..."
-                    class="w-full border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition" />
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input 
+                    type="text" 
+                    name="buscar" 
+                    value="{{ request('buscar') }}" 
+                    placeholder="Buscar por código, equipo, categoría, ubicación..."
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                >
             </div>
-            <button type="submit" class="px-4 py-2.5 bg-slate-800 text-white text-sm rounded-xl hover:bg-slate-700 transition">Buscar</button>
-            @if(request('buscar'))
-                <a href="{{ route('admin.activos.inventario') }}" class="px-3 py-2.5 text-sm text-gray-600 hover:text-gray-800 transition">Limpiar</a>
-            @endif
+            
+            <div class="flex items-center gap-2">
+                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                    Buscar
+                </button>
+
+                @if(request('buscar'))
+                    <a href="{{ route('admin.activos.inventario') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition flex items-center gap-1">
+                        ✕ Limpiar
+                    </a>
+                @endif
+            </div>
         </form>
-        <a href="{{ route('admin.activos.registrar') }}" class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm bg-blue-600 text-white hover:bg-blue-700 transition">Registrar nuevo activo</a>
+
+        @if(request('buscar'))
+            <div class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                <span>Filtro activo para: <strong class="text-slate-800">"{{ request('buscar') }}"</strong></span>
+                <span class="text-slate-300">•</span>
+                <span>Resultados encontrados: <strong class="text-slate-800">{{ $activos->total() }}</strong></span>
+            </div>
+        @endif
     </div>
 
-    <div class="bg-white rounded shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold">Listado de activos</h3>
-        </div>
+    {{-- Tabla de Activos --}}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="w-full divide-y divide-gray-200">
+                <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Equipo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ubicación</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Etapa</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Criticidad</th>
+                        <th class="w-12 px-2 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="px-2.5 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Código</th>
+                        <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Equipo</th>
+                        <th class="px-2.5 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Categoría</th>
+                        <th class="px-2 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Ubicación</th>
+                        <th class="px-2.5 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
+                        <th class="px-2.5 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Criticidad</th>
+                        <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($activos as $activo)
-                        <tr>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $activo->id_activo }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $activo->codigo_patrimonial }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $activo->nombre_equipo }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $activo->categoria->nombre_categoria ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $activo->ubicacion->seccion ?? '-' }} {{ $activo->ubicacion->aula ? '- ' . $activo->ubicacion->aula : '' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $activo->estado_operativo }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $activo->etapa_ciclo_vida }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $activo->criticidad_institucional ?? '-' }}</td>
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="w-12 px-2 py-3.5 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $activo->id_activo }}</td>
+                            <td class="px-2.5 py-3.5 text-center text-sm font-mono font-semibold text-slate-800 whitespace-nowrap">{{ $activo->codigo_patrimonial }}</td>
+                            <td class="px-3 py-3.5 text-center text-sm font-semibold text-slate-900 whitespace-nowrap">
+                                <div>{{ $activo->nombre_equipo }}</div>
+                                @if($activo->marca || $activo->modelo)
+                                    <div class="text-xs text-slate-400 font-normal">{{ $activo->marca }} {{ $activo->modelo }}</div>
+                                @endif
+                            </td>
+                            <td class="px-2.5 py-3.5 text-center text-sm text-slate-700 whitespace-nowrap">{{ $activo->categoria->nombre_categoria ?? '-' }}</td>
+                            <td class="px-2 py-3.5 text-center text-sm text-slate-600 leading-tight">
+                                <div class="font-medium text-slate-800 truncate" title="{{ $activo->ubicacion->seccion ?? '-' }}">{{ $activo->ubicacion->seccion ?? '-' }}</div>
+                                @if(!empty($activo->ubicacion->aula))
+                                    <div class="text-xs text-slate-400 truncate" title="{{ $activo->ubicacion->aula }}">{{ $activo->ubicacion->aula }}</div>
+                                @endif
+                            </td>
+                            <td class="px-2.5 py-3.5 text-center text-sm whitespace-nowrap">
+                                @php
+                                    $estadoStr = strtolower(trim($activo->estado_operativo ?? ''));
+                                    $estadoColor = match(true) {
+                                        str_contains($estadoStr, 'operativo') && !str_contains($estadoStr, 'inoperativo') => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                                        str_contains($estadoStr, 'mantenimiento') => 'bg-amber-100 text-amber-800 border-amber-200',
+                                        str_contains($estadoStr, 'inoperativo') || str_contains($estadoStr, 'baja') => 'bg-rose-100 text-rose-800 border-rose-200',
+                                        default => 'bg-slate-100 text-slate-700 border-slate-200',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $estadoColor }}">
+                                    {{ $activo->estado_operativo }}
+                                </span>
+                            </td>
+                            <td class="px-2.5 py-3.5 text-center text-sm whitespace-nowrap">
+                                @php
+                                    $critStr = strtolower(trim($activo->criticidad_institucional ?? ''));
+                                    $critColor = match(true) {
+                                        str_contains($critStr, 'alta') || str_contains($critStr, 'alto') => 'bg-rose-100 text-rose-800 border-rose-200',
+                                        str_contains($critStr, 'media') || str_contains($critStr, 'medio') => 'bg-amber-100 text-amber-800 border-amber-200',
+                                        str_contains($critStr, 'baja') || str_contains($critStr, 'bajo') => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                                        default => 'bg-slate-100 text-slate-700 border-slate-200',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $critColor }}">
+                                    {{ $activo->criticidad_institucional ?? '-' }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-3.5 text-center text-sm whitespace-nowrap">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <a href="{{ route('admin.activos.show', $activo->id_activo) }}" class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Ver
+                                    </a>
+                                    <a href="{{ route('admin.activos.edit', $activo->id_activo) }}" class="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Editar
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500">No hay activos registrados todavía.</td>
+                            <td colspan="8" class="px-6 py-12 text-center text-slate-500">
+                                No hay activos registrados todavía.
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

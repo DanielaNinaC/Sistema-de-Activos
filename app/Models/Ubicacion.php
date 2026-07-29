@@ -16,4 +16,9 @@ class Ubicacion extends Model
         'seccion',
         'aula',
     ];
+
+    public function activos()
+    {
+        return $this->hasMany(ActivoTecnologico::class, 'fk_id_ubicacion', 'id_ubicacion');
+    }
 }

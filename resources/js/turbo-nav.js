@@ -259,8 +259,8 @@
 
             // Only intercept POST forms (not logout or special forms)
             if (form.method.toUpperCase() !== 'POST') return;
-            // Don't intercept logout form
-            if (form.action.includes('/logout')) return;
+            // Don't intercept login or logout form
+            if (form.action.includes('/logout') || form.action.includes('/login') || form.hasAttribute('data-turbo-disabled')) return;
 
             e.preventDefault();
             showProgress();

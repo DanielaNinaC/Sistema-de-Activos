@@ -10,7 +10,6 @@ return new class extends Migration {
             $table->foreign('fk_id_activo')->references('id_activo')->on('activos_tecnologicos')->onDelete('cascade');
             $table->string('direccion_ip')->nullable();
             $table->string('version_firmware')->nullable();
-            $table->string('tipo_equipo')->nullable();
             $table->timestamps();
         });
     }

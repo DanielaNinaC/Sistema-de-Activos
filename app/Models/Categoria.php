@@ -16,4 +16,9 @@ class Categoria extends Model
         'nombre_categoria',
         'vida_util_meses',
     ];
+
+    public function activos()
+    {
+        return $this->hasMany(ActivoTecnologico::class, 'fk_id_categoria', 'id_categoria');
+    }
 }

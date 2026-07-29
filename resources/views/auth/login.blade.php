@@ -14,26 +14,17 @@
 
         <!-- Session Status Alert -->
         @if (session('status'))
-            <div class="p-3 text-sm text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-xl text-center">
-                {{ session('status') }}
-            </div>
-        @endif
-
-        <!-- General Error Alert -->
-        @if ($errors->any())
-            <div class="p-4 text-sm text-rose-700 bg-rose-100 border border-rose-200 rounded-xl space-y-1">
-                <p class="font-semibold">Ocurrió un error al iniciar sesión:</p>
-                <ul class="list-disc list-inside text-xs space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
+            <div class="p-3 text-sm text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-xl text-center flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{{ session('status') }}</span>
             </div>
         @endif
 
         <!-- Login Form (white panel) -->
         <div class="bg-white rounded-xl">
-            <form method="POST" action="{{ route('login') }}" class="space-y-5">
+            <form id="loginForm" method="POST" action="{{ route('login') }}" class="space-y-5" novalidate data-turbo-disabled="true">
             @csrf
             <!-- Correo Electrónico -->
             <div class="space-y-1.5">
@@ -46,11 +37,20 @@
                         id="correo" 
                         name="correo" 
                         value="{{ old('correo') }}" 
-                        required 
                         autofocus
                         placeholder="usuario@dominio.com"
-                        class="w-full px-4 py-3 bg-gray-50 border @error('correo') border-rose-500 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
+                        class="w-full px-4 py-3 bg-gray-50 border @error('correo') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
                     >
+                </div>
+                <div id="error-correo-container">
+                    @error('correo')
+                        <p class="mt-1.5 text-xs text-rose-600 font-semibold flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{{ $message }}</span>
+                        </p>
+                    @enderror
                 </div>
             </div>
 
@@ -64,9 +64,8 @@
                         type="password" 
                         id="contrasena" 
                         name="contrasena" 
-                        required 
                         placeholder="••••••••"
-                        class="w-full px-4 py-3 bg-gray-50 border @error('contrasena') border-rose-500 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
+                        class="w-full px-4 py-3 bg-gray-50 border @error('contrasena') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
                     >
 
                     <button type="button" id="togglePassword" aria-label="Mostrar contraseña" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700">
@@ -80,6 +79,16 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.88 9.88A3 3 0 0114.12 14.12" />
                         </svg>
                     </button>
+                </div>
+                <div id="error-contrasena-container">
+                    @error('contrasena')
+                        <p class="mt-1.5 text-xs text-rose-600 font-semibold flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{{ $message }}</span>
+                        </p>
+                    @enderror
                 </div>
             </div>
 
@@ -118,25 +127,22 @@
                         id="codigo_cache" 
                         name="codigo_cache" 
                         value="{{ old('codigo_cache') }}" 
-                        required
                         autocomplete="off"
                         placeholder="Ingresa el código de 5 caracteres"
-                        class="w-full px-4 py-3 bg-gray-50 border @error('codigo_cache') border-rose-500 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
+                        class="w-full px-4 py-3 bg-gray-50 border @error('codigo_cache') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
                     >
                 </div>
+                <div id="error-codigo_cache-container">
+                    @error('codigo_cache')
+                        <p class="mt-1.5 text-xs text-rose-600 font-semibold flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{{ $message }}</span>
+                        </p>
+                    @enderror
+                </div>
             </div>
-
-            <!-- Remember me -->
-            <!-- <div class="flex items-center justify-between text-xs">
-                <label class="flex items-center gap-2 text-slate-600 cursor-pointer">
-                    <input 
-                        type="checkbox" 
-                        name="remember" 
-                        class="w-4 h-4 rounded bg-white border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    >
-                    <span>Recordar mi sesión</span>
-                </label>
-            </div> -->
 
             <!-- Submit Button -->
             <button 
@@ -147,29 +153,120 @@
             </button>
         </form>
 
-            <script>
-                function refreshCaptcha() {
-                    var img = document.getElementById('captcha-img');
-                    if (img) {
-                        img.src = "{{ route('captcha.image') }}?t=" + new Date().getTime();
-                    }
+        <script>
+            function refreshCaptcha() {
+                var img = document.getElementById('captcha-img');
+                if (img) {
+                    img.src = "{{ route('captcha.image') }}?t=" + new Date().getTime();
                 }
+            }
 
-                document.addEventListener('DOMContentLoaded', function () {
-                    var input = document.getElementById('contrasena');
-                    var toggle = document.getElementById('togglePassword');
-                    if (!input || !toggle) return;
+            function initLoginValidation() {
+                var form = document.getElementById('loginForm');
+                var correoInput = document.getElementById('correo');
+                var contrasenaInput = document.getElementById('contrasena');
+                var captchaInput = document.getElementById('codigo_cache');
+
+                // Password toggle
+                var toggle = document.getElementById('togglePassword');
+                if (contrasenaInput && toggle) {
                     var eyeOpen = toggle.querySelector('.eye-open');
                     var eyeClosed = toggle.querySelector('.eye-closed');
                     toggle.addEventListener('click', function () {
-                        var type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-                        input.setAttribute('type', type);
+                        var type = contrasenaInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                        contrasenaInput.setAttribute('type', type);
                         if (eyeOpen) eyeOpen.classList.toggle('hidden');
                         if (eyeClosed) eyeClosed.classList.toggle('hidden');
-                        toggle.setAttribute('aria-pressed', type === 'text');
                     });
-                });
-            </script>
+                }
+
+                function showError(fieldName, inputEl, message) {
+                    if (inputEl) {
+                        inputEl.classList.add('border-rose-500', 'ring-2', 'ring-rose-200');
+                        inputEl.classList.remove('border-gray-200');
+                    }
+                    var container = document.getElementById('error-' + fieldName + '-container');
+                    if (container) {
+                        container.innerHTML = '<p class="mt-1.5 text-xs text-rose-600 font-semibold flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>' + message + '</span></p>';
+                    }
+                }
+
+                function clearError(fieldName, inputEl) {
+                    if (inputEl) {
+                        inputEl.classList.remove('border-rose-500', 'ring-2', 'ring-rose-200');
+                        inputEl.classList.add('border-gray-200');
+                    }
+                    var container = document.getElementById('error-' + fieldName + '-container');
+                    if (container) {
+                        container.innerHTML = '';
+                    }
+                }
+
+                // Clear field error only when typing into that specific field
+                if (correoInput) {
+                    correoInput.addEventListener('input', function () {
+                        clearError('correo', correoInput);
+                    });
+                }
+                if (contrasenaInput) {
+                    contrasenaInput.addEventListener('input', function () {
+                        clearError('contrasena', contrasenaInput);
+                    });
+                }
+                if (captchaInput) {
+                    captchaInput.addEventListener('input', function () {
+                        clearError('codigo_cache', captchaInput);
+                    });
+                }
+
+                // Validate form submission
+                if (form) {
+                    form.addEventListener('submit', function (e) {
+                        var hasErrors = false;
+
+                        var correoVal = correoInput ? correoInput.value.trim() : '';
+                        var contrasenaVal = contrasenaInput ? contrasenaInput.value.trim() : '';
+                        var captchaVal = captchaInput ? captchaInput.value.trim() : '';
+
+                        if (!correoVal) {
+                            showError('correo', correoInput, 'El correo electrónico es obligatorio.');
+                            hasErrors = true;
+                        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoVal)) {
+                            showError('correo', correoInput, 'Ingrese una dirección de correo electrónico válida.');
+                            hasErrors = true;
+                        }
+
+                        if (!contrasenaVal) {
+                            showError('contrasena', contrasenaInput, 'La contraseña es obligatoria.');
+                            hasErrors = true;
+                        }
+
+                        if (!captchaVal) {
+                            showError('codigo_cache', captchaInput, 'El código de seguridad es obligatorio.');
+                            hasErrors = true;
+                        }
+
+                        if (hasErrors) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (correoInput && (!correoVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoVal))) {
+                                correoInput.focus();
+                            } else if (contrasenaInput && !contrasenaVal) {
+                                contrasenaInput.focus();
+                            } else if (captchaInput && !captchaVal) {
+                                captchaInput.focus();
+                            }
+                        }
+                    });
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initLoginValidation);
+            } else {
+                initLoginValidation();
+            }
+        </script>
         </div>
 
     </div>

@@ -1,101 +1,292 @@
 @extends('layouts.principal')
 
-@section('title','Incidentes - Registrar')
+@section('title', 'Registrar Incidente - Activos Tecnológicos')
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
+    {{-- Header idéntico al registro de activo --}}
     <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition" aria-label="Volver" title="Volver">
+        <a href="{{ route('admin.incidentes.seguimiento') }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver a la pantalla anterior" title="Volver">
             <span aria-hidden="true">&#8592;</span>
         </a>
         <div>
-            <h2 class="text-2xl font-semibold">Incidentes</h2>
-            <p class="text-sm text-gray-500">Registra incidentes y revisa los casos recientes</p>
+            <h2 class="text-2xl font-semibold text-slate-900">Registrar Incidente</h2>
+            <p class="text-sm text-slate-500">Reporte una falla o problema técnico detectado en un equipo</p>
         </div>
     </div>
 
+    {{-- Alerta Éxito --}}
     @if(session('success'))
-        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
-            {{ session('success') }}
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-sm font-medium">{{ session('success') }}</span>
         </div>
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-white rounded-lg p-5 shadow">
-            <h3 class="text-lg font-medium mb-4">Registrar incidente</h3>
-            <form method="POST" action="{{ route('admin.incidentes.registrar.store') }}" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                @csrf
-                <div>
-                    <label class="block text-sm mb-1">Activo</label>
-                    <select name="fk_id_activo" class="w-full border px-3 py-2.5 text-sm rounded" required>
-                        <option value="">Seleccione un activo</option>
-                        @foreach($activos as $activo)
-                            <option value="{{ $activo->id_activo }}">{{ $activo->id_activo }} - {{ $activo->nombre_equipo }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Usuario que reporta</label>
-                    <select name="fk_id_usuario_reporta" class="w-full border px-3 py-2.5 text-sm rounded" required>
-                        <option value="">Seleccione un usuario</option>
-                        @foreach($usuarios as $usuario)
-                            <option value="{{ $usuario->id_usuario }}">{{ $usuario->nombre }} {{ $usuario->apellido ?? '' }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Fecha del incidente</label>
-                    <input type="datetime-local" name="fecha_incidente" class="w-full border px-3 py-2.5 text-sm rounded" required />
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Estado</label>
-                    <select name="estado_incidente" class="w-full border px-3 py-2.5 text-sm rounded" required>
-                        <option value="Reportado">Reportado</option>
-                        <option value="En proceso">En proceso</option>
-                        <option value="Resuelto">Resuelto</option>
-                        <option value="Cerrado">Cerrado</option>
-                    </select>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm mb-1">Descripción de la falla</label>
-                    <textarea name="descripcion_falla" rows="4" class="w-full border px-3 py-2.5 text-sm rounded" required></textarea>
-                </div>
-                <div class="md:col-span-2 flex justify-end gap-3">
-                    <a href="{{ route('admin.incidentes.historial') }}" class="inline-flex items-center px-4 py-2.5 rounded text-sm border border-gray-300 text-gray-700 hover:bg-gray-50">Ver historial</a>
-                    <button class="bg-blue-600 text-white px-4 py-2.5 rounded text-sm">Guardar incidente</button>
-                </div>
-            </form>
+    {{-- Errores de Validación --}}
+    @if ($errors->any())
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 space-y-1 shadow-sm">
+            <div class="font-semibold text-sm">Por favor corrige los siguientes errores:</div>
+            <ul class="list-disc list-inside text-xs space-y-0.5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
+    @endif
 
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold">Últimos incidentes</h3>
+    {{-- Formulario Principal estilo Card igual a registrar-activo --}}
+    <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
+        <h3 class="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-3">Formulario de Registro</h3>
+        
+        <form method="POST" action="{{ route('admin.incidentes.registrar.store') }}" class="grid grid-cols-1 md:grid-cols-2 gap-5" id="formRegistrarIncidente">
+            @csrf
+
+            <!-- Selección de Activo Tecnológico (Columna Izquierda 1) -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Activo Tecnológico Afectado *</label>
+                <select name="fk_id_activo" id="selectActivo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                    <option value="">Seleccione un activo tecnológico</option>
+                    @foreach($activos as $activo)
+                        @php
+                            $ubicacionTxt = $activo->ubicacion ? ($activo->ubicacion->seccion . ' - ' . $activo->ubicacion->aula) : 'Sin ubicación';
+                            $categoriaTxt = $activo->categoria ? $activo->categoria->nombre_categoria : 'Sin categoría';
+                            $marcaModeloTxt = trim(($activo->marca ?? '') . ' ' . ($activo->modelo ?? ''));
+                        @endphp
+                        <option 
+                            value="{{ $activo->id_activo }}" 
+                            data-codigo="{{ $activo->codigo_patrimonial ?? 'ID: '.$activo->id_activo }}"
+                            data-nombre="{{ $activo->nombre_equipo }}"
+                            data-marcamodelo="{{ $marcaModeloTxt != '' ? $marcaModeloTxt : 'N/A' }}"
+                            data-categoria="{{ $categoriaTxt }}"
+                            data-ubicacion="{{ $ubicacionTxt }}"
+                            data-estado="{{ $activo->estado_operativo ?? 'No especificado' }}"
+                            {{ old('fk_id_activo') == $activo->id_activo ? 'selected' : '' }}
+                        >
+                            [{{ $activo->codigo_patrimonial ?? 'ID: '.$activo->id_activo }}] {{ $activo->nombre_equipo }} - {{ $categoriaTxt }} ({{ $ubicacionTxt }})
+                        </option>
+                    @endforeach
+                </select>
             </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activo</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($incidentes as $incidente)
-                            <tr>
-                                <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{{ \Carbon\Carbon::parse($incidente->fecha_incidente)->format('d/m/Y H:i') }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ $incidente->activo->nombre_equipo ?? '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ $incidente->estado_incidente }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="3" class="px-6 py-8 text-center text-sm text-gray-500">Aún no hay incidentes registrados.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+
+            <!-- Usuario que reporta (Columna Derecha 1 - Input Editable) -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Usuario que Reporta *</label>
+                <input type="hidden" name="fk_id_usuario_reporta" id="hiddenUsuarioId" value="{{ old('fk_id_usuario_reporta') }}">
+                <input 
+                    type="text" 
+                    name="usuario_reporta_nombre"
+                    id="inputUsuarioReporta"
+                    list="listUsuarios" 
+                    value="{{ old('usuario_reporta_nombre') }}"
+                    placeholder="Ingrese o busque el nombre del usuario..." 
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" 
+                    required 
+                    autocomplete="off"
+                />
+                <datalist id="listUsuarios">
+                    @foreach($usuarios as $usuario)
+                        <option value="{{ $usuario->nombre }} {{ $usuario->apellido ?? '' }}" data-id="{{ $usuario->id_usuario }}">
+                    @endforeach
+                </datalist>
             </div>
-        </div>
+
+            <!-- Fecha y Hora del Incidente (Columna Izquierda 2) -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Fecha y Hora del Incidente *</label>
+                <input 
+                    type="datetime-local" 
+                    name="fecha_incidente" 
+                    value="{{ old('fecha_incidente', date('Y-m-d\TH:i')) }}" 
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition cursor-pointer" 
+                    required 
+                />
+            </div>
+
+            <!-- Estado Inicial (Columna Derecha 2) -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Estado Inicial *</label>
+                <select name="estado_incidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                    <option value="Reportado" {{ old('estado_incidente', 'Reportado') == 'Reportado' ? 'selected' : '' }}>Reportado (Nuevo incidente registrado)</option>
+                    <option value="En proceso" {{ old('estado_incidente') == 'En proceso' ? 'selected' : '' }}>En proceso (En revisión o diagnóstico)</option>
+                    <option value="En espera" {{ old('estado_incidente') == 'En espera' ? 'selected' : '' }}>En espera (Pendiente de repuestos o soporte externo)</option>
+                </select>
+            </div>
+
+            <!-- Sección Dinámica Informativa del Activo Seleccionado (Ancho completo) -->
+            <div id="secDetalleActivo" class="md:col-span-2 hidden bg-slate-50 border border-blue-100 rounded-2xl p-5 space-y-3 transition">
+                <div class="flex items-center gap-2 text-blue-700 font-semibold text-sm border-b border-blue-100 pb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Especificaciones del Activo Seleccionado</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <span class="text-slate-500 font-medium uppercase tracking-wider block text-[10px] mb-0.5">Código Patrimonial</span>
+                        <span id="prevCodigo" class="font-bold text-slate-800 text-sm">--</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <span class="text-slate-500 font-medium uppercase tracking-wider block text-[10px] mb-0.5">Categoría / Equipo</span>
+                        <span id="prevCategoria" class="font-bold text-slate-800 text-sm">--</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <span class="text-slate-500 font-medium uppercase tracking-wider block text-[10px] mb-0.5">Ubicación</span>
+                        <span id="prevUbicacion" class="font-bold text-slate-800 text-sm">--</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <span class="text-slate-500 font-medium uppercase tracking-wider block text-[10px] mb-0.5">Estado Operativo</span>
+                        <span id="prevEstado" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 mt-0.5">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plantillas de Diagnóstico Rápido (Ancho completo) -->
+            <!-- <div class="md:col-span-2 space-y-1.5">
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider">Plantillas Rápida de Descripción</label>
+                <p class="text-xs text-slate-400">Haga clic en una plantilla para añadirla automáticamente al texto de la falla:</p>
+                <div class="flex flex-wrap gap-2 pt-1">
+                    <button type="button" class="btn-preset inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition" data-text="El equipo no enciende y no da señales de alimentación eléctrica.">
+                        ⚡ No enciende / Sin energía
+                    </button>
+                    <button type="button" class="btn-preset inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition" data-text="Falla de conectividad a la red local e internet. El puerto de red o Wi-Fi no responde.">
+                        🌐 Falla de conectividad en red
+                    </button>
+                    <button type="button" class="btn-preset inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition" data-text="El proyector no emite señal de video o muestra colores distorsionados/pantalla azul.">
+                        📽️ Proyector sin señal / Video
+                    </button>
+                    <button type="button" class="btn-preset inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition" data-text="El equipo emite ruidos anómalos en los ventiladores y presenta sobrecalentamiento excesivo.">
+                        🔥 Sobrecalentamiento / Ruidos
+                    </button>
+                    <button type="button" class="btn-preset inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition" data-text="Los periféricos (teclado, mouse o monitor) presentan fallas de detección o daño físico.">
+                        ⌨️ Falla en periféricos
+                    </button>
+                </div>
+            </div> -->
+
+            <!-- Descripción detallada de la falla (Ancho completo) -->
+            <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Descripción Detallada de la Falla *</label>
+                <textarea 
+                    name="descripcion_falla" 
+                    id="descripcionFalla"
+                    rows="4" 
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" 
+                    placeholder="Describa los síntomas del equipo, mensajes de error o comportamiento anómalo observados..." 
+                    required
+                >{{ old('descripcion_falla') }}</textarea>
+            </div>
+
+            
+
+            <!-- Botones de Acción idénticos a registrar-activo -->
+            <div class="md:col-span-2 flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <a href="{{ route('admin.incidentes.seguimiento') }}" class="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition">
+                    Ver seguimiento
+                </a>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition shadow-md shadow-blue-200 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Registrar Incidente
+                </button>
+            </div>
+        </form>
     </div>
 </div>
+
+<script>
+    (function () {
+        function initRegistrarIncidente() {
+            var selectActivo = document.getElementById('selectActivo');
+            var secDetalle = document.getElementById('secDetalleActivo');
+            var prevCodigo = document.getElementById('prevCodigo');
+            var prevCategoria = document.getElementById('prevCategoria');
+            var prevUbicacion = document.getElementById('prevUbicacion');
+            var prevEstado = document.getElementById('prevEstado');
+            var descripcionFalla = document.getElementById('descripcionFalla');
+
+            if (!selectActivo) return;
+
+            function updateActivoPreview() {
+                var selectedOpt = selectActivo.options[selectActivo.selectedIndex];
+                if (!selectedOpt || !selectedOpt.value) {
+                    if (secDetalle) secDetalle.classList.add('hidden');
+                    return;
+                }
+
+                var codigo = selectedOpt.getAttribute('data-codigo') || '--';
+                var nombre = selectedOpt.getAttribute('data-nombre') || '--';
+                var categoria = selectedOpt.getAttribute('data-categoria') || '--';
+                var ubicacion = selectedOpt.getAttribute('data-ubicacion') || '--';
+                var estado = selectedOpt.getAttribute('data-estado') || 'No especificado';
+
+                if (prevCodigo) prevCodigo.textContent = codigo;
+                if (prevCategoria) prevCategoria.textContent = nombre + ' (' + categoria + ')';
+                if (prevUbicacion) prevUbicacion.textContent = ubicacion;
+                if (prevEstado) {
+                    prevEstado.textContent = estado;
+                    if (estado.toLowerCase() === 'operativo') {
+                        prevEstado.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 mt-0.5';
+                    } else if (estado.toLowerCase().includes('mantenimiento')) {
+                        prevEstado.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 mt-0.5';
+                    } else {
+                        prevEstado.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-800 mt-0.5';
+                    }
+                }
+
+                if (secDetalle) secDetalle.classList.remove('hidden');
+            }
+
+            selectActivo.removeEventListener('change', updateActivoPreview);
+            selectActivo.addEventListener('change', updateActivoPreview);
+            updateActivoPreview();
+
+            // Botones de plantilla rápida
+            var presetBtns = document.querySelectorAll('.btn-preset');
+            presetBtns.forEach(function (btn) {
+                btn.onclick = function () {
+                    var presetText = btn.getAttribute('data-text');
+                    if (descripcionFalla && presetText) {
+                        if (descripcionFalla.value.trim().length > 0) {
+                            descripcionFalla.value += '\n' + presetText;
+                        } else {
+                            descripcionFalla.value = presetText;
+                        }
+                        descripcionFalla.focus();
+                    }
+                };
+            });
+
+            // Sincronizar datalist de usuario
+            var inputUsuario = document.getElementById('inputUsuarioReporta');
+            var hiddenUsuarioId = document.getElementById('hiddenUsuarioId');
+            var listUsuarios = document.getElementById('listUsuarios');
+
+            if (inputUsuario && hiddenUsuarioId && listUsuarios) {
+                inputUsuario.addEventListener('input', function () {
+                    var val = inputUsuario.value.trim();
+                    var matchedId = '';
+                    for (var i = 0; i < listUsuarios.options.length; i++) {
+                        if (listUsuarios.options[i].value.trim() === val) {
+                            matchedId = listUsuarios.options[i].getAttribute('data-id') || '';
+                            break;
+                        }
+                    }
+                    hiddenUsuarioId.value = matchedId;
+                });
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initRegistrarIncidente);
+        } else {
+            initRegistrarIncidente();
+        }
+
+        document.addEventListener('turbo:load', initRegistrarIncidente);
+    })();
+</script>
 @endsection

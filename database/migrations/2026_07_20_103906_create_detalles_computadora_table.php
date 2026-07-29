@@ -18,7 +18,10 @@ return new class extends Migration
             $table->integer('disco_solido_gb')->nullable();
             $table->integer('disco_rigido_gb')->nullable();
             $table->string('sistema_operativo')->nullable();
-            $table->string('perifericos')->nullable();
+            $table->boolean('lector')->default(false);
+            $table->boolean('parlantes')->default(false);
+            $table->boolean('teclado_mouse')->default(false);
+            $table->boolean('monitor')->default(false);
             $table->boolean('camara_web')->default(false);
             $table->timestamps();
         });

@@ -35,4 +35,19 @@ class ActivoTecnologico extends Model
     {
         return $this->belongsTo(Ubicacion::class, 'fk_id_ubicacion', 'id_ubicacion');
     }
+
+    public function detalleComputadora()
+    {
+        return $this->hasOne(DetalleComputadora::class, 'fk_id_activo', 'id_activo');
+    }
+
+    public function detalleEquipoRed()
+    {
+        return $this->hasOne(DetalleEquipoRed::class, 'fk_id_activo', 'id_activo');
+    }
+
+    public function detalleProyector()
+    {
+        return $this->hasOne(DetalleProyector::class, 'fk_id_activo', 'id_activo');
+    }
 }

@@ -123,11 +123,48 @@ SVG;
             'codigo_cache' => 'required|string',
         ], [
             'correo.required' => 'El correo electrónico es obligatorio.',
-            'correo.email' => 'Ingrese una dirección de correo válida.',
+            'correo.email' => 'Ingrese una dirección de correo electrónico válida.',
             'contrasena.required' => 'La contraseña es obligatoria.',
-            'codigo_cache.required' => 'El código de seguridad en cache es obligatorio.',
+            'codigo_cache.required' => 'El código de seguridad es obligatorio.',
         ]);
 
+        // 1. Validar el código de seguridad (captcha/cache)
+        $sessionKey = 'login_cache_code_' . session()->getId();
+        $cacheCode = Cache::get($sessionKey) ?? Cache::get('login_cache_code');
+
+        if ($cacheCode === null || $cacheCode === '') {
+            $this->generateNewCacheCode();
+            return back()->withErrors([
+                'codigo_cache' => 'El código de seguridad ha expirado. Ingresa el nuevo código generado.',
+            ])->withInput($request->only('correo'));
+        }
+
+        if (strtoupper(trim((string) $cacheCode)) !== strtoupper(trim((string) $request->codigo_cache))) {
+            $this->generateNewCacheCode();
+            return back()->withErrors([
+                'codigo_cache' => 'El código de seguridad ingresado es incorrecto.',
+            ])->withInput($request->only('correo'));
+        }
+
+        // 2. Verificar existencia del usuario en la base de datos
+        $usuario = \App\Models\Usuario::where('correo', $request->correo)->first();
+
+        if (!$usuario) {
+            $this->generateNewCacheCode();
+            return back()->withErrors([
+                'correo' => 'No existe ninguna cuenta registrada con este correo electrónico.',
+            ])->withInput($request->only('correo'));
+        }
+
+        // 3. Verificar estado del usuario (activo / inactivo)
+        if (isset($usuario->estado) && (int)$usuario->estado === 0) {
+            $this->generateNewCacheCode();
+            return back()->withErrors([
+                'correo' => 'Tu cuenta se encuentra desactivada. Contacta al administrador del sistema.',
+            ])->withInput($request->only('correo'));
+        }
+
+        // 4. Intentar autenticación con credenciales
         $credentials = [
             'correo' => $request->correo,
             'password' => $request->contrasena,
@@ -135,47 +172,20 @@ SVG;
 
         $remember = $request->boolean('remember');
 
-        if (Auth::attempt($credentials, $remember)) {
-            $sessionKey = 'login_cache_code_' . session()->getId();
-            $cacheCode = Cache::get($sessionKey) ?? Cache::get('login_cache_code');
-
-            if ($cacheCode === null || $cacheCode === '') {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-                $this->generateNewCacheCode();
-
-                return back()->withErrors([
-                    'codigo_cache' => 'No hay un código de cache disponible o ha expirado. Intenta nuevamente.',
-                ])->onlyInput('correo');
-            }
-
-            if (strtoupper(trim((string) $cacheCode)) !== strtoupper(trim((string) $request->codigo_cache))) {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-                $this->generateNewCacheCode();
-
-                return back()->withErrors([
-                    'codigo_cache' => 'El código de seguridad / cache ingresado es incorrecto.',
-                ])->onlyInput('correo');
-            }
-
-            // Éxito: limpiar el código de la cache y regenerar sesión
-            Cache::forget($sessionKey);
-            Cache::forget('login_cache_code');
-            $request->session()->regenerate();
-
-            return redirect()->intended(route('dashboard'))
-                ->with('success', '¡Bienvenido de nuevo!');
+        if (!Auth::attempt($credentials, $remember)) {
+            $this->generateNewCacheCode();
+            return back()->withErrors([
+                'contrasena' => 'La contraseña ingresada es incorrecta.',
+            ])->withInput($request->only('correo'));
         }
 
-        // Si fallan las credenciales, regenerar el código para seguridad
-        $this->generateNewCacheCode();
+        // Éxito: limpiar el código de la cache y regenerar sesión
+        Cache::forget($sessionKey);
+        Cache::forget('login_cache_code');
+        $request->session()->regenerate();
 
-        return back()->withErrors([
-            'correo' => 'Las credenciales ingresadas no coinciden con nuestros registros.',
-        ])->onlyInput('correo');
+        return redirect()->intended(route('dashboard'))
+            ->with('success', '¡Bienvenido de nuevo!');
     }
 
     /**
