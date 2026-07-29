@@ -123,12 +123,12 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" class="submenu-arrow h-5 w-5 transform transition-transform text-white/90" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 8l4 4 4-4" clip-rule="evenodd" /></svg>
                             </div>
                             <div class="submenu hidden mt-1 pl-3" data-submenu-panel="riesgos">
-                                <a href="{{ route('admin.riesgos.modos') }}" class="block p-2 rounded hover:bg-white/5">Modos de Falla</a>
                                 <a href="{{ route('admin.riesgos.evaluacion') }}" class="block p-2 rounded hover:bg-white/5">Evaluación FMEA</a>
-                                <a href="{{ route('admin.riesgos.score') }}" class="block p-2 rounded hover:bg-white/5">Score</a>
                                 <a href="{{ route('admin.riesgos.riesgo') }}" class="block p-2 rounded hover:bg-white/5">Riesgo</a>
                                 <a href="{{ route('admin.riesgos.alertas') }}" class="block p-2 rounded hover:bg-white/5">Alertas</a>
                                 <a href="{{ route('admin.riesgos.tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Plan de tratamiento</a>
+                                <a href="{{ route('admin.riesgos.modos') }}" class="block p-2 rounded hover:bg-white/5">Modos de Falla</a>
+                                <a href="{{ route('admin.riesgos.score') }}" class="block p-2 rounded hover:bg-white/5">Score</a>
                             </div>
                         </div>
 

@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
             Route::put('/mantenimiento/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoUpdate'])->name('mantenimiento.update');
             Route::get('/riesgos/modos-falla', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'modosIndex'])->name('riesgos.modos');
             Route::post('/riesgos/modos-falla', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'modosStore'])->name('riesgos.modos.store');
+            Route::put('/riesgos/modos-falla/{id}', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'modosUpdate'])->name('riesgos.modos.update');
             Route::get('/riesgos/evaluacion-fmea', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'evaluacionIndex'])->name('riesgos.evaluacion');
             Route::post('/riesgos/evaluacion-fmea', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'evaluacionStore'])->name('riesgos.evaluacion.store');
             Route::get('/riesgos/score', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'pesosIndex'])->name('riesgos.score');

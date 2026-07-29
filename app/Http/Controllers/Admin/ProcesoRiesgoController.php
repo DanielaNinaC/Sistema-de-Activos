@@ -32,9 +32,18 @@ class ProcesoRiesgoController extends Controller
         return 'Bajo';
     }
 
-    public function modosIndex()
+    public function modosIndex(Request $request)
     {
-        $modos = ModoFalla::with('categoria')->orderBy('id_modo_falla')->get();
+        $query = ModoFalla::with('categoria');
+
+        if ($buscar = $request->input('buscar')) {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('nombre_modo_falla', 'like', "%{$buscar}%")
+                  ->orWhereHas('categoria', fn($c) => $c->where('nombre_categoria', 'like', "%{$buscar}%"));
+            });
+        }
+
+        $modos = $query->orderBy('id_modo_falla')->get();
         $categorias = Categoria::orderBy('nombre_categoria')->get();
 
         return view('riesgos.modos-falla', compact('modos', 'categorias'));
@@ -50,6 +59,20 @@ class ProcesoRiesgoController extends Controller
         ModoFalla::create($data);
 
         return redirect()->route('admin.riesgos.modos')->with('success', 'Modo de falla creado con éxito');
+    }
+
+    public function modosUpdate(Request $request, $id)
+    {
+        $modo = ModoFalla::findOrFail($id);
+
+        $data = $request->validate([
+            'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
+            'nombre_modo_falla' => 'required|string|max:255',
+        ]);
+
+        $modo->update($data);
+
+        return redirect()->route('admin.riesgos.modos')->with('success', 'Modo de falla actualizado con éxito');
     }
 
     public function evaluacionIndex()
@@ -130,9 +153,18 @@ class ProcesoRiesgoController extends Controller
             'fecha_actualizacion' => 'required|date',
         ]);
 
+        $suma = round($data['peso_severidad'] + $data['peso_frecuencia'] + $data['peso_msr'], 3);
+        if (abs($suma - 1.0) > 0.05) {
+            return redirect()->back()->withErrors([
+                'peso_severidad' => 'La suma de los tres pesos debe ser igual a 1.000 (100%). La suma actual ingresada es ' . number_format($suma, 3)
+            ])->withInput();
+        }
+
+        $data['fecha_actualizacion'] = \Carbon\Carbon::parse($data['fecha_actualizacion'])->format('Y-m-d H:i:s');
+
         PesoAhp::create($data);
 
-        return redirect()->route('admin.riesgos.pesos')->with('success', 'Pesos AHP actualizados con éxito');
+        return redirect()->route('admin.riesgos.score')->with('success', 'Pesos AHP actualizados con éxito');
     }
 
     public function tratamientoIndex()
