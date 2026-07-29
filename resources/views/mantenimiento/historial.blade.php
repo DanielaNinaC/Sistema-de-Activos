@@ -1,59 +1,195 @@
 @extends('layouts.principal')
 
-@section('title','Mantenimiento - Historial')
+@section('title', 'Historial de Mantenimiento')
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
-    <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition" aria-label="Volver" title="Volver">
-            <span aria-hidden="true">&#8592;</span>
-        </a>
-        <div>
-            <h2 class="text-2xl font-semibold">Historial de mantenimiento</h2>
-            <p class="text-sm text-gray-500">Consulta completa de los mantenimientos realizados y programados</p>
+    {{-- Header con botones de navegación --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <a href="{{ url()->previous() != url()->current() ? url()->previous() : route('admin.mantenimiento.cronograma') }}" 
+               class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" 
+               aria-label="Volver" title="Volver">
+                <span aria-hidden="true">&#8592;</span>
+            </a>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Historial de Mantenimiento</h2>
+                <p class="text-sm text-slate-500">Consulta completa y registro histórico de mantenimientos técnicos</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+            <a href="{{ route('admin.mantenimiento.programar') }}" 
+               class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-200">
+                Registrar Mantenimiento
+            </a>
+            <a href="{{ route('admin.mantenimiento.cronograma') }}" 
+               class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition">
+                Ver Cronograma
+            </a>
         </div>
     </div>
 
-    <form method="GET" action="{{ route('admin.mantenimiento.historial') }}" class="flex items-center gap-2 max-w-md">
-        <div class="relative flex-1">
-            <input type="text" name="buscar" value="{{ request('buscar') }}" placeholder="Buscar por activo, tipo, estado, asignado..."
-                class="w-full border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition" />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    {{-- Alertas de Éxito --}}
+    @if(session('success'))
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-sm font-medium">{{ session('success') }}</span>
         </div>
-        <button type="submit" class="px-4 py-2.5 bg-slate-800 text-white text-sm rounded-xl hover:bg-slate-700 transition">Buscar</button>
-        @if(request('buscar'))
-            <a href="{{ route('admin.mantenimiento.historial') }}" class="px-3 py-2.5 text-sm text-gray-600 hover:text-gray-800 transition">Limpiar</a>
-        @endif
-    </form>
+    @endif
 
-    <div class="bg-white rounded shadow overflow-hidden">
+    {{-- Barra de Búsqueda --}}
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <form method="GET" action="{{ route('admin.mantenimiento.historial') }}" class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input 
+                    type="text" 
+                    name="buscar" 
+                    value="{{ request('buscar') }}" 
+                    placeholder="Buscar por activo, código patrimonial, asignado, tipo, origen o estado..."
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                >
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                    Buscar
+                </button>
+
+                @if(request('buscar'))
+                    <a href="{{ route('admin.mantenimiento.historial') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition flex items-center gap-1">
+                        ✕ Limpiar
+                    </a>
+                @endif
+            </div>
+        </form>
+
+        @if(request('buscar'))
+            <div class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                <span>Filtro activo para: <strong class="text-slate-800">"{{ request('buscar') }}"</strong></span>
+                <span class="text-slate-300">•</span>
+                <span>Resultados encontrados: <strong class="text-slate-800">{{ $mantenimientos->total() }}</strong></span>
+            </div>
+        @endif
+    </div>
+
+    {{-- Tabla de Historial de Mantenimiento --}}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="w-full divide-y divide-gray-200">
+                <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Programada</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Asignado</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ejecución</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Evidencia</th>
+                        <th class="w-12 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="w-28 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha Programada</th>
+                        <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo Tecnológico</th>
+                        <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Origen</th>
+                        <th class="px-3 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Tipo</th>
+                        <th class="px-3 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Asignado A</th>
+                        <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
+                        <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha Ejecución</th>
+                        <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($mantenimientos as $mantenimiento)
-                        <tr>
-                            <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{{ \Carbon\Carbon::parse($mantenimiento->fecha_programada)->format('d/m/Y') }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->activo->nombre_equipo ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->usuarioAsignado->nombre ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->tipo_mantenimiento }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->estado_mantenimiento }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->fecha_ejecucion ? \Carbon\Carbon::parse($mantenimiento->fecha_ejecucion)->format('d/m/Y') : '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->evidencia_pdf ? 'Sí' : 'No' }}</td>
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="w-12 px-3 py-4 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $mantenimiento->id_mantenimiento }}</td>
+                            <td class="w-28 px-3 py-4 text-center text-sm font-mono font-semibold text-slate-800 whitespace-nowrap">
+                                {{ \Carbon\Carbon::parse($mantenimiento->fecha_programada)->format('d/m/Y') }}
+                            </td>
+                            <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
+                                <div class="font-semibold text-slate-900">{{ $mantenimiento->activo->nombre_equipo ?? '-' }}</div>
+                                @if($mantenimiento->activo && $mantenimiento->activo->codigo_patrimonial)
+                                    <div class="text-xs text-slate-400 font-mono">{{ $mantenimiento->activo->codigo_patrimonial }}</div>
+                                @endif
+                            </td>
+                            <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
+                                @php
+                                    $origenNombre = $mantenimiento->origenMantenimiento->nombre ?? 'Preventivo';
+                                    $origenBadge = match($mantenimiento->fk_id_origen) {
+                                        2 => 'bg-amber-100 text-amber-800 border-amber-200',
+                                        3 => 'bg-rose-100 text-rose-800 border-rose-200',
+                                        default => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $origenBadge }}">
+                                    {{ $origenNombre }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-4 text-left text-sm text-slate-700 whitespace-nowrap font-medium">
+                                {{ $mantenimiento->tipo_mantenimiento }}
+                            </td>
+                            <td class="px-3 py-4 text-left text-sm text-slate-700 whitespace-nowrap">
+                                {{ $mantenimiento->usuarioAsignado ? $mantenimiento->usuarioAsignado->nombre . ' ' . ($mantenimiento->usuarioAsignado->apellido ?? '') : '-' }}
+                            </td>
+                            <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
+                                @php
+                                    $st = strtolower(trim($mantenimiento->estado_mantenimiento ?? ''));
+                                    $badgeStyle = match(true) {
+                                        str_contains($st, 'finalizado') || str_contains($st, 'completado') => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                                        str_contains($st, 'ejecución') => 'bg-blue-100 text-blue-800 border-blue-200',
+                                        str_contains($st, 'pendiente') => 'bg-rose-100 text-rose-800 border-rose-200',
+                                        default => 'bg-amber-100 text-amber-800 border-amber-200',
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border {{ $badgeStyle }}">
+                                    {{ $mantenimiento->estado_mantenimiento }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-4 text-center text-sm font-mono text-slate-700 whitespace-nowrap">
+                                {{ $mantenimiento->fecha_ejecucion ? \Carbon\Carbon::parse($mantenimiento->fecha_ejecucion)->format('d/m/Y') : '-' }}
+                            </td>
+                            <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <a href="{{ route('admin.mantenimiento.show', $mantenimiento->id_mantenimiento) }}" 
+                                       class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                       title="Ver vista completa de detalles del mantenimiento">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Ver más
+                                    </a>
+
+                                    <button type="button" 
+                                            onclick="openUpdateModal({{ $mantenimiento->id_mantenimiento }}, '{{ addslashes($mantenimiento->estado_mantenimiento) }}', '{{ addslashes($mantenimiento->descripcion_trabajo) }}')" 
+                                            class="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                            title="Cambiar estado del mantenimiento">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Editar
+                                    </button>
+
+                                    @if($mantenimiento->evidencia_pdf)
+                                        <a href="{{ Storage::url($mantenimiento->evidencia_pdf) }}" target="_blank" 
+                                           class="inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                           title="Ver PDF adjunto">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V7.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 1H7a2 2 0 00-2 2v16a2 2 0 002 2z" />
+                                            </svg>
+                                            PDF
+                                        </a>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">No hay mantenimientos para mostrar.</td>
+                            <td colspan="9" class="px-6 py-12 text-center text-slate-500">
+                                @if(request('buscar'))
+                                    No se encontraron mantenimientos que coincidan con la búsqueda.
+                                @else
+                                    No hay mantenimientos registrados en el historial.
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -65,4 +201,72 @@
         {{ $mantenimientos->links() }}
     </div>
 </div>
+
+<!-- Modal para Editar Estado del Mantenimiento -->
+<div id="updateModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm transition-all duration-200">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 border border-slate-100 transform transition-all scale-95 opacity-0" id="updateModalCard">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-lg font-bold text-slate-900">Editar Estado de Mantenimiento</h3>
+            <button type="button" onclick="closeUpdateModal()" class="text-slate-400 hover:text-slate-600 transition">✕</button>
+        </div>
+
+        <form id="updateForm" method="POST" action="">
+            @csrf
+            @method('PUT')
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado del Mantenimiento <span class="text-rose-500">*</span></label>
+                    <select id="update_estado_mantenimiento" name="estado_mantenimiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="Programado">Programado</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="En ejecución">En ejecución</option>
+                        <option value="Finalizado">Finalizado</option>
+                        <option value="Cancelado">Cancelado</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Descripción / Observaciones del trabajo</label>
+                    <textarea id="update_descripcion_trabajo" name="descripcion_trabajo" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
+                <button type="button" onclick="closeUpdateModal()" class="px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openUpdateModal(id, estado, descripcion) {
+        var form = document.getElementById('updateForm');
+        form.action = '/admin/mantenimiento/' + id;
+
+        document.getElementById('update_estado_mantenimiento').value = estado;
+        document.getElementById('update_descripcion_trabajo').value = descripcion;
+
+        var modal = document.getElementById('updateModal');
+        var card = document.getElementById('updateModalCard');
+        modal.classList.remove('hidden');
+        setTimeout(function () {
+            card.classList.remove('scale-95', 'opacity-0');
+            card.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeUpdateModal() {
+        var modal = document.getElementById('updateModal');
+        var card = document.getElementById('updateModalCard');
+        card.classList.remove('scale-100', 'opacity-100');
+        card.classList.add('scale-95', 'opacity-0');
+        setTimeout(function () {
+            modal.classList.add('hidden');
+        }, 150);
+    }
+</script>
 @endsection

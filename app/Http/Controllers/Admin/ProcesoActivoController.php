@@ -7,6 +7,7 @@ use App\Models\ActivoTecnologico;
 use App\Models\EvaluacionRiesgo;
 use App\Models\Incidente;
 use App\Models\Mantenimiento;
+use App\Models\OrigenMantenimiento;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -113,20 +114,34 @@ class ProcesoActivoController extends Controller
         return redirect()->back()->with('success', 'Estado del incidente actualizado con éxito');
     }
 
-    public function mantenimientoIndex()
-    {
-        $mantenimientos = Mantenimiento::with(['activo:id_activo,nombre_equipo,codigo_patrimonial', 'usuarioAsignado:id_usuario,nombre', 'evaluacionOrigen'])
-            ->orderByDesc('fecha_programada')
-            ->paginate(15);
+    // ─────────────────────────────────────────────
+    //  MANTENIMIENTO
+    // ─────────────────────────────────────────────
 
+    public function mantenimientoIndex(Request $request)
+    {
         $activos = ActivoTecnologico::select('id_activo', 'nombre_equipo', 'codigo_patrimonial')->orderBy('id_activo')->get();
-        $usuarios = Usuario::select('id_usuario', 'nombre')->orderBy('nombre')->get();
+        $usuarios = Usuario::select('id_usuario', 'nombre', 'apellido')->orderBy('nombre')->get();
+        $origenes = OrigenMantenimiento::orderBy('id_origen')->get();
         $evaluaciones = EvaluacionRiesgo::with('activo:id_activo,nombre_equipo')
             ->select('id_evaluacion', 'fk_id_activo', 'nivel_riesgo', 'score_calculado', 'fecha_evaluacion')
             ->orderByDesc('fecha_evaluacion')
             ->get();
+        $incidentes = Incidente::with('activo:id_activo,nombre_equipo')
+            ->select('id_incidente', 'fk_id_activo', 'descripcion_falla', 'estado_incidente', 'fecha_incidente')
+            ->orderByDesc('fecha_incidente')
+            ->get();
 
-        return view('mantenimiento.programar', compact('mantenimientos', 'activos', 'usuarios', 'evaluaciones'));
+        // Prellenado automático desde query params
+        $preOrigen = $request->query('origen');
+        $preEvaluacionId = $request->query('evaluacion_id');
+        $preIncidenteId = $request->query('incidente_id');
+        $preActivoId = $request->query('activo_id');
+
+        return view('mantenimiento.programar', compact(
+            'activos', 'usuarios', 'origenes', 'evaluaciones', 'incidentes',
+            'preOrigen', 'preEvaluacionId', 'preIncidenteId', 'preActivoId'
+        ));
     }
 
     public function mantenimientoStore(Request $request)
@@ -135,6 +150,7 @@ class ProcesoActivoController extends Controller
             'fk_id_activo' => 'required|integer|exists:activos_tecnologicos,id_activo',
             'fk_id_usuario_asignado' => 'required|integer|exists:usuarios,id_usuario',
             'id_evaluacion_origen' => 'nullable|integer|exists:evaluacion_riesgo,id_evaluacion',
+            'fk_id_incidente' => 'nullable|integer|exists:incidentes,id_incidente',
             'tipo_mantenimiento' => 'required|string|max:255',
             'fecha_programada' => 'required|date',
             'fecha_ejecucion' => 'nullable|date',
@@ -142,6 +158,19 @@ class ProcesoActivoController extends Controller
             'estado_mantenimiento' => 'required|string|max:255',
             'evidencia_pdf' => 'nullable|file|mimes:pdf|max:5120',
         ]);
+
+        // Determinar automáticamente el origen según la presencia de evaluación o incidente
+        if (!empty($data['fk_id_incidente'])) {
+            $data['fk_id_origen'] = 3; // Incidente
+            $data['id_evaluacion_origen'] = null;
+        } elseif (!empty($data['id_evaluacion_origen'])) {
+            $data['fk_id_origen'] = 2; // Evaluación de riesgos
+            $data['fk_id_incidente'] = null;
+        } else {
+            $data['fk_id_origen'] = 1; // Preventivo
+            $data['id_evaluacion_origen'] = null;
+            $data['fk_id_incidente'] = null;
+        }
 
         if ($request->hasFile('evidencia_pdf')) {
             $data['evidencia_pdf'] = $request->file('evidencia_pdf')->store('mantenimientos', 'public');
@@ -152,17 +181,78 @@ class ProcesoActivoController extends Controller
         return redirect()->route('admin.mantenimiento.programar')->with('success', 'Mantenimiento registrado con éxito');
     }
 
-    public function mantenimientoHistorial(Request $request)
+    public function mantenimientoCronograma(Request $request)
     {
-        $query = Mantenimiento::with(['activo', 'usuarioAsignado', 'evaluacionOrigen']);
+        $tresDiasDespues = \Carbon\Carbon::now()->addDays(3)->endOfDay();
+
+        $alertasProx3Dias = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'origenMantenimiento'])
+            ->whereNotIn('estado_mantenimiento', ['Finalizado', 'Cancelado', 'Completado'])
+            ->where('fecha_programada', '<=', $tresDiasDespues)
+            ->orderBy('fecha_programada')
+            ->get();
+
+        $query = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'origenMantenimiento', 'evaluacionOrigen', 'incidente']);
 
         if ($buscar = $request->input('buscar')) {
             $query->where(function ($q) use ($buscar) {
                 $q->where('tipo_mantenimiento', 'like', "%{$buscar}%")
                   ->orWhere('estado_mantenimiento', 'like', "%{$buscar}%")
                   ->orWhere('descripcion_trabajo', 'like', "%{$buscar}%")
-                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%"))
-                  ->orWhereHas('usuarioAsignado', fn($u) => $u->where('nombre', 'like', "%{$buscar}%"));
+                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%")->orWhere('codigo_patrimonial', 'like', "%{$buscar}%"))
+                  ->orWhereHas('usuarioAsignado', fn($u) => $u->where('nombre', 'like', "%{$buscar}%")->orWhere('apellido', 'like', "%{$buscar}%"))
+                  ->orWhereHas('origenMantenimiento', fn($o) => $o->where('nombre', 'like', "%{$buscar}%"));
+            });
+        }
+
+        $mantenimientos = $query->orderBy('fecha_programada')->get();
+
+        return view('mantenimiento.cronograma', compact('mantenimientos', 'alertasProx3Dias'));
+    }
+
+    public function mantenimientoUpdate(Request $request, $id)
+    {
+        $mantenimiento = Mantenimiento::findOrFail($id);
+
+        $data = $request->validate([
+            'estado_mantenimiento' => 'required|string|max:255',
+            'descripcion_trabajo' => 'nullable|string',
+        ]);
+
+        if (in_array($data['estado_mantenimiento'], ['Finalizado', 'Completado']) && !$mantenimiento->fecha_ejecucion) {
+            $data['fecha_ejecucion'] = date('Y-m-d');
+        }
+
+        $mantenimiento->update($data);
+
+        return redirect()->back()->with('success', 'Mantenimiento actualizado con éxito');
+    }
+
+    public function mantenimientoShow($id)
+    {
+        $mantenimiento = Mantenimiento::with([
+            'activo.categoria', 
+            'activo.ubicacion', 
+            'usuarioAsignado.rol', 
+            'origenMantenimiento', 
+            'evaluacionOrigen.activo', 
+            'incidente.usuarioReporta'
+        ])->findOrFail($id);
+
+        return view('mantenimiento.show', compact('mantenimiento'));
+    }
+
+    public function mantenimientoHistorial(Request $request)
+    {
+        $query = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'origenMantenimiento', 'evaluacionOrigen', 'incidente']);
+
+        if ($buscar = $request->input('buscar')) {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('tipo_mantenimiento', 'like', "%{$buscar}%")
+                  ->orWhere('estado_mantenimiento', 'like', "%{$buscar}%")
+                  ->orWhere('descripcion_trabajo', 'like', "%{$buscar}%")
+                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%")->orWhere('codigo_patrimonial', 'like', "%{$buscar}%"))
+                  ->orWhereHas('usuarioAsignado', fn($u) => $u->where('nombre', 'like', "%{$buscar}%")->orWhere('apellido', 'like', "%{$buscar}%"))
+                  ->orWhereHas('origenMantenimiento', fn($o) => $o->where('nombre', 'like', "%{$buscar}%"));
             });
         }
 

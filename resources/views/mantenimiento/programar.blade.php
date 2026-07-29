@@ -1,125 +1,272 @@
 @extends('layouts.principal')
 
-@section('title','Mantenimiento - Programar')
+@section('title', 'Registrar Mantenimiento')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
-    <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition" aria-label="Volver" title="Volver">
-            <span aria-hidden="true">&#8592;</span>
-        </a>
-        <div>
-            <h2 class="text-2xl font-semibold">Mantenimiento</h2>
-            <p class="text-sm text-gray-500">Programa y registra el mantenimiento de los activos</p>
+<div class="max-w-5xl mx-auto space-y-6">
+
+    {{-- Encabezado --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <a href="{{ url()->previous() != url()->current() ? url()->previous() : route('admin.mantenimiento.cronograma') }}" 
+               class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" 
+               aria-label="Volver" title="Volver">
+                <span aria-hidden="true">&#8592;</span>
+            </a>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Registrar Mantenimiento</h2>
+                <p class="text-xs text-slate-500">Programa y registra la atención técnica preventiva o correctiva de un activo</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <a href="{{ route('admin.mantenimiento.cronograma') }}" class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3.5 py-2.5 rounded-xl transition">
+                Ver Cronograma
+            </a>
+            <a href="{{ route('admin.mantenimiento.historial') }}" class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3.5 py-2.5 rounded-xl transition">
+                Ver Historial
+            </a>
         </div>
     </div>
 
     @if(session('success'))
-        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
-            {{ session('success') }}
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl flex items-center gap-2 text-sm shadow-sm">
+            <span class="font-bold">✓</span> {{ session('success') }}
         </div>
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-white rounded-lg p-5 shadow">
-            <h3 class="text-lg font-medium mb-4">Programar mantenimiento</h3>
-            <form method="POST" action="{{ route('admin.mantenimiento.programar.store') }}" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                @csrf
-                <div>
-                    <label class="block text-sm mb-1">Activo</label>
-                    <select name="fk_id_activo" class="w-full border px-3 py-2.5 text-sm rounded" required>
-                        <option value="">Seleccione un activo</option>
-                        @foreach($activos as $activo)
-                            <option value="{{ $activo->id_activo }}">{{ $activo->id_activo }} - {{ $activo->nombre_equipo }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Usuario asignado</label>
-                    <select name="fk_id_usuario_asignado" class="w-full border px-3 py-2.5 text-sm rounded" required>
-                        <option value="">Seleccione un usuario</option>
-                        @foreach($usuarios as $usuario)
-                            <option value="{{ $usuario->id_usuario }}">{{ $usuario->nombre }} {{ $usuario->apellido ?? '' }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm mb-1">Evaluación origen</label>
-                    <select name="id_evaluacion_origen" class="w-full border px-3 py-2.5 text-sm rounded">
-                        <option value="">Sin evaluación de origen</option>
-                        @foreach($evaluaciones as $evaluacion)
-                            <option value="{{ $evaluacion->id_evaluacion }}">Evaluación #{{ $evaluacion->id_evaluacion }} - {{ $evaluacion->activo->nombre_equipo ?? 'Activo' }} - {{ $evaluacion->nivel_riesgo }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Tipo</label>
-                    <input name="tipo_mantenimiento" class="w-full border px-3 py-2.5 text-sm rounded" placeholder="Preventivo / Correctivo / Programado" required />
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Estado</label>
-                    <select name="estado_mantenimiento" class="w-full border px-3 py-2.5 text-sm rounded" required>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Programado">Programado</option>
-                        <option value="En ejecución">En ejecución</option>
-                        <option value="Finalizado">Finalizado</option>
-                        <option value="Cancelado">Cancelado</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Fecha programada</label>
-                    <input name="fecha_programada" type="date" class="w-full border px-3 py-2.5 text-sm rounded" required />
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Fecha de ejecución</label>
-                    <input name="fecha_ejecucion" type="date" class="w-full border px-3 py-2.5 text-sm rounded" />
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm mb-1">Evidencia PDF</label>
-                    <input type="file" name="evidencia_pdf" accept="application/pdf" class="w-full border px-3 py-2.5 text-sm rounded bg-white" />
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm mb-1">Descripción del trabajo</label>
-                    <textarea name="descripcion_trabajo" rows="4" class="w-full border px-3 py-2.5 text-sm rounded"></textarea>
-                </div>
-                <div class="md:col-span-2 flex justify-end gap-3">
-                    <a href="{{ route('admin.mantenimiento.historial') }}" class="inline-flex items-center px-4 py-2.5 rounded text-sm border border-gray-300 text-gray-700 hover:bg-gray-50">Ver historial</a>
-                    <button class="bg-blue-600 text-white px-4 py-2.5 rounded text-sm">Guardar mantenimiento</button>
-                </div>
-            </form>
+    @if($errors->any())
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 space-y-1 shadow-sm">
+            <div class="font-semibold text-sm">Por favor corrige los siguientes errores:</div>
+            <ul class="list-disc list-inside text-xs space-y-0.5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
+    @endif
 
-        <div class="bg-white rounded shadow overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h3 class="text-lg font-semibold">Próximos mantenimientos</h3>
+    {{-- Banner Informativo del Origen Vinculado (si vino desde Incidente o Evaluación) --}}
+    @if($preIncidenteId)
+        <div class="bg-rose-50 border border-rose-200 text-rose-900 px-4 py-3 rounded-2xl flex items-center justify-between text-xs shadow-sm">
+            <div class="flex items-center gap-2 font-medium">
+                <span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+                <span>Mantenimiento autovinculado al <strong>Incidente #{{ $preIncidenteId }}</strong> (Origen: Incidente).</span>
             </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activo</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($mantenimientos as $mantenimiento)
-                            <tr>
-                                <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{{ \Carbon\Carbon::parse($mantenimiento->fecha_programada)->format('d/m/Y') }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->activo->nombre_equipo ?? '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->tipo_mantenimiento }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-700">{{ $mantenimiento->estado_mantenimiento }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500">No hay mantenimientos registrados todavía.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <span class="font-bold text-[11px] bg-rose-200/80 px-2 py-0.5 rounded-full">Origen Automático</span>
+        </div>
+    @elseif($preEvaluacionId)
+        <div class="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-2xl flex items-center justify-between text-xs shadow-sm">
+            <div class="flex items-center gap-2 font-medium">
+                <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                <span>Mantenimiento autovinculado a la <strong>Evaluación de Riesgo #{{ $preEvaluacionId }}</strong> (Origen: Evaluación de riesgos).</span>
+            </div>
+            <span class="font-bold text-[11px] bg-amber-200/80 px-2 py-0.5 rounded-full">Origen Automático</span>
+        </div>
+    @else
+        <div class="bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-2xl flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                <span>Origen detectado automáticamente: <strong>Preventivo</strong> (se actualizará a Evaluación o Incidente si selecciona uno abajo).</span>
             </div>
         </div>
+    @endif
+
+    {{-- Formulario --}}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <form method="POST" action="{{ route('admin.mantenimiento.programar.store') }}" enctype="multipart/form-data" class="space-y-6" id="formMantenimiento">
+            @csrf
+
+            <div class="border-b border-slate-100 pb-4 mb-2">
+                <h3 class="text-lg font-bold text-slate-900">Formulario de Registro de Mantenimiento</h3>
+                <p class="text-xs text-slate-500">Complete los datos requeridos. El origen del mantenimiento se asignará automáticamente según la vinculación.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                {{-- Activo Tecnológico --}}
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Activo Tecnológico <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="fk_id_activo" id="selectActivo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="">-- Seleccionar Activo --</option>
+                        @foreach($activos as $activo)
+                            <option value="{{ $activo->id_activo }}" {{ old('fk_id_activo', $preActivoId) == $activo->id_activo ? 'selected' : '' }}>
+                                {{ $activo->codigo_patrimonial ? '['.$activo->codigo_patrimonial.'] - ' : '' }}{{ $activo->nombre_equipo }} (ID: {{ $activo->id_activo }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Técnico / Usuario Asignado --}}
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Técnico / Usuario Asignado <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="fk_id_usuario_asignado" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="">-- Seleccionar Responsable --</option>
+                        @foreach($usuarios as $usuario)
+                            <option value="{{ $usuario->id_usuario }}" {{ old('fk_id_usuario_asignado') == $usuario->id_usuario ? 'selected' : '' }}>
+                                {{ $usuario->nombre }} {{ $usuario->apellido ?? '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Vinculación opcional a Incidente o Evaluación (si no venía prellenado) --}}
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Vincular a Incidente <span class="text-slate-400 font-normal">(Opcional)</span>
+                    </label>
+                    <select name="fk_id_incidente" id="selectIncidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                        <option value="">-- Sin Incidente (Origen Preventivo / Evaluación) --</option>
+                        @foreach($incidentes as $inc)
+                            <option value="{{ $inc->id_incidente }}" 
+                                    data-activo="{{ $inc->fk_id_activo }}"
+                                    {{ old('fk_id_incidente', $preIncidenteId) == $inc->id_incidente ? 'selected' : '' }}>
+                                Incidente #{{ $inc->id_incidente }} - {{ $inc->activo->nombre_equipo ?? 'Activo' }} ({{ $inc->estado_incidente }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Vincular a Evaluación de Riesgo FMEA <span class="text-slate-400 font-normal">(Opcional)</span>
+                    </label>
+                    <select name="id_evaluacion_origen" id="selectEvaluacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                        <option value="">-- Sin Evaluación FMEA --</option>
+                        @foreach($evaluaciones as $evaluacion)
+                            <option value="{{ $evaluacion->id_evaluacion }}" 
+                                    data-activo="{{ $evaluacion->fk_id_activo }}"
+                                    {{ old('id_evaluacion_origen', $preEvaluacionId) == $evaluacion->id_evaluacion ? 'selected' : '' }}>
+                                Evaluación #{{ $evaluacion->id_evaluacion }} - {{ $evaluacion->activo->nombre_equipo ?? 'Activo' }} (Riesgo: {{ $evaluacion->nivel_riesgo }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Tipo de Mantenimiento --}}
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Tipo de Mantenimiento <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="tipo_mantenimiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="Preventivo" {{ old('tipo_mantenimiento') == 'Preventivo' ? 'selected' : '' }}>Preventivo</option>
+                        <option value="Correctivo" {{ old('tipo_mantenimiento') == 'Correctivo' ? 'selected' : '' }}>Correctivo</option>
+                        <option value="Programado" {{ old('tipo_mantenimiento') == 'Programado' ? 'selected' : '' }}>Programado</option>
+                        <option value="Inspección" {{ old('tipo_mantenimiento') == 'Inspección' ? 'selected' : '' }}>Inspección / Evaluación Técnica</option>
+                    </select>
+                </div>
+
+                {{-- Estado --}}
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Estado Inicial <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="estado_mantenimiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="Programado" {{ old('estado_mantenimiento') == 'Programado' ? 'selected' : '' }}>Programado</option>
+                        <option value="Pendiente" {{ old('estado_mantenimiento') == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
+                        <option value="En ejecución" {{ old('estado_mantenimiento') == 'En ejecución' ? 'selected' : '' }}>En ejecución</option>
+                        <option value="Finalizado" {{ old('estado_mantenimiento') == 'Finalizado' ? 'selected' : '' }}>Finalizado</option>
+                    </select>
+                </div>
+
+                {{-- Fecha Programada --}}
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Fecha Programada <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="date" name="fecha_programada" value="{{ old('fecha_programada', date('Y-m-d')) }}" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required />
+                </div>
+
+                {{-- Fecha de Ejecución --}}
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Fecha Real de Ejecución <span class="text-slate-400 font-normal">(Opcional)</span>
+                    </label>
+                    <input type="date" name="fecha_ejecucion" value="{{ old('fecha_ejecucion') }}" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                </div>
+
+                {{-- Evidencia PDF --}}
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Evidencia Adjunta (PDF) <span class="text-slate-400 font-normal">(Opcional)</span>
+                    </label>
+                    <input type="file" name="evidencia_pdf" accept="application/pdf" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-700 focus:outline-none focus:border-blue-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition" />
+                </div>
+
+                {{-- Descripción --}}
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Descripción del Trabajo / Observaciones
+                    </label>
+                    <textarea name="descripcion_trabajo" rows="4" 
+                              placeholder="Detalle el alcance del mantenimiento, repuestos necesarios, tareas preventivas a ejecutar o procedimiento técnico..." 
+                              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition leading-relaxed">{{ old('descripcion_trabajo') }}</textarea>
+                </div>
+
+            </div>
+
+            {{-- Botones --}}
+            <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+                <a href="{{ route('admin.mantenimiento.cronograma') }}" 
+                   class="px-5 py-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-6 py-2.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-200 transition">
+                    Guardar Mantenimiento
+                </button>
+            </div>
+
+        </form>
     </div>
+
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var selectActivo = document.getElementById('selectActivo');
+    var selectEvaluacion = document.getElementById('selectEvaluacion');
+    var selectIncidente = document.getElementById('selectIncidente');
+
+    // Mutual exclusion: if incident is chosen, clear evaluation; if evaluation is chosen, clear incident
+    selectIncidente.addEventListener('change', function() {
+        var selected = this.options[this.selectedIndex];
+        if (this.value) {
+            selectEvaluacion.value = '';
+            if (selected.dataset.activo) {
+                selectActivo.value = selected.dataset.activo;
+            }
+        }
+    });
+
+    selectEvaluacion.addEventListener('change', function() {
+        var selected = this.options[this.selectedIndex];
+        if (this.value) {
+            selectIncidente.value = '';
+            if (selected.dataset.activo) {
+                selectActivo.value = selected.dataset.activo;
+            }
+        }
+    });
+
+    // Auto-fill active on load if pre-selected
+    if (selectIncidente.value) {
+        var selInc = selectIncidente.options[selectIncidente.selectedIndex];
+        if (selInc && selInc.dataset.activo) {
+            selectActivo.value = selInc.dataset.activo;
+        }
+    } else if (selectEvaluacion.value) {
+        var selEval = selectEvaluacion.options[selectEvaluacion.selectedIndex];
+        if (selEval && selEval.dataset.activo) {
+            selectActivo.value = selEval.dataset.activo;
+        }
+    }
+});
+</script>
 @endsection

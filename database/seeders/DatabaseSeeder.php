@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\OrigenMantenimiento;
 use App\Models\Rol;
 use App\Models\Usuario;
 use Illuminate\Database\Seeder;
@@ -64,6 +65,21 @@ class DatabaseSeeder extends Seeder
             );
         }
 
+        // Orígenes de Mantenimiento
+        $origenes = [
+            1 => 'Preventivo',
+            2 => 'Evaluación de riesgos',
+            3 => 'Incidente',
+        ];
+
+        foreach ($origenes as $id => $nombre) {
+            OrigenMantenimiento::firstOrCreate(
+                ['id_origen' => $id],
+                ['nombre' => $nombre]
+            );
+        }
+
         $this->call(DatosPruebaSeeder::class);
     }
 }
+

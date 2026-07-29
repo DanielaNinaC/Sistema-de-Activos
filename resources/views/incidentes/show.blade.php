@@ -55,8 +55,8 @@
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xl shadow-inner">
-                    📋
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
+                    ID
                 </div>
                 <div>
                     <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Estado de Atención Actual</span>
@@ -98,7 +98,6 @@
                 <div class="p-4 rounded-xl border {{ $isReportado ? 'bg-rose-50 border-rose-200 text-rose-900 shadow-sm font-bold' : 'bg-slate-50 border-slate-200 text-slate-600' }}">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs uppercase tracking-wider">1. Reportado</span>
-                        <span class="text-xs">📌</span>
                     </div>
                     <p class="text-[11px] opacity-80">Incidente registrado en el sistema</p>
                 </div>
@@ -106,7 +105,6 @@
                 <div class="p-4 rounded-xl border {{ $isProceso ? 'bg-blue-600 border-blue-600 text-white shadow-md font-bold' : ($isEspera || $isResuelto ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-slate-50 border-slate-200 text-slate-400') }}">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs uppercase tracking-wider">2. En Proceso</span>
-                        <span class="text-xs">⚙️</span>
                     </div>
                     <p class="text-[11px] opacity-80">En atención por servicio técnico</p>
                 </div>
@@ -114,7 +112,6 @@
                 <div class="p-4 rounded-xl border {{ $isEspera ? 'bg-amber-500 border-amber-500 text-white shadow-md font-bold' : ($isResuelto ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-slate-50 border-slate-200 text-slate-400') }}">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs uppercase tracking-wider">3. En Espera</span>
-                        <span class="text-xs">⏳</span>
                     </div>
                     <p class="text-[11px] opacity-80">Repuestos o evaluación en espera</p>
                 </div>
@@ -122,7 +119,6 @@
                 <div class="p-4 rounded-xl border {{ $isResuelto ? 'bg-emerald-600 border-emerald-600 text-white shadow-md font-bold' : 'bg-slate-50 border-slate-200 text-slate-400' }}">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs uppercase tracking-wider">4. Resuelto / Cerrado</span>
-                        <span class="text-xs">✅</span>
                     </div>
                     <p class="text-[11px] opacity-80">Incidente solucionado y archivado</p>
                 </div>
@@ -138,8 +134,8 @@
             <!-- Card Descripción de Falla -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                        📝 Descripción de la Falla y Observaciones
+                    <h3 class="text-base font-bold text-slate-900">
+                        Descripción de la Falla y Observaciones
                     </h3>
                 </div>
 
@@ -151,8 +147,8 @@
             <!-- Card Activo Tecnológico Afectado -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                        💻 Activo Tecnológico Afectado
+                    <h3 class="text-base font-bold text-slate-900">
+                        Activo Tecnológico Afectado
                     </h3>
                     @if($incidente->activo)
                         <a href="{{ route('admin.activos.show', $incidente->activo->id_activo) }}" class="text-xs text-blue-600 hover:text-blue-700 font-semibold transition flex items-center gap-1">
@@ -215,8 +211,8 @@
 
             <!-- Card Datos del Reportante -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-                <h3 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-                    👤 Usuario que Reporta
+                <h3 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
+                    Usuario que Reporta
                 </h3>
 
                 <div class="space-y-3 text-sm">
@@ -246,7 +242,7 @@
             <!-- Card Resumen Técnico del Caso -->
             <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl text-white p-6 space-y-4 shadow-md">
                 <h4 class="text-sm font-bold uppercase tracking-wider border-b border-slate-700/60 pb-2 text-slate-300">
-                    ℹ️ Ficha Resumen
+                    Ficha Resumen
                 </h4>
                 <div class="space-y-2.5 text-xs">
                     <div class="flex justify-between">

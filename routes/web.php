@@ -50,7 +50,10 @@ Route::middleware('auth')->group(function () {
             Route::put('/incidentes/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'incidentesUpdate'])->name('incidentes.update');
             Route::get('/mantenimiento/programar', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoIndex'])->name('mantenimiento.programar');
             Route::post('/mantenimiento/programar', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoStore'])->name('mantenimiento.programar.store');
+            Route::get('/mantenimiento/cronograma', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoCronograma'])->name('mantenimiento.cronograma');
             Route::get('/mantenimiento/historial', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoHistorial'])->name('mantenimiento.historial');
+            Route::get('/mantenimiento/detalles/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoShow'])->name('mantenimiento.show');
+            Route::put('/mantenimiento/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoUpdate'])->name('mantenimiento.update');
             Route::get('/riesgos/modos-falla', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'modosIndex'])->name('riesgos.modos');
             Route::post('/riesgos/modos-falla', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'modosStore'])->name('riesgos.modos.store');
             Route::get('/riesgos/evaluacion-fmea', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'evaluacionIndex'])->name('riesgos.evaluacion');
