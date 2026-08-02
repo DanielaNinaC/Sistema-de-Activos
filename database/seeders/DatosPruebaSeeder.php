@@ -149,13 +149,13 @@ class DatosPruebaSeeder extends Seeder
             ],
         ]);
 
-        // 8. Modos de Falla
+        // 8. Modos de Falla (con valores base de Severidad y MSR)
         DB::table('modos_falla')->insertOrIgnore([
-            ['id_modo_falla' => 1, 'fk_id_categoria' => 1, 'nombre_modo_falla' => 'Caída del sistema operativo'],
-            ['id_modo_falla' => 2, 'fk_id_categoria' => 3, 'nombre_modo_falla' => 'Atasco de papel mecánico'],
-            ['id_modo_falla' => 3, 'fk_id_categoria' => 4, 'nombre_modo_falla' => 'Falla de lámpara'],
-            ['id_modo_falla' => 4, 'fk_id_categoria' => 2, 'nombre_modo_falla' => 'Falla de disco duro'],
-            ['id_modo_falla' => 5, 'fk_id_categoria' => 5, 'nombre_modo_falla' => 'Pérdida de conectividad de red'],
+            ['id_modo_falla' => 1, 'fk_id_categoria' => 1, 'nombre_modo_falla' => 'Caída del sistema operativo', 'valor_severidad_base' => 10, 'valor_msr_base' => 4],
+            ['id_modo_falla' => 2, 'fk_id_categoria' => 3, 'nombre_modo_falla' => 'Atasco de papel mecánico', 'valor_severidad_base' => 3, 'valor_msr_base' => 9],
+            ['id_modo_falla' => 3, 'fk_id_categoria' => 4, 'nombre_modo_falla' => 'Falla de lámpara', 'valor_severidad_base' => 5, 'valor_msr_base' => 9],
+            ['id_modo_falla' => 4, 'fk_id_categoria' => 2, 'nombre_modo_falla' => 'Falla de disco duro', 'valor_severidad_base' => 8, 'valor_msr_base' => 6],
+            ['id_modo_falla' => 5, 'fk_id_categoria' => 5, 'nombre_modo_falla' => 'Pérdida de conectividad de red', 'valor_severidad_base' => 8, 'valor_msr_base' => 2],
         ]);
 
         // 9. Evaluación de Riesgo

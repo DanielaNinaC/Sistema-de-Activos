@@ -50,4 +50,19 @@ class ActivoTecnologico extends Model
     {
         return $this->hasOne(DetalleProyector::class, 'fk_id_activo', 'id_activo');
     }
+
+    public function incidentes()
+    {
+        return $this->hasMany(Incidente::class, 'fk_id_activo', 'id_activo');
+    }
+
+    public function evaluaciones()
+    {
+        return $this->hasMany(EvaluacionRiesgo::class, 'fk_id_activo', 'id_activo');
+    }
+
+    public function mantenimientos()
+    {
+        return $this->hasMany(Mantenimiento::class, 'fk_id_activo', 'id_activo');
+    }
 }

@@ -21,4 +21,9 @@ class Categoria extends Model
     {
         return $this->hasMany(ActivoTecnologico::class, 'fk_id_categoria', 'id_categoria');
     }
+
+    public function modosFalla()
+    {
+        return $this->hasMany(ModoFalla::class, 'fk_id_categoria', 'id_categoria');
+    }
 }

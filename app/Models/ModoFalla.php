@@ -15,6 +15,8 @@ class ModoFalla extends Model
     protected $fillable = [
         'fk_id_categoria',
         'nombre_modo_falla',
+        'valor_severidad_base',
+        'valor_msr_base',
     ];
 
     public function categoria()

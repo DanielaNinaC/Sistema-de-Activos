@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('fk_id_rol');
             $table->foreign('fk_id_rol')->references('id_rol')->on('roles')->onDelete('cascade');
             $table->string('nombre');
-            $table->string('apellido');
+            $table->string('apellido')->nullable();
             $table->string('correo')->unique();
             $table->string('contrasena');
             $table->boolean('estado')->default(true);

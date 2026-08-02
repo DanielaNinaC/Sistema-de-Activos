@@ -10,6 +10,7 @@ use App\Models\EvaluacionRiesgo;
 use App\Models\ModoFalla;
 use App\Models\PesoAhp;
 use App\Models\PlanTratamientoRiesgo;
+use App\Services\MotorFmeaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -54,6 +55,8 @@ class ProcesoRiesgoController extends Controller
         $data = $request->validate([
             'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
             'nombre_modo_falla' => 'required|string|max:255',
+            'valor_severidad_base' => 'nullable|integer|min:1|max:10',
+            'valor_msr_base' => 'nullable|integer|min:1|max:10',
         ]);
 
         ModoFalla::create($data);
@@ -68,6 +71,8 @@ class ProcesoRiesgoController extends Controller
         $data = $request->validate([
             'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
             'nombre_modo_falla' => 'required|string|max:255',
+            'valor_severidad_base' => 'nullable|integer|min:1|max:10',
+            'valor_msr_base' => 'nullable|integer|min:1|max:10',
         ]);
 
         $modo->update($data);
@@ -75,14 +80,43 @@ class ProcesoRiesgoController extends Controller
         return redirect()->route('admin.riesgos.modos')->with('success', 'Modo de falla actualizado con éxito');
     }
 
-    public function evaluacionIndex()
+    public function evaluacionIndex(MotorFmeaService $service)
     {
-        $activos = ActivoTecnologico::orderBy('id_activo')->get();
+        $activos = ActivoTecnologico::with(['categoria', 'incidentes'])->orderBy('id_activo')->get();
+        
+        // Calcular antiguedad y desgaste de cada activo para mostrar en la interfaz
+        foreach ($activos as $act) {
+            $act->antiguedad_meses = $service->calcularAntiguedadMeses($act->fecha_adquisicion);
+            $vidaUtil = max(1, $act->categoria->vida_util_meses ?? 60);
+            $act->porcentaje_desgaste = min(100, round(($act->antiguedad_meses / $vidaUtil) * 100, 1));
+        }
+
         $modos = ModoFalla::with('categoria')->orderBy('id_modo_falla')->get();
         $evaluaciones = EvaluacionRiesgo::with(['activo', 'modoFalla'])->orderByDesc('fecha_evaluacion')->paginate(15);
         $ultimoPeso = PesoAhp::orderByDesc('id_config')->first();
 
         return view('riesgos.evaluacion-fmea', compact('activos', 'modos', 'evaluaciones', 'ultimoPeso'));
+    }
+
+    public function evaluarActivo(Request $request, MotorFmeaService $service)
+    {
+        $request->validate([
+            'fk_id_activo' => 'required|integer|exists:activos_tecnologicos,id_activo',
+        ]);
+
+        $resultado = $service->evaluarActivo($request->input('fk_id_activo'));
+
+        return redirect()->route('admin.riesgos.evaluacion')
+            ->with('success', "Evaluación automatizada FMEA ejecutada con éxito para '{$resultado['activo']->nombre_equipo}'. Max Score: {$resultado['max_score']} (Nivel: {$resultado['criticidad_global']}).")
+            ->with('resultadoMotor', $resultado);
+    }
+
+    public function evaluarTodos(MotorFmeaService $service)
+    {
+        $total = $service->evaluarTodos();
+
+        return redirect()->route('admin.riesgos.evaluacion')
+            ->with('success', "Se han evaluado automáticamente {$total} activos tecnológicos del inventario bajo los estándares ISO 31000 / FMEA-MSR.");
     }
 
     public function evaluacionStore(Request $request)
@@ -111,9 +145,25 @@ class ProcesoRiesgoController extends Controller
         $data['score_calculado'] = $score;
         $data['nivel_riesgo'] = $this->nivelRiesgo($score);
 
-        EvaluacionRiesgo::create($data);
+        $evaluacion = EvaluacionRiesgo::create($data);
 
-        return redirect()->route('admin.riesgos.evaluacion')->with('success', 'Evaluación registrada con éxito');
+        // Actualizar criticidad del activo si es mayor que la actual
+        $maxScore = EvaluacionRiesgo::where('fk_id_activo', $data['fk_id_activo'])->max('score_calculado');
+        $activo = ActivoTecnologico::find($data['fk_id_activo']);
+        if ($activo) {
+            $service = new MotorFmeaService();
+            $info = $service->obtenerNivelYAlerta($maxScore);
+            $activo->update(['criticidad_institucional' => $info['criticidad']]);
+
+            Alerta::create([
+                'fk_id_evaluacion' => $evaluacion->id_evaluacion,
+                'tipo_alerta' => $info['tipo_alerta'],
+                'fecha_generacion' => now(),
+                'notificacion_enviada' => true,
+            ]);
+        }
+
+        return redirect()->route('admin.riesgos.evaluacion')->with('success', 'Evaluación manual registrada con éxito');
     }
 
     public function pesosIndex()
@@ -125,23 +175,32 @@ class ProcesoRiesgoController extends Controller
 
     public function riesgoIndex(Request $request)
     {
-        $query = EvaluacionRiesgo::with(['activo:id_activo,nombre_equipo,codigo_patrimonial', 'modoFalla:id_modo_falla,nombre_modo_falla']);
+        $query = EvaluacionRiesgo::with([
+            'activo:id_activo,nombre_equipo,codigo_patrimonial',
+            'modoFalla:id_modo_falla,nombre_modo_falla'
+        ]);
 
         if ($buscar = $request->input('buscar')) {
             $query->where(function ($q) use ($buscar) {
                 $q->where('nivel_riesgo', 'like', "%{$buscar}%")
-                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%"))
+                  ->orWhere('score_calculado', 'like', "%{$buscar}%")
+                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%")->orWhere('codigo_patrimonial', 'like', "%{$buscar}%"))
                   ->orWhereHas('modoFalla', fn($m) => $m->where('nombre_modo_falla', 'like', "%{$buscar}%"));
             });
         }
 
-        $evaluaciones = $query->orderByDesc('score_calculado')->paginate(15)->withQueryString();
-        $alertas = Alerta::with('evaluacion.activo:id_activo,nombre_equipo')
+        $evaluaciones = $query->orderByDesc('fecha_evaluacion')->paginate(15)->withQueryString();
+        $totalEvaluaciones = EvaluacionRiesgo::count();
+        $totalAlertas = Alerta::count();
+        $totalCritico = EvaluacionRiesgo::where('nivel_riesgo', 'Crítico')->count();
+        $totalAlto = EvaluacionRiesgo::where('nivel_riesgo', 'Alto')->count();
+
+        $alertas = Alerta::with('evaluacion.activo:id_activo,nombre_equipo,codigo_patrimonial')
             ->orderByDesc('fecha_generacion')
-            ->take(20)
+            ->take(10)
             ->get();
 
-        return view('riesgos.riesgo', compact('evaluaciones', 'alertas'));
+        return view('riesgos.riesgo', compact('evaluaciones', 'alertas', 'totalEvaluaciones', 'totalAlertas', 'totalCritico', 'totalAlto'));
     }
 
     public function pesosStore(Request $request)
@@ -193,10 +252,19 @@ class ProcesoRiesgoController extends Controller
         return redirect()->route('admin.riesgos.tratamiento')->with('success', 'Plan de tratamiento creado con éxito');
     }
 
-    public function alertasIndex()
+    public function alertasIndex(Request $request)
     {
-        $alertas = Alerta::with('evaluacion.activo:id_activo,nombre_equipo')->orderByDesc('fecha_generacion')->paginate(15);
-        $evaluaciones = EvaluacionRiesgo::with('activo:id_activo,nombre_equipo')
+        $query = Alerta::with('evaluacion.activo');
+
+        if ($buscar = $request->input('buscar')) {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('tipo_alerta', 'like', "%{$buscar}%")
+                  ->orWhereHas('evaluacion.activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%")->orWhere('codigo_patrimonial', 'like', "%{$buscar}%"));
+            });
+        }
+
+        $alertas = $query->orderByDesc('fecha_generacion')->paginate(15)->withQueryString();
+        $evaluaciones = EvaluacionRiesgo::with('activo:id_activo,nombre_equipo,codigo_patrimonial')
             ->select('id_evaluacion', 'fk_id_activo', 'nivel_riesgo', 'score_calculado')
             ->orderByDesc('score_calculado')
             ->get();

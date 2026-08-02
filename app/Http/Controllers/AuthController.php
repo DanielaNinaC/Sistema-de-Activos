@@ -56,7 +56,6 @@ class AuthController extends Controller
 
         $sessionKey = 'login_cache_code_' . session()->getId();
         Cache::put($sessionKey, $code, now()->addMinutes(15));
-        Cache::put('login_cache_code', $code, now()->addMinutes(15));
 
         return $code;
     }
@@ -130,7 +129,7 @@ SVG;
 
         // 1. Validar el código de seguridad (captcha/cache)
         $sessionKey = 'login_cache_code_' . session()->getId();
-        $cacheCode = Cache::get($sessionKey) ?? Cache::get('login_cache_code');
+        $cacheCode = Cache::get($sessionKey);
 
         if ($cacheCode === null || $cacheCode === '') {
             $this->generateNewCacheCode();
@@ -181,11 +180,56 @@ SVG;
 
         // Éxito: limpiar el código de la cache y regenerar sesión
         Cache::forget($sessionKey);
-        Cache::forget('login_cache_code');
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard'))
             ->with('success', '¡Bienvenido de nuevo!');
+    }
+
+    /**
+     * Procesa el registro de un nuevo usuario.
+     */
+    public function register(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'apellido' => 'required|string|max:255',
+            'correo' => 'required|email|max:255|unique:usuarios,correo',
+            'contrasena' => 'required|string|min:6|confirmed',
+        ], [
+            'nombre.required' => 'El nombre es obligatorio.',
+            'apellido.required' => 'El apellido es obligatorio.',
+            'correo.required' => 'El correo electrónico es obligatorio.',
+            'correo.email' => 'Ingrese un correo electrónico válido.',
+            'correo.unique' => 'Este correo electrónico ya se encuentra registrado.',
+            'contrasena.required' => 'La contraseña es obligatoria.',
+            'contrasena.min' => 'La contraseña debe tener al menos 6 caracteres.',
+            'contrasena.confirmed' => 'La confirmación de la contraseña no coincide.',
+        ]);
+
+        $nombre = trim($request->nombre);
+        $apellido = trim($request->apellido);
+
+        // Separación inteligente de respaldo si apellido estuviese vacío pero el nombre contuviese espacios
+        if (empty($apellido) && str_contains($nombre, ' ')) {
+            $parts = explode(' ', $nombre, 2);
+            $nombre = $parts[0];
+            $apellido = $parts[1];
+        }
+
+        // Crear el usuario con estado deshabilitado (0) y rol por defecto (2 = Soporte)
+        \App\Models\Usuario::create([
+            'nombre' => $nombre,
+            'apellido' => $apellido,
+            'correo' => $request->correo,
+            'contrasena' => \Illuminate\Support\Facades\Hash::make($request->contrasena),
+            'fk_id_rol' => 2,
+            'estado' => 0,
+        ]);
+
+        $this->generateNewCacheCode();
+
+        return redirect()->route('login')->with('registered_success', 'Usted ha sido registrado en el Sistema de Activos, espere a que el administrador habilite su cuenta.');
     }
 
     /**

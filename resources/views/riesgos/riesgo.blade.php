@@ -1,100 +1,181 @@
 @extends('layouts.principal')
 
-@section('title','Riesgos - Riesgo')
+@section('title', 'Historial de Riesgos - Evaluación FMEA')
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
-    <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition" aria-label="Volver" title="Volver">
-            <span aria-hidden="true">&#8592;</span>
-        </a>
-        <div>
-            <h2 class="text-2xl font-semibold">Riesgo</h2>
-            <p class="text-sm text-gray-500">Resumen de niveles de riesgo y alertas vinculadas</p>
+
+    {{-- Encabezado Principal --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver" title="Volver">
+                <span aria-hidden="true">&#8592;</span>
+            </a>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900">Historial de Riesgos</h2>
+                <p class="text-sm text-slate-500">Registro histórico completo de evaluaciones de riesgo FMEA y cálculo de scores AHP</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 self-start sm:self-auto">
+            <a href="{{ route('admin.riesgos.evaluacion') }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Motor de Evaluación FMEA
+            </a>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white p-4 rounded shadow">Evaluaciones: <strong>{{ $evaluaciones->total() }}</strong></div>
-        <div class="bg-white p-4 rounded shadow">Alertas: <strong>{{ $alertas->count() }}</strong></div>
-        <div class="bg-white p-4 rounded shadow">Riesgo alto: <strong>{{ $evaluaciones->where('nivel_riesgo', 'Alto')->count() }}</strong></div>
-        <div class="bg-white p-4 rounded shadow">Riesgo crítico: <strong>{{ $evaluaciones->where('nivel_riesgo', 'Crítico')->count() }}</strong></div>
+    {{-- Tarjetas de Métricas Resumen Compactas (Centradas) --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Total Evaluaciones</span>
+            <span class="text-xl font-bold font-mono text-slate-900 mt-0.5 block">{{ $totalEvaluaciones }}</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Alertas Generadas</span>
+            <span class="text-xl font-bold font-mono text-slate-900 mt-0.5 block">{{ $totalAlertas }}</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Riesgo Alto</span>
+            <span class="text-xl font-bold font-mono text-orange-600 mt-0.5 block">{{ $totalAlto }}</span>
+        </div>
+
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Riesgo Crítico</span>
+            <span class="text-xl font-bold font-mono text-rose-600 mt-0.5 block">{{ $totalCritico }}</span>
+        </div>
     </div>
 
-    <form method="GET" action="{{ route('admin.riesgos.riesgo') }}" class="flex items-center gap-2 max-w-md">
-        <div class="relative flex-1">
-            <input type="text" name="buscar" value="{{ request('buscar') }}" placeholder="Buscar por activo, nivel de riesgo, modo de falla..."
-                class="w-full border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition" />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        </div>
-        <button type="submit" class="px-4 py-2.5 bg-slate-800 text-white text-sm rounded-xl hover:bg-slate-700 transition">Buscar</button>
+    {{-- Barra de Búsqueda --}}
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+        <form method="GET" action="{{ route('admin.riesgos.riesgo') }}" class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input 
+                    type="text" 
+                    name="buscar" 
+                    value="{{ request('buscar') }}" 
+                    placeholder="Buscar por activo, código patrimonial, modo de falla, nivel o score..."
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                >
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                    Buscar
+                </button>
+
+                @if(request('buscar'))
+                    <a href="{{ route('admin.riesgos.riesgo') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition flex items-center gap-1">
+                        ✕ Limpiar
+                    </a>
+                @endif
+            </div>
+        </form>
+
         @if(request('buscar'))
-            <a href="{{ route('admin.riesgos.riesgo') }}" class="px-3 py-2.5 text-sm text-gray-600 hover:text-gray-800 transition">Limpiar</a>
+            <div class="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                <span>Filtro activo para: <strong class="text-slate-800">"{{ request('buscar') }}"</strong></span>
+                <span class="text-slate-300">•</span>
+                <span>Resultados encontrados: <strong class="text-slate-800">{{ $evaluaciones->total() }}</strong></span>
+            </div>
         @endif
-    </form>
+    </div>
 
-    <div class="bg-white rounded shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold">Evaluaciones con mayor score</h3>
+    {{-- Tabla de Historial de Evaluaciones de Riesgo --}}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden space-y-4">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Registro Histórico de Evaluaciones FMEA</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Parámetros inferidos (S, F, MSR) y niveles de riesgo semafóricos</p>
+            </div>
+            <span class="text-xs text-slate-400">Página {{ $evaluaciones->currentPage() }} de {{ $evaluaciones->lastPage() }}</span>
         </div>
+
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nivel</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo Tecnológico</th>
+                        <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Modo de Falla</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Severidad (S)</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Frecuencia (F)</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">MSR (Control)</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Score AHP</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Nivel de Riesgo</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($evaluaciones as $evaluacion)
-                        <tr>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $evaluacion->score_calculado }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $evaluacion->nivel_riesgo }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $evaluacion->activo->nombre_equipo ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $evaluacion->modoFalla->nombre_modo_falla ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{{ \Carbon\Carbon::parse($evaluacion->fecha_evaluacion)->format('d/m/Y H:i') }}</td>
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="px-6 py-4 text-center text-xs font-mono text-slate-600 whitespace-nowrap">
+                                {{ \Carbon\Carbon::parse($evaluacion->fecha_evaluacion)->format('d/m/Y H:i') }}
+                            </td>
+                            <td class="px-6 py-4 text-center font-semibold text-slate-900">
+                                {{ $evaluacion->activo->nombre_equipo ?? '-' }}
+                                <span class="block text-[11px] font-mono text-slate-400 font-normal">
+                                    {{ $evaluacion->activo->codigo_patrimonial ?? '' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-left text-slate-800 font-medium">
+                                {{ $evaluacion->modoFalla->nombre_modo_falla ?? '-' }}
+                            </td>
+                            <td class="px-6 py-4 text-center font-mono font-bold text-rose-600">{{ $evaluacion->valor_severidad }}</td>
+                            <td class="px-6 py-4 text-center font-mono font-bold text-amber-600">{{ $evaluacion->valor_frecuencia }}</td>
+                            <td class="px-6 py-4 text-center font-mono font-bold text-blue-600">{{ $evaluacion->valor_msr }}</td>
+                            <td class="px-6 py-4 text-center font-mono font-bold text-slate-900 text-base">
+                                {{ number_format($evaluacion->score_calculado, 2) }}
+                            </td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                @if($evaluacion->nivel_riesgo === 'Crítico')
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                        🔴 Crítico
+                                    </span>
+                                @elseif($evaluacion->nivel_riesgo === 'Alto')
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                                        🟠 Alto
+                                    </span>
+                                @elseif($evaluacion->nivel_riesgo === 'Medio')
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                        🟡 Medio
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                        🟢 Bajo
+                                    </span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-6 py-8 text-center text-sm text-gray-500">No hay evaluaciones para mostrar.</td></tr>
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center text-slate-500 text-sm">
+                                @if(request('buscar'))
+                                    No se encontraron evaluaciones de riesgo que coincidan con la búsqueda.
+                                @else
+                                    No hay evaluaciones de riesgo registradas en el historial.
+                                @endif
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+
+        @if($evaluaciones->hasPages())
+            <div class="px-6 py-3 border-t border-slate-100">
+                {{ $evaluaciones->links() }}
+            </div>
+        @endif
     </div>
 
-    <div class="bg-white rounded shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold">Alertas recientes</h3>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Enviada</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($alertas as $alerta)
-                        <tr>
-                            <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{{ \Carbon\Carbon::parse($alerta->fecha_generacion)->format('d/m/Y H:i') }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $alerta->evaluacion->activo->nombre_equipo ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $alerta->tipo_alerta }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700">{{ $alerta->notificacion_enviada ? 'Sí' : 'No' }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500">No hay alertas registradas todavía.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="mt-4">{{ $evaluaciones->links() }}</div>
 </div>
 @endsection
