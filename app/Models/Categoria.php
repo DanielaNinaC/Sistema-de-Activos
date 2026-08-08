@@ -15,6 +15,8 @@ class Categoria extends Model
     protected $fillable = [
         'nombre_categoria',
         'vida_util_meses',
+        'nivel_dependencia',
+        'justificacion_dependencia',
     ];
 
     public function activos()

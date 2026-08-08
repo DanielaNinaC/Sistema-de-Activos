@@ -239,6 +239,9 @@
                         <option value="Finalizado">Finalizado</option>
                         <option value="Cancelado">Cancelado</option>
                     </select>
+                    <p class="text-[11px] text-amber-700 mt-1.5 hidden" id="avisoFinalizado">
+                        Al marcar "Finalizado" este mantenimiento podrá afectar la próxima evaluación de riesgo del activo (el desgaste se recalcula desde esta fecha).
+                    </p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Descripción / Observaciones del trabajo</label>
@@ -259,12 +262,19 @@
 </div>
 
 <script>
+    function toggleAvisoFinalizado() {
+        var select = document.getElementById('update_estado_mantenimiento');
+        var aviso = document.getElementById('avisoFinalizado');
+        if (select && aviso) aviso.classList.toggle('hidden', select.value !== 'Finalizado');
+    }
+
     function openUpdateModal(id, estado, descripcion) {
         var form = document.getElementById('updateForm');
         form.action = '/admin/mantenimiento/' + id;
 
         document.getElementById('update_estado_mantenimiento').value = estado;
         document.getElementById('update_descripcion_trabajo').value = descripcion;
+        toggleAvisoFinalizado();
 
         var modal = document.getElementById('updateModal');
         var card = document.getElementById('updateModalCard');
@@ -274,6 +284,13 @@
             card.classList.add('scale-100', 'opacity-100');
         }, 10);
     }
+
+    (function initAvisoFinalizado() {
+        var select = document.getElementById('update_estado_mantenimiento');
+        if (!select) return;
+        select.removeEventListener('change', toggleAvisoFinalizado);
+        select.addEventListener('change', toggleAvisoFinalizado);
+    })();
 
     function closeUpdateModal() {
         var modal = document.getElementById('updateModal');

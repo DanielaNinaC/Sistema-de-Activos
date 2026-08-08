@@ -62,6 +62,18 @@
                         <option value="anos" {{ old('vida_util_unidad') == 'anos' ? 'selected' : '' }}>Años</option>
                     </select>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Dependencia Institucional <span class="text-rose-500">*</span></label>
+                    <select name="nivel_dependencia" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="Alta" {{ old('nivel_dependencia') == 'Alta' ? 'selected' : '' }}>Alta</option>
+                        <option value="Media" {{ old('nivel_dependencia', 'Media') == 'Media' ? 'selected' : '' }}>Media</option>
+                        <option value="Baja" {{ old('nivel_dependencia') == 'Baja' ? 'selected' : '' }}>Baja</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-3">
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Justificación de Dependencia <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <textarea name="justificacion_dependencia" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Ej: Tabla 8 de la tesis — activos de infraestructura de red crítica...">{{ old('justificacion_dependencia') }}</textarea>
+                </div>
             </div>
             <div class="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
                 <button type="button" onclick="toggleRegistroForm()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition">
@@ -125,6 +137,7 @@
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Nombre</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Vida Útil</th>
+                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Dependencia</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Dispositivos</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
                 </tr>
@@ -151,6 +164,18 @@
                             <span class="text-slate-400">—</span>
                         @endif
                     </td>
+                    <td class="px-6 py-4 text-center text-sm">
+                        @php
+                            $depClases = [
+                                'Alta' => 'bg-rose-50 text-rose-800 border-rose-100',
+                                'Media' => 'bg-amber-50 text-amber-800 border-amber-100',
+                                'Baja' => 'bg-emerald-50 text-emerald-800 border-emerald-100',
+                            ];
+                        @endphp
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border {{ $depClases[$categoria->nivel_dependencia] ?? 'bg-slate-50 text-slate-700 border-slate-200' }}">
+                            {{ $categoria->nivel_dependencia ?? 'Media' }}
+                        </span>
+                    </td>
                     <td class="px-6 py-4 text-center text-sm text-slate-700 font-medium font-mono">
                         {{ $categoria->activos_count }}
                     </td>
@@ -162,7 +187,7 @@
                                 </svg>
                                 Ver Equipos
                             </a>
-                            <button type="button" onclick="openEditModal({{ $categoria->id_categoria }}, '{{ addslashes($categoria->nombre_categoria) }}', {{ $categoria->vida_util_meses ?? 'null' }})" class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
+                            <button type="button" onclick="openEditModal({{ $categoria->id_categoria }}, '{{ addslashes($categoria->nombre_categoria) }}', {{ $categoria->vida_util_meses ?? 'null' }}, '{{ $categoria->nivel_dependencia ?? 'Media' }}', '{{ addslashes($categoria->justificacion_dependencia ?? '') }}')" class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
@@ -173,7 +198,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="px-6 py-12 text-center text-slate-500">
+                    <td colspan="6" class="px-6 py-12 text-center text-slate-500">
                         No hay categorías registradas todavía.
                     </td>
                 </tr>
@@ -212,6 +237,18 @@
                         </select>
                     </div>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Dependencia Institucional <span class="text-rose-500">*</span></label>
+                    <select id="edit_nivel_dependencia" name="nivel_dependencia" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="Alta">Alta</option>
+                        <option value="Media">Media</option>
+                        <option value="Baja">Baja</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Justificación de Dependencia <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <textarea id="edit_justificacion_dependencia" name="justificacion_dependencia" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
+                </div>
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
@@ -239,11 +276,13 @@
         }
     }
 
-    function openEditModal(id, nombre, vidaUtilMeses) {
+    function openEditModal(id, nombre, vidaUtilMeses, nivelDependencia, justificacionDependencia) {
         var form = document.getElementById('editForm');
         form.action = '/admin/activos/categorias/' + id;
 
         document.getElementById('edit_nombre_categoria').value = nombre;
+        document.getElementById('edit_nivel_dependencia').value = nivelDependencia || 'Media';
+        document.getElementById('edit_justificacion_dependencia').value = justificacionDependencia || '';
 
         var valInput = document.getElementById('edit_vida_util_valor');
         var unitSelect = document.getElementById('edit_vida_util_unidad');

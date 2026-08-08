@@ -218,11 +218,11 @@ class DatosPruebaSeeder extends Seeder
             [
                 'id_tratamiento' => 1, 'fk_id_evaluacion' => 1,
                 'estrategia' => 'Mitigar', 'accion_preventiva' => 'Comprar disco SSD de respaldo y configurar RAID 1.',
-                'estado_tratamiento' => 'En ejecución', 'fecha_compromiso' => now()->addMonth()
+                'estado_tratamiento' => 'En Proceso', 'fecha_compromiso' => now()->addMonth()
             ],
             [
                 'id_tratamiento' => 2, 'fk_id_evaluacion' => 4,
-                'estrategia' => 'Prevenir', 'accion_preventiva' => 'Reemplazar disco rígido por SSD M.2.',
+                'estrategia' => 'Mitigar', 'accion_preventiva' => 'Reemplazar disco rígido por SSD M.2.',
                 'estado_tratamiento' => 'Pendiente', 'fecha_compromiso' => now()->addWeeks(2)
             ],
             [
@@ -246,7 +246,7 @@ class DatosPruebaSeeder extends Seeder
                 'id_evaluacion_origen' => 4, 'tipo_mantenimiento' => 'Correctivo',
                 'fecha_programada' => now()->subDay(), 'fecha_ejecucion' => now(),
                 'descripcion_trabajo' => 'Cambio de módulo de memoria RAM defectuoso.',
-                'estado_mantenimiento' => 'Realizado', 'evidencia_pdf' => null
+                'estado_mantenimiento' => 'Finalizado', 'evidencia_pdf' => null
             ],
             [
                 'id_mantenimiento' => 3, 'fk_id_activo' => 3, 'fk_id_usuario_asignado' => 2,
@@ -273,6 +273,255 @@ class DatosPruebaSeeder extends Seeder
                 'id_log' => 3, 'id_usuario' => 2, 'accion_realizada' => 'Actualización de evaluación de riesgo',
                 'tabla_afectada' => 'evaluacion_riesgo', 'registro_id' => 1,
                 'fecha_hora' => now(), 'valor_anterior' => 'Score: 6.0', 'valor_nuevo' => 'Score: 7.49'
+            ],
+        ]);
+
+        // =====================================================================
+        // 15. Datos adicionales para variedad en Evaluación e Informes: más
+        // activos, modos de falla y evaluaciones con score en todos los
+        // niveles (no solo Alto/Crítico). Los IDs usan un rango alto
+        // (900+ en evaluacion_riesgo/alertas/tratamientos) para no chocar con
+        // filas ya generadas por uso real del motor en un entorno existente.
+        // =====================================================================
+
+        // 15.1 Modos de falla adicionales (uno más por categoría, con
+        // severidad/MSR distintos a los ya existentes para ampliar el rango
+        // de scores posibles dentro de cada categoría).
+        DB::table('modos_falla')->insertOrIgnore([
+            ['id_modo_falla' => 6, 'fk_id_categoria' => 1, 'nombre_modo_falla' => 'Sobrecalentamiento por falla de refrigeración', 'valor_severidad_base' => 8, 'valor_msr_base' => 6],
+            ['id_modo_falla' => 7, 'fk_id_categoria' => 2, 'nombre_modo_falla' => 'Falla de fuente de poder', 'valor_severidad_base' => 5, 'valor_msr_base' => 6],
+            ['id_modo_falla' => 8, 'fk_id_categoria' => 3, 'nombre_modo_falla' => 'Falta de tóner o tinta', 'valor_severidad_base' => 1, 'valor_msr_base' => 9],
+            ['id_modo_falla' => 9, 'fk_id_categoria' => 4, 'nombre_modo_falla' => 'Sobrecalentamiento de lámpara', 'valor_severidad_base' => 3, 'valor_msr_base' => 4],
+            ['id_modo_falla' => 10, 'fk_id_categoria' => 5, 'nombre_modo_falla' => 'Configuración corrupta de firmware', 'valor_severidad_base' => 5, 'valor_msr_base' => 6],
+        ]);
+
+        // 15.2 Activos adicionales, distribuidos entre las 5 categorías.
+        DB::table('activos_tecnologicos')->insertOrIgnore([
+            [
+                'id_activo' => 11, 'fk_id_categoria' => 1, 'fk_id_ubicacion' => 3,
+                'codigo_patrimonial' => 'SRV-002', 'nombre_equipo' => 'Servidor de Archivos',
+                'marca' => 'HPE', 'modelo' => 'ProLiant DL380', 'fecha_adquisicion' => '2024-04-12',
+                'estado_operativo' => 'Operativo', 'etapa_ciclo_vida' => 'Operación',
+                'criticidad_institucional' => 'Alta', 'observaciones' => 'Almacenamiento compartido institucional.'
+            ],
+            [
+                'id_activo' => 12, 'fk_id_categoria' => 2, 'fk_id_ubicacion' => 4,
+                'codigo_patrimonial' => 'PC-004', 'nombre_equipo' => 'PC Biblioteca',
+                'marca' => 'Acer', 'modelo' => 'Veriton X4670G', 'fecha_adquisicion' => '2024-02-20',
+                'estado_operativo' => 'Operativo', 'etapa_ciclo_vida' => 'Operación',
+                'criticidad_institucional' => 'Media', 'observaciones' => 'Consulta de catálogo y préstamos.'
+            ],
+            [
+                'id_activo' => 13, 'fk_id_categoria' => 2, 'fk_id_ubicacion' => 1,
+                'codigo_patrimonial' => 'PC-005', 'nombre_equipo' => 'PC Sala de Profesores',
+                'marca' => 'HP', 'modelo' => 'EliteDesk 800', 'fecha_adquisicion' => '2019-06-18',
+                'estado_operativo' => 'Operativo', 'etapa_ciclo_vida' => 'Operación',
+                'criticidad_institucional' => 'Media', 'observaciones' => 'Uso compartido por varios docentes.'
+            ],
+            [
+                'id_activo' => 14, 'fk_id_categoria' => 3, 'fk_id_ubicacion' => 4,
+                'codigo_patrimonial' => 'IMP-011', 'nombre_equipo' => 'Impresora Laboratorio 1',
+                'marca' => 'HP', 'modelo' => 'LaserJet Pro M404', 'fecha_adquisicion' => '2022-08-09',
+                'estado_operativo' => 'Operativo', 'etapa_ciclo_vida' => 'Operación',
+                'criticidad_institucional' => 'Baja', 'observaciones' => 'Impresión de guías de laboratorio.'
+            ],
+            [
+                'id_activo' => 15, 'fk_id_categoria' => 3, 'fk_id_ubicacion' => 1,
+                'codigo_patrimonial' => 'IMP-012', 'nombre_equipo' => 'Impresora Multifuncional Profesores',
+                'marca' => 'Canon', 'modelo' => 'imageCLASS MF267dw', 'fecha_adquisicion' => '2023-10-02',
+                'estado_operativo' => 'Operativo', 'etapa_ciclo_vida' => 'Operación',
+                'criticidad_institucional' => 'Baja', 'observaciones' => 'Escaneo y copiado de material didáctico.'
+            ],
+            [
+                'id_activo' => 16, 'fk_id_categoria' => 4, 'fk_id_ubicacion' => 1,
+                'codigo_patrimonial' => 'PRY-025', 'nombre_equipo' => 'Proyector Auditorio',
+                'marca' => 'Epson', 'modelo' => 'EB-X41', 'fecha_adquisicion' => '2024-03-14',
+                'estado_operativo' => 'Operativo', 'etapa_ciclo_vida' => 'Operación',
+                'criticidad_institucional' => 'Media', 'observaciones' => 'Eventos y actos institucionales.'
+            ],
+            [
+                'id_activo' => 17, 'fk_id_categoria' => 5, 'fk_id_ubicacion' => 4,
+                'codigo_patrimonial' => 'RED-003', 'nombre_equipo' => 'Access Point Laboratorio',
+                'marca' => 'Ubiquiti', 'modelo' => 'UniFi AP AC Lite', 'fecha_adquisicion' => '2023-05-27',
+                'estado_operativo' => 'Operativo', 'etapa_ciclo_vida' => 'Operación',
+                'criticidad_institucional' => 'Alta', 'observaciones' => 'Cobertura wifi del laboratorio.'
+            ],
+            [
+                'id_activo' => 18, 'fk_id_categoria' => 5, 'fk_id_ubicacion' => 4,
+                'codigo_patrimonial' => 'RED-004', 'nombre_equipo' => 'Switch Secundario Laboratorio',
+                'marca' => 'TP-Link', 'modelo' => 'TL-SG1024', 'fecha_adquisicion' => '2022-01-11',
+                'estado_operativo' => 'Operativo', 'etapa_ciclo_vida' => 'Operación',
+                'criticidad_institucional' => 'Alta', 'observaciones' => 'Distribución de red en el laboratorio.'
+            ],
+        ]);
+
+        // 15.3 Evaluaciones de riesgo adicionales. Los valores de Severidad y
+        // MSR replican el modo de falla correspondiente (igual que hace el
+        // motor); Score = round(0.75*(S*0.648 + F*0.230 + MSR*0.122) + 0.25*D, 2)
+        // con los pesos vigentes actuales (peso_severidad=0.648,
+        // peso_frecuencia=0.230, peso_msr=0.122, peso_riesgo_tecnico=0.75,
+        // peso_dependencia=0.25) y D según nivel_dependencia de la categoría
+        // (Alta=9, Media=5). El resultado cubre los 4 niveles de riesgo, no
+        // solo Alto/Crítico.
+        DB::table('evaluacion_riesgo')->insertOrIgnore([
+            ['id_evaluacion' => 900, 'fk_id_activo' => 5, 'fk_id_modo_falla' => 7, 'valor_severidad' => 5, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 5.57, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(45)],
+            ['id_evaluacion' => 901, 'fk_id_activo' => 6, 'fk_id_modo_falla' => 4, 'valor_severidad' => 8, 'valor_frecuencia' => 9, 'valor_msr' => 6, 'score_calculado' => 8.24, 'nivel_riesgo' => 'Crítico', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(38)],
+            ['id_evaluacion' => 902, 'fk_id_activo' => 7, 'fk_id_modo_falla' => 3, 'valor_severidad' => 5, 'valor_frecuencia' => 6, 'valor_msr' => 9, 'score_calculado' => 5.54, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(30)],
+            ['id_evaluacion' => 903, 'fk_id_activo' => 8, 'fk_id_modo_falla' => 9, 'valor_severidad' => 3, 'valor_frecuencia' => 2, 'valor_msr' => 4, 'score_calculado' => 3.42, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(25)],
+            ['id_evaluacion' => 904, 'fk_id_activo' => 10, 'fk_id_modo_falla' => 10, 'valor_severidad' => 5, 'valor_frecuencia' => 9, 'valor_msr' => 6, 'score_calculado' => 6.78, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(20)],
+            ['id_evaluacion' => 905, 'fk_id_activo' => 11, 'fk_id_modo_falla' => 1, 'valor_severidad' => 10, 'valor_frecuencia' => 2, 'valor_msr' => 4, 'score_calculado' => 7.82, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(15)],
+            ['id_evaluacion' => 906, 'fk_id_activo' => 11, 'fk_id_modo_falla' => 6, 'valor_severidad' => 8, 'valor_frecuencia' => 6, 'valor_msr' => 6, 'score_calculado' => 7.72, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(12)],
+            ['id_evaluacion' => 907, 'fk_id_activo' => 12, 'fk_id_modo_falla' => 7, 'valor_severidad' => 5, 'valor_frecuencia' => 6, 'valor_msr' => 6, 'score_calculado' => 6.26, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(10)],
+            ['id_evaluacion' => 908, 'fk_id_activo' => 13, 'fk_id_modo_falla' => 4, 'valor_severidad' => 8, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 7.03, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(8)],
+            ['id_evaluacion' => 909, 'fk_id_activo' => 14, 'fk_id_modo_falla' => 2, 'valor_severidad' => 3, 'valor_frecuencia' => 2, 'valor_msr' => 9, 'score_calculado' => 3.88, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(6)],
+            ['id_evaluacion' => 910, 'fk_id_activo' => 15, 'fk_id_modo_falla' => 8, 'valor_severidad' => 1, 'valor_frecuencia' => 2, 'valor_msr' => 9, 'score_calculado' => 2.90, 'nivel_riesgo' => 'Bajo', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(5)],
+            ['id_evaluacion' => 911, 'fk_id_activo' => 16, 'fk_id_modo_falla' => 3, 'valor_severidad' => 5, 'valor_frecuencia' => 9, 'valor_msr' => 9, 'score_calculado' => 6.06, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(4)],
+            ['id_evaluacion' => 912, 'fk_id_activo' => 17, 'fk_id_modo_falla' => 5, 'valor_severidad' => 8, 'valor_frecuencia' => 2, 'valor_msr' => 2, 'score_calculado' => 6.67, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(3)],
+            ['id_evaluacion' => 913, 'fk_id_activo' => 18, 'fk_id_modo_falla' => 10, 'valor_severidad' => 5, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 5.57, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(2)],
+            ['id_evaluacion' => 914, 'fk_id_activo' => 2, 'fk_id_modo_falla' => 8, 'valor_severidad' => 1, 'valor_frecuencia' => 6, 'valor_msr' => 9, 'score_calculado' => 3.59, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(1)],
+        ]);
+
+        // 15.4 Alertas correspondientes a cada evaluación adicional (tipo
+        // según nivel_riesgo: Crítico=Roja, Alto=Naranja, Medio=Amarilla, Bajo=Verde).
+        DB::table('alertas')->insertOrIgnore([
+            ['id_alerta' => 900, 'fk_id_evaluacion' => 900, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(45), 'notificacion_enviada' => true],
+            ['id_alerta' => 901, 'fk_id_evaluacion' => 901, 'tipo_alerta' => 'Roja', 'fecha_generacion' => now()->subDays(38), 'notificacion_enviada' => true],
+            ['id_alerta' => 902, 'fk_id_evaluacion' => 902, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(30), 'notificacion_enviada' => false],
+            ['id_alerta' => 903, 'fk_id_evaluacion' => 903, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(25), 'notificacion_enviada' => true],
+            ['id_alerta' => 904, 'fk_id_evaluacion' => 904, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(20), 'notificacion_enviada' => true],
+            ['id_alerta' => 905, 'fk_id_evaluacion' => 905, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(15), 'notificacion_enviada' => false],
+            ['id_alerta' => 906, 'fk_id_evaluacion' => 906, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(12), 'notificacion_enviada' => true],
+            ['id_alerta' => 907, 'fk_id_evaluacion' => 907, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(10), 'notificacion_enviada' => true],
+            ['id_alerta' => 908, 'fk_id_evaluacion' => 908, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(8), 'notificacion_enviada' => false],
+            ['id_alerta' => 909, 'fk_id_evaluacion' => 909, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(6), 'notificacion_enviada' => true],
+            ['id_alerta' => 910, 'fk_id_evaluacion' => 910, 'tipo_alerta' => 'Verde', 'fecha_generacion' => now()->subDays(5), 'notificacion_enviada' => true],
+            ['id_alerta' => 911, 'fk_id_evaluacion' => 911, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(4), 'notificacion_enviada' => false],
+            ['id_alerta' => 912, 'fk_id_evaluacion' => 912, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(3), 'notificacion_enviada' => true],
+            ['id_alerta' => 913, 'fk_id_evaluacion' => 913, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(2), 'notificacion_enviada' => true],
+            ['id_alerta' => 914, 'fk_id_evaluacion' => 914, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(1), 'notificacion_enviada' => false],
+        ]);
+
+        // 15.5 Incidentes adicionales.
+        DB::table('incidentes')->insertOrIgnore([
+            [
+                'id_incidente' => 4, 'fk_id_activo' => 6, 'fk_id_usuario_reporta' => 2,
+                'fecha_incidente' => now()->subDays(10), 'descripcion_falla' => 'Disco duro con sonidos extraños y lentitud extrema al iniciar.',
+                'estado_incidente' => 'Resuelto'
+            ],
+            [
+                'id_incidente' => 5, 'fk_id_activo' => 11, 'fk_id_usuario_reporta' => 1,
+                'fecha_incidente' => now()->subDays(7), 'descripcion_falla' => 'El servidor se reinicia solo por sobrecalentamiento.',
+                'estado_incidente' => 'En proceso'
+            ],
+            [
+                'id_incidente' => 6, 'fk_id_activo' => 10, 'fk_id_usuario_reporta' => 3,
+                'fecha_incidente' => now()->subDays(4), 'descripcion_falla' => 'Pérdida intermitente de conexión a internet en todo el edificio.',
+                'estado_incidente' => 'Resuelto'
+            ],
+            [
+                'id_incidente' => 7, 'fk_id_activo' => 14, 'fk_id_usuario_reporta' => 2,
+                'fecha_incidente' => now()->subDays(2), 'descripcion_falla' => 'Atasco de papel recurrente en la bandeja trasera.',
+                'estado_incidente' => 'Reportado'
+            ],
+            [
+                'id_incidente' => 8, 'fk_id_activo' => 17, 'fk_id_usuario_reporta' => 1,
+                'fecha_incidente' => now()->subDays(6), 'descripcion_falla' => 'Los usuarios reportan desconexión frecuente del wifi del laboratorio.',
+                'estado_incidente' => 'En proceso'
+            ],
+            [
+                'id_incidente' => 9, 'fk_id_activo' => 16, 'fk_id_usuario_reporta' => 3,
+                'fecha_incidente' => now()->subDays(8), 'descripcion_falla' => 'La lámpara del proyector se apaga sola tras 20 minutos de uso.',
+                'estado_incidente' => 'Resuelto'
+            ],
+        ]);
+
+        // 15.6 Mantenimientos adicionales, cubriendo los 4 tipos reales del
+        // formulario (Preventivo, Correctivo, Programado, Inspección).
+        DB::table('mantenimientos')->insertOrIgnore([
+            [
+                'id_mantenimiento' => 4, 'fk_id_activo' => 6, 'fk_id_usuario_asignado' => 2,
+                'id_evaluacion_origen' => 901, 'tipo_mantenimiento' => 'Correctivo',
+                'fecha_programada' => now()->subDays(9), 'fecha_ejecucion' => now()->subDays(8),
+                'descripcion_trabajo' => 'Reemplazo de disco duro por fallas de lectura.',
+                'estado_mantenimiento' => 'Finalizado', 'evidencia_pdf' => null
+            ],
+            [
+                'id_mantenimiento' => 5, 'fk_id_activo' => 10, 'fk_id_usuario_asignado' => 2,
+                'id_evaluacion_origen' => 904, 'tipo_mantenimiento' => 'Correctivo',
+                'fecha_programada' => now()->subDays(3), 'fecha_ejecucion' => now()->subDays(2),
+                'descripcion_trabajo' => 'Actualización de firmware y reinicio del enrutador.',
+                'estado_mantenimiento' => 'Finalizado', 'evidencia_pdf' => null
+            ],
+            [
+                'id_mantenimiento' => 6, 'fk_id_activo' => 11, 'fk_id_usuario_asignado' => 2,
+                'id_evaluacion_origen' => 905, 'tipo_mantenimiento' => 'Preventivo',
+                'fecha_programada' => now()->addWeeks(2), 'fecha_ejecucion' => null,
+                'descripcion_trabajo' => 'Limpieza del sistema de ventilación y cambio de pasta térmica.',
+                'estado_mantenimiento' => 'Pendiente', 'evidencia_pdf' => null
+            ],
+            [
+                'id_mantenimiento' => 7, 'fk_id_activo' => 16, 'fk_id_usuario_asignado' => 2,
+                'id_evaluacion_origen' => 911, 'tipo_mantenimiento' => 'Programado',
+                'fecha_programada' => now()->addDays(10), 'fecha_ejecucion' => null,
+                'descripcion_trabajo' => 'Revisión y calibración de la lámpara del proyector.',
+                'estado_mantenimiento' => 'Programado', 'evidencia_pdf' => null
+            ],
+            [
+                'id_mantenimiento' => 8, 'fk_id_activo' => 17, 'fk_id_usuario_asignado' => 2,
+                'id_evaluacion_origen' => 912, 'tipo_mantenimiento' => 'Inspección',
+                'fecha_programada' => now()->subDay(), 'fecha_ejecucion' => now(),
+                'descripcion_trabajo' => 'Inspección técnica y actualización de firmware del access point.',
+                'estado_mantenimiento' => 'Finalizado', 'evidencia_pdf' => null
+            ],
+        ]);
+
+        // 15.7 Planes de tratamiento para parte de las evaluaciones
+        // Alto/Crítico agregadas (905, 907 y 911 se dejan sin tratamiento a
+        // propósito, para poblar el informe "Evaluaciones Sin Tratamiento").
+        DB::table('plan_tratamiento_riesgo')->insertOrIgnore([
+            [
+                'id_tratamiento' => 900, 'fk_id_evaluacion' => 901,
+                'estrategia' => 'Mitigar', 'accion_preventiva' => 'Migrar el disco duro a SSD y programar respaldo diario automático.',
+                'estado_tratamiento' => 'Pendiente', 'origen' => 'automatico', 'fecha_compromiso' => now()->addDays(3)
+            ],
+            [
+                'id_tratamiento' => 901, 'fk_id_evaluacion' => 904,
+                'estrategia' => 'Mitigar', 'accion_preventiva' => 'Actualizar firmware del enrutador y revisar reglas de firewall.',
+                'estado_tratamiento' => 'En Proceso', 'origen' => 'automatico', 'fecha_compromiso' => now()->addDays(15)
+            ],
+            [
+                'id_tratamiento' => 902, 'fk_id_evaluacion' => 906,
+                'estrategia' => 'Mitigar', 'accion_preventiva' => 'Instalar sistema de refrigeración adicional en el rack del servidor.',
+                'estado_tratamiento' => 'Completado', 'origen' => 'manual', 'fecha_compromiso' => now()->subWeek()
+            ],
+            [
+                'id_tratamiento' => 903, 'fk_id_evaluacion' => 908,
+                'estrategia' => 'Mitigar', 'accion_preventiva' => 'Reemplazar el disco duro mecánico por una unidad de estado sólido.',
+                'estado_tratamiento' => 'Pendiente', 'origen' => 'automatico', 'fecha_compromiso' => now()->addDays(15)
+            ],
+            [
+                'id_tratamiento' => 904, 'fk_id_evaluacion' => 912,
+                'estrategia' => 'Transferir', 'accion_preventiva' => 'Contratar soporte externo especializado en redes inalámbricas.',
+                'estado_tratamiento' => 'En Proceso', 'origen' => 'manual', 'fecha_compromiso' => now()->addDays(15)
+            ],
+        ]);
+
+        // 15.8 Logs de auditoría adicionales.
+        DB::table('logs')->insertOrIgnore([
+            [
+                'id_log' => 4, 'id_usuario' => 2, 'accion_realizada' => 'Registro de incidente',
+                'tabla_afectada' => 'incidentes', 'registro_id' => 4,
+                'fecha_hora' => now()->subDays(10), 'valor_anterior' => null, 'valor_nuevo' => 'Disco duro con fallas'
+            ],
+            [
+                'id_log' => 5, 'id_usuario' => 1, 'accion_realizada' => 'Evaluación de riesgo ejecutada',
+                'tabla_afectada' => 'evaluacion_riesgo', 'registro_id' => 901,
+                'fecha_hora' => now()->subDays(38), 'valor_anterior' => null, 'valor_nuevo' => 'Score: 8.24 (Crítico)'
+            ],
+            [
+                'id_log' => 6, 'id_usuario' => 3, 'accion_realizada' => 'Actualización de plan de tratamiento',
+                'tabla_afectada' => 'plan_tratamiento_riesgo', 'registro_id' => 901,
+                'fecha_hora' => now()->subDays(5), 'valor_anterior' => 'Pendiente', 'valor_nuevo' => 'En Proceso'
             ],
         ]);
     }

@@ -16,6 +16,13 @@ class PesoAhp extends Model
         'peso_severidad',
         'peso_frecuencia',
         'peso_msr',
+        'peso_riesgo_tecnico',
+        'peso_dependencia',
         'fecha_actualizacion',
+        'vigente',
+    ];
+
+    protected $casts = [
+        'vigente' => 'boolean',
     ];
 }

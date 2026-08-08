@@ -89,7 +89,7 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                         Activo Tecnológico <span class="text-rose-500">*</span>
                     </label>
-                    <select name="fk_id_activo" id="selectActivo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                    <select name="fk_id_activo" id="selectActivo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar activo..." required>
                         <option value="">-- Seleccionar Activo --</option>
                         @foreach($activos as $activo)
                             <option value="{{ $activo->id_activo }}" {{ old('fk_id_activo', $preActivoId) == $activo->id_activo ? 'selected' : '' }}>
@@ -119,7 +119,7 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                         Vincular a Incidente <span class="text-slate-400 font-normal">(Opcional)</span>
                     </label>
-                    <select name="fk_id_incidente" id="selectIncidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                    <select name="fk_id_incidente" id="selectIncidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar incidente...">
                         <option value="">-- Sin Incidente (Origen Preventivo / Evaluación) --</option>
                         @foreach($incidentes as $inc)
                             <option value="{{ $inc->id_incidente }}" 
@@ -135,7 +135,7 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                         Vincular a Evaluación de Riesgo FMEA <span class="text-slate-400 font-normal">(Opcional)</span>
                     </label>
-                    <select name="id_evaluacion_origen" id="selectEvaluacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                    <select name="id_evaluacion_origen" id="selectEvaluacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar evaluación...">
                         <option value="">-- Sin Evaluación FMEA --</option>
                         @foreach($evaluaciones as $evaluacion)
                             <option value="{{ $evaluacion->id_evaluacion }}" 
@@ -229,44 +229,59 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var selectActivo = document.getElementById('selectActivo');
-    var selectEvaluacion = document.getElementById('selectEvaluacion');
-    var selectIncidente = document.getElementById('selectIncidente');
+(function () {
+    function initProgramarMantenimiento() {
+        var selectActivo = document.getElementById('selectActivo');
+        var selectEvaluacion = document.getElementById('selectEvaluacion');
+        var selectIncidente = document.getElementById('selectIncidente');
 
-    // Mutual exclusion: if incident is chosen, clear evaluation; if evaluation is chosen, clear incident
-    selectIncidente.addEventListener('change', function() {
-        var selected = this.options[this.selectedIndex];
-        if (this.value) {
-            selectEvaluacion.value = '';
-            if (selected.dataset.activo) {
-                selectActivo.value = selected.dataset.activo;
+        if (!selectActivo || !selectEvaluacion || !selectIncidente) return;
+
+        function setValue(select, value) {
+            select.value = value || '';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        // Mutual exclusion: if incident is chosen, clear evaluation; if evaluation is chosen, clear incident
+        selectIncidente.addEventListener('change', function() {
+            var selected = this.options[this.selectedIndex];
+            if (this.value) {
+                setValue(selectEvaluacion, '');
+                if (selected.dataset.activo) {
+                    setValue(selectActivo, selected.dataset.activo);
+                }
             }
-        }
-    });
+        });
 
-    selectEvaluacion.addEventListener('change', function() {
-        var selected = this.options[this.selectedIndex];
-        if (this.value) {
-            selectIncidente.value = '';
-            if (selected.dataset.activo) {
-                selectActivo.value = selected.dataset.activo;
+        selectEvaluacion.addEventListener('change', function() {
+            var selected = this.options[this.selectedIndex];
+            if (this.value) {
+                setValue(selectIncidente, '');
+                if (selected.dataset.activo) {
+                    setValue(selectActivo, selected.dataset.activo);
+                }
             }
-        }
-    });
+        });
 
-    // Auto-fill active on load if pre-selected
-    if (selectIncidente.value) {
-        var selInc = selectIncidente.options[selectIncidente.selectedIndex];
-        if (selInc && selInc.dataset.activo) {
-            selectActivo.value = selInc.dataset.activo;
-        }
-    } else if (selectEvaluacion.value) {
-        var selEval = selectEvaluacion.options[selectEvaluacion.selectedIndex];
-        if (selEval && selEval.dataset.activo) {
-            selectActivo.value = selEval.dataset.activo;
+        // Auto-fill active on load if pre-selected
+        if (selectIncidente.value) {
+            var selInc = selectIncidente.options[selectIncidente.selectedIndex];
+            if (selInc && selInc.dataset.activo) {
+                setValue(selectActivo, selInc.dataset.activo);
+            }
+        } else if (selectEvaluacion.value) {
+            var selEval = selectEvaluacion.options[selectEvaluacion.selectedIndex];
+            if (selEval && selEval.dataset.activo) {
+                setValue(selectActivo, selEval.dataset.activo);
+            }
         }
     }
-});
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initProgramarMantenimiento);
+    } else {
+        initProgramarMantenimiento();
+    }
+})();
 </script>
 @endsection

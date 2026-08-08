@@ -50,6 +50,26 @@
         </div>
     </div>
 
+    {{-- Activos que nunca podrán evaluarse por falta de modos de falla en su categoría --}}
+    @if($activosSinModos->isNotEmpty())
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm text-sm space-y-2">
+            <div class="flex items-center gap-2 font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                {{ $activosSinModos->count() }} {{ $activosSinModos->count() === 1 ? 'activo no aparece' : 'activos no aparecen' }} en este historial: sin modos de falla definidos
+            </div>
+            <div class="flex flex-wrap gap-2">
+                @foreach($activosSinModos as $act)
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white border border-amber-200 text-amber-800">
+                        {{ $act->codigo_patrimonial ?? $act->nombre_equipo }} — {{ $act->categoria->nombre_categoria ?? 'Sin categoría' }}
+                    </span>
+                @endforeach
+            </div>
+            <p class="text-xs text-amber-700">Registra al menos un modo de falla en la categoría correspondiente (<a href="{{ route('admin.riesgos.modos') }}" class="underline font-semibold">Modos de Falla</a>) para que estos activos puedan evaluarse.</p>
+        </div>
+    @endif
+
     {{-- Barra de Búsqueda --}}
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
         <form method="GET" action="{{ route('admin.riesgos.riesgo') }}" class="flex flex-col sm:flex-row gap-3">

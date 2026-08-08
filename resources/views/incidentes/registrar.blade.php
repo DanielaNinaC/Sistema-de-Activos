@@ -47,7 +47,7 @@
             <!-- Selección de Activo Tecnológico (Columna Izquierda 1) -->
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Activo Tecnológico Afectado *</label>
-                <select name="fk_id_activo" id="selectActivo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                <select name="fk_id_activo" id="selectActivo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar por código, nombre o categoría..." required>
                     <option value="">Seleccione un activo tecnológico</option>
                     @foreach($activos as $activo)
                         @php
@@ -55,12 +55,13 @@
                             $categoriaTxt = $activo->categoria ? $activo->categoria->nombre_categoria : 'Sin categoría';
                             $marcaModeloTxt = trim(($activo->marca ?? '') . ' ' . ($activo->modelo ?? ''));
                         @endphp
-                        <option 
-                            value="{{ $activo->id_activo }}" 
+                        <option
+                            value="{{ $activo->id_activo }}"
                             data-codigo="{{ $activo->codigo_patrimonial ?? 'ID: '.$activo->id_activo }}"
                             data-nombre="{{ $activo->nombre_equipo }}"
                             data-marcamodelo="{{ $marcaModeloTxt != '' ? $marcaModeloTxt : 'N/A' }}"
                             data-categoria="{{ $categoriaTxt }}"
+                            data-categoria-id="{{ $activo->fk_id_categoria }}"
                             data-ubicacion="{{ $ubicacionTxt }}"
                             data-estado="{{ $activo->estado_operativo ?? 'No especificado' }}"
                             {{ old('fk_id_activo') == $activo->id_activo ? 'selected' : '' }}
@@ -99,7 +100,7 @@
                 <input 
                     type="datetime-local" 
                     name="fecha_incidente" 
-                    value="{{ old('fecha_incidente', date('Y-m-d\TH:i')) }}" 
+                    value="{{ old('fecha_incidente', \Carbon\Carbon::now('America/La_Paz')->format('Y-m-d\TH:i')) }}" 
                     class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition cursor-pointer" 
                     required 
                 />
@@ -141,6 +142,18 @@
                         <span id="prevEstado" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 mt-0.5">--</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Modo de Falla asociado (Opcional, filtrado por categoría del activo) -->
+            <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Modo de Falla Asociado <span class="text-slate-400 font-normal normal-case">(Opcional)</span></label>
+                <select name="fk_id_modo_falla" id="selectModoIncidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar modo de falla...">
+                    <option value="">-- Sin clasificar --</option>
+                    @foreach($modos as $modo)
+                        <option value="{{ $modo->id_modo_falla }}" data-categoria="{{ $modo->fk_id_categoria }}" {{ old('fk_id_modo_falla') == $modo->id_modo_falla ? 'selected' : '' }}>{{ $modo->nombre_modo_falla }} ({{ $modo->categoria->nombre_categoria ?? '-' }})</option>
+                    @endforeach
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1" id="avisoFiltroModoIncidente">Seleccione primero el activo para filtrar por su categoría. Ayuda a que el reporte de "modos de falla más frecuentes" use datos reales en vez de solo texto libre.</p>
             </div>
 
             <!-- Plantillas de Diagnóstico Rápido (Ancho completo) -->
@@ -244,6 +257,40 @@
             selectActivo.addEventListener('change', updateActivoPreview);
             updateActivoPreview();
 
+            // Filtrar Modo de Falla según la categoría del activo seleccionado
+            function filtrarModosPorActivo() {
+                var selectModo = document.getElementById('selectModoIncidente');
+                var aviso = document.getElementById('avisoFiltroModoIncidente');
+                if (!selectModo) return;
+
+                var opcionActivo = selectActivo.options[selectActivo.selectedIndex];
+                var categoriaId = opcionActivo ? opcionActivo.getAttribute('data-categoria-id') : '';
+
+                var modoSigueValido = false;
+                Array.prototype.forEach.call(selectModo.options, function (opt) {
+                    if (opt.value === '') return;
+                    var coincide = !categoriaId || opt.getAttribute('data-categoria') === categoriaId;
+                    opt.hidden = !coincide;
+                    if (coincide && selectModo.value === opt.value) modoSigueValido = true;
+                });
+
+                if (!modoSigueValido) {
+                    selectModo.value = '';
+                }
+                selectModo.dispatchEvent(new Event('change', { bubbles: true }));
+
+                if (aviso) {
+                    var nombreCategoria = opcionActivo ? opcionActivo.getAttribute('data-categoria') : '';
+                    aviso.textContent = categoriaId && nombreCategoria
+                        ? 'Mostrando solo los modos de falla de la categoría "' + nombreCategoria + '".'
+                        : 'Seleccione primero el activo para filtrar por su categoría.';
+                }
+            }
+
+            selectActivo.removeEventListener('change', filtrarModosPorActivo);
+            selectActivo.addEventListener('change', filtrarModosPorActivo);
+            filtrarModosPorActivo();
+
             // Botones de plantilla rápida
             var presetBtns = document.querySelectorAll('.btn-preset');
             presetBtns.forEach(function (btn) {
@@ -277,6 +324,15 @@
                     }
                     hiddenUsuarioId.value = matchedId;
                 });
+            }
+
+            // Auto-establecer fecha y hora exacta del cliente local si no hay selección previa
+            var inputFecha = document.querySelector('input[name="fecha_incidente"]');
+            if (inputFecha && !'{{ old('fecha_incidente') }}') {
+                var now = new Date();
+                var offsetMs = now.getTimezoneOffset() * 60000;
+                var localISOTime = (new Date(now.getTime() - offsetMs)).toISOString().slice(0, 16);
+                inputFecha.value = localISOTime;
             }
         }
 

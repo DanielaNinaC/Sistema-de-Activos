@@ -18,6 +18,7 @@ class PlanTratamientoRiesgo extends Model
         'accion_preventiva',
         'estado_tratamiento',
         'fecha_compromiso',
+        'origen',
     ];
 
     public function evaluacion()

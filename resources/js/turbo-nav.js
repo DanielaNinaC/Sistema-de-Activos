@@ -7,12 +7,34 @@
  * 
  * Also prefetches links on hover for even faster perceived navigation.
  */
+import { enhanceSearchableSelects } from './searchable-select.js';
+
 (function () {
     'use strict';
 
     const CONTENT_SELECTOR = '#main-content';
     const SIDEBAR_SELECTOR = 'aside';
     const PREFETCH_DELAY = 65; // ms before prefetching on hover
+
+    // --- CSRF Token helper ---
+    function getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    function updateCsrfToken(doc) {
+        const newMeta = doc.querySelector('meta[name="csrf-token"]');
+        if (newMeta) {
+            const currentMeta = document.querySelector('meta[name="csrf-token"]');
+            if (currentMeta) {
+                currentMeta.setAttribute('content', newMeta.getAttribute('content'));
+            }
+            // Also update any CSRF hidden inputs in the current page
+            document.querySelectorAll('input[name="_token"]').forEach(input => {
+                input.value = newMeta.getAttribute('content');
+            });
+        }
+    }
 
     // --- In-memory page cache ---
     const pageCache = new Map();
@@ -66,10 +88,18 @@
                 const response = await fetch(url, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': getCsrfToken(),
                         'Accept': 'text/html',
                     },
                     credentials: 'same-origin',
                 });
+
+                // Handle 419 (CSRF token mismatch) — session likely expired
+                if (response.status === 419) {
+                    pageCache.clear();
+                    window.location.href = url;
+                    return;
+                }
 
                 if (!response.ok) {
                     // Fallback to normal navigation on error
@@ -79,6 +109,7 @@
 
                 // If redirected to login (session expired), do full navigation
                 if (response.redirected && response.url.includes('/login')) {
+                    pageCache.clear();
                     window.location.href = response.url;
                     return;
                 }
@@ -96,6 +127,10 @@
             // Parse the new HTML and extract the main content
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
+
+            // Keep CSRF token fresh from the new page
+            updateCsrfToken(doc);
+
             const newContent = doc.querySelector(CONTENT_SELECTOR);
             const currentContent = document.querySelector(CONTENT_SELECTOR);
 
@@ -120,6 +155,8 @@
                         }
                         oldScript.parentNode.replaceChild(newScript, oldScript);
                     });
+
+                    enhanceSearchableSelects(currentContent);
                 }, 80);
 
                 // Update the page title
@@ -175,7 +212,8 @@
                 (key === 'activos' && path.indexOf('/admin/activos/') !== -1) ||
                 (key === 'incidentes' && path.indexOf('/admin/incidentes/') !== -1) ||
                 (key === 'mantenimiento' && path.indexOf('/admin/mantenimiento/') !== -1) ||
-                (key === 'riesgos' && path.indexOf('/admin/riesgos/') !== -1)
+                (key === 'riesgos' && path.indexOf('/admin/riesgos/') !== -1) ||
+                (key === 'informes' && path.indexOf('/admin/informes/') !== -1)
             );
 
             if (shouldOpen) {
@@ -187,43 +225,9 @@
         });
     }
 
-    // --- Prefetch on hover ---
-    let prefetchTimer = null;
-    let prefetchedUrls = new Set();
-
+    // --- Prefetch on hover (disabled to avoid server thread exhaustion) ---
     function setupPrefetch() {
-        document.addEventListener('mouseover', function (e) {
-            const link = e.target.closest('a[href]');
-            if (!link || !shouldIntercept(link)) return;
-
-            const url = link.href;
-            if (prefetchedUrls.has(url) || pageCache.has(url)) return;
-
-            prefetchTimer = setTimeout(() => {
-                prefetchedUrls.add(url);
-                fetch(url, {
-                    headers: { 'Accept': 'text/html' },
-                    credentials: 'same-origin',
-                    priority: 'low',
-                })
-                    .then(r => r.text())
-                    .then(html => {
-                        if (pageCache.size >= MAX_CACHE) {
-                            const firstKey = pageCache.keys().next().value;
-                            pageCache.delete(firstKey);
-                        }
-                        pageCache.set(url, html);
-                    })
-                    .catch(() => { /* silent */ });
-            }, PREFETCH_DELAY);
-        });
-
-        document.addEventListener('mouseout', function (e) {
-            if (prefetchTimer) {
-                clearTimeout(prefetchTimer);
-                prefetchTimer = null;
-            }
-        });
+        // Disabled prefetching to ensure instant response on user clicks
     }
 
     // --- Link interception ---
@@ -272,17 +276,26 @@
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getCsrfToken(),
                     'Accept': 'text/html',
                 },
                 credentials: 'same-origin',
                 redirect: 'follow',
             })
                 .then(response => {
+                    // Handle 419 — CSRF expired, resubmit normally
+                    if (response.status === 419) {
+                        pageCache.clear();
+                        window.location.reload();
+                        return;
+                    }
+
                     if (!response.ok && response.status !== 302) {
                         // Validation errors — re-render with errors
                         return response.text().then(html => {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(html, 'text/html');
+                            updateCsrfToken(doc);
                             const newContent = doc.querySelector(CONTENT_SELECTOR);
                             const currentContent = document.querySelector(CONTENT_SELECTOR);
                             if (newContent && currentContent) {
@@ -293,6 +306,7 @@
                                     newScript.textContent = oldScript.textContent;
                                     oldScript.parentNode.replaceChild(newScript, oldScript);
                                 });
+                                enhanceSearchableSelects(currentContent);
                             }
                         });
                     }
@@ -320,6 +334,7 @@
                             if (newTitle) document.title = newTitle.textContent;
                             history.pushState({ turboNav: true }, '', finalUrl);
                             updateActiveLink(finalUrl);
+                            enhanceSearchableSelects(currentContent);
                         } else {
                             window.location.href = finalUrl;
                         }
@@ -347,6 +362,29 @@
         });
     }
 
+    // --- Periodic CSRF token refresh ---
+    function setupCsrfRefresh() {
+        const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutos
+
+        setInterval(function () {
+            fetch('/csrf-token', {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.token) {
+                        const meta = document.querySelector('meta[name="csrf-token"]');
+                        if (meta) meta.setAttribute('content', data.token);
+                        document.querySelectorAll('input[name="_token"]').forEach(input => {
+                            input.value = data.token;
+                        });
+                    }
+                })
+                .catch(() => { /* silent */ });
+        }, REFRESH_INTERVAL);
+    }
+
     // --- Initialize ---
     function init() {
         // Mark initial state
@@ -356,7 +394,9 @@
         setupFormInterception();
         setupPopState();
         setupPrefetch();
+        setupCsrfRefresh();
         updateActiveLink(window.location.href);
+        enhanceSearchableSelects();
     }
 
     // Run when DOM is ready

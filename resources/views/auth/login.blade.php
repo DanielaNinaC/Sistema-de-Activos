@@ -21,7 +21,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
-                
+
                 <h3 class="text-xl font-bold text-slate-900 mb-2">¡Registro Exitoso!</h3>
                 <p class="text-sm text-slate-600 leading-relaxed">
                     {{ session('registered_success') }}
@@ -31,31 +31,76 @@
     </div>
 @endif
 
-<div id="authCardContainer" class="w-full max-w-md transition-all duration-300 p-4 sm:p-6">
-    <div class="bg-white backdrop-blur-sm border border-gray-200 shadow-md rounded-3xl p-5 sm:p-6 space-y-4">
-        
-        <!-- Header -->
-        <div class="text-center space-y-2">
-            <h1 id="authTitle" class="text-2xl font-bold tracking-tight text-slate-900 transition-all duration-200">Sistema de Activos</h1>
-            <p id="authSubtitle" class="text-sm text-slate-500 transition-all duration-200">Ingresa tus credenciales para acceder</p>
+<div class="w-full min-h-dvh grid grid-cols-1 lg:grid-cols-2">
+
+    <!-- Panel izquierdo: branding institucional (oculto en móvil) -->
+    <div class="hidden lg:flex relative flex-col text-white p-10 xl:p-14 lg:h-dvh overflow-hidden" style="background-image: url('{{ asset('imagenes/servidor.png') }}'); background-repeat: repeat;">
+
+        <div class="relative flex items-center justify-between w-full">
+            <div class="inline-flex items-center justify-center bg-white rounded-2xl p-2.5 shadow-lg h-16 w-36">
+                <img src="{{ asset('imagenes/logoFranco.jpg') }}" alt="Lycée Franco Bolivien" class="h-full w-full object-contain rounded-lg">
+            </div>
+            <div class="inline-flex items-center justify-center bg-white rounded-2xl p-2.5 shadow-lg h-16 w-36">
+                <img src="{{ asset('imagenes/siatec.png') }}" alt="SIATEC" class="h-full w-full object-contain rounded-lg">
+            </div>
         </div>
 
-        <!-- Session Status Alert -->
-        @if (session('status'))
-            <div class="p-4 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl text-center flex items-center justify-center gap-2 shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span class="font-medium">{{ session('status') }}</span>
-            </div>
-        @endif
+        {{-- `my-auto` centra el mensaje en el espacio que queda bajo el logo. --}}
+        <div class="relative my-auto space-y-5 max-w-lg mx-auto">
+            <h2 class="text-5xl xl:text-6xl font-black tracking-widest uppercase text-center text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-blue-200 drop-shadow-md">
+                SIATEC
+            </h2>
+            <p id="heroDescription" class="text-sm xl:text-base text-slate-300 leading-relaxed text-justify font-normal max-w-md mx-auto">
+                @if(old('auth_mode', 'login') === 'register')
+                    Usted se está registrando en SIATEC para obtener acceso al sistema de control y seguimiento de activos tecnológicos de TI de la Unidad Educativa Franco Boliviano.
+                @else
+                    Usted está iniciando sesión en SIATEC, el Sistema Centralizado de Control y Seguimiento de Activos Tecnológicos alineado a normativas ISO para la Unidad Educativa Franco Boliviano.
+                @endif
+            </p>
+        </div>
+    </div>
 
-        <!-- Form (white panel) -->
-        <div class="bg-white rounded-xl">
+    {{--
+        Panel derecho. En escritorio ocupa exactamente el alto del viewport y
+        hace scroll interno si el formulario no entra (modo registro, pantallas
+        bajas); `my-auto` en la tarjeta la centra cuando sobra espacio sin
+        recortarla por arriba cuando falta —a diferencia de `items-center`.
+    --}}
+    <div class="flex justify-center bg-white px-4 py-6 sm:px-6 lg:px-10 lg:h-dvh lg:overflow-y-auto">
+        <div id="authCardContainer" class="w-full max-w-md my-auto transition-all duration-300 space-y-4">
+
+            <!-- Branding compacto (solo visible en móvil, donde el panel izquierdo está oculto) -->
+            <div class="lg:hidden flex justify-between items-center pb-1">
+                <div class="inline-flex items-center justify-center bg-white rounded-xl p-1.5 shadow h-12 w-28">
+                    <img src="{{ asset('imagenes/logoFranco.jpg') }}" alt="Logo Franco" class="h-full w-full object-contain rounded-md">
+                </div>
+                <div class="inline-flex items-center justify-center bg-white rounded-xl p-1.5 shadow h-12 w-28">
+                    <img src="{{ asset('imagenes/siatec.png') }}" alt="SIATEC" class="h-full w-full object-contain rounded-md">
+                </div>
+            </div>
+
+            <!-- Header -->
+            <div class="text-center space-y-2">
+                <h1 id="authTitle" class="text-2xl font-bold tracking-tight text-slate-900 transition-all duration-200">Iniciar Sesión</h1>
+                <p id="authSubtitle" class="text-sm text-slate-500 transition-all duration-200">Ingrese sus credenciales administrativas.</p>
+            </div>
+
+            <!-- Session Status Alert -->
+            @if (session('status'))
+                <div class="p-4 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl text-center flex items-center justify-center gap-2 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="font-medium">{{ session('status') }}</span>
+                </div>
+            @endif
+
+            <!-- Form -->
+            <div>
             <form id="loginForm" method="POST" action="{{ route('login') }}" class="space-y-5" novalidate data-turbo-disabled="true">
             @csrf
             <input type="hidden" name="auth_mode" id="auth_mode_input" value="{{ old('auth_mode', 'login') }}">
-            
+
             <div id="formFieldsGrid" class="space-y-4 transition-all duration-300">
                 <!-- Nombre (solo en modo registro) -->
                 <div id="field-nombre" class="hidden space-y-1.5">
@@ -63,11 +108,11 @@
                         Nombre
                     </label>
                     <div class="relative">
-                        <input 
-                            type="text" 
-                            id="nombre" 
-                            name="nombre" 
-                            value="{{ old('nombre') }}" 
+                        <input
+                            type="text"
+                            id="nombre"
+                            name="nombre"
+                            value="{{ old('nombre') }}"
                             placeholder="Ej. Juan"
                             class="w-full px-4 py-3 bg-gray-50 border @error('nombre') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
                         >
@@ -90,11 +135,11 @@
                         Apellido
                     </label>
                     <div class="relative">
-                        <input 
-                            type="text" 
-                            id="apellido" 
-                            name="apellido" 
-                            value="{{ old('apellido') }}" 
+                        <input
+                            type="text"
+                            id="apellido"
+                            name="apellido"
+                            value="{{ old('apellido') }}"
                             placeholder="Ej. Pérez Gómez"
                             class="w-full px-4 py-3 bg-gray-50 border @error('apellido') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
                         >
@@ -117,14 +162,17 @@
                         Correo Electrónico
                     </label>
                     <div class="relative">
-                        <input 
-                            type="email" 
-                            id="correo" 
-                            name="correo" 
-                            value="{{ old('correo') }}" 
+                        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <input
+                            type="email"
+                            id="correo"
+                            name="correo"
+                            value="{{ old('correo') }}"
                             autofocus
                             placeholder="usuario@dominio.com"
-                            class="w-full px-4 py-3 bg-gray-50 border @error('correo') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
+                            class="w-full pl-10 pr-4 py-3 bg-gray-50 border @error('correo') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
                         >
                     </div>
                     <div id="error-correo-container">
@@ -145,12 +193,15 @@
                         Contraseña
                     </label>
                     <div class="relative">
-                        <input 
-                            type="password" 
-                            id="contrasena" 
-                            name="contrasena" 
+                        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <input
+                            type="password"
+                            id="contrasena"
+                            name="contrasena"
                             placeholder="••••••••"
-                            class="w-full px-4 py-3 bg-gray-50 border @error('contrasena') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
+                            class="w-full pl-10 pr-11 py-3 bg-gray-50 border @error('contrasena') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
                         >
 
                         <button type="button" id="togglePassword" aria-label="Mostrar contraseña" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700">
@@ -183,10 +234,10 @@
                         Confirmar Contraseña
                     </label>
                     <div class="relative">
-                        <input 
-                            type="password" 
-                            id="contrasena_confirmation" 
-                            name="contrasena_confirmation" 
+                        <input
+                            type="password"
+                            id="contrasena_confirmation"
+                            name="contrasena_confirmation"
                             placeholder="••••••••"
                             class="w-full px-4 py-3 bg-gray-50 border @error('contrasena_confirmation') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
                         >
@@ -215,6 +266,8 @@
                     </div>
                 </div>
 
+
+
                 <!-- Código cache / Captcha (solo en modo inicio de sesión) -->
                 <div id="field-captcha" class="space-y-1.5 sm:col-span-2">
                     <div class="flex justify-between items-center">
@@ -225,15 +278,15 @@
 
                     <!-- Muestra visual de la imagen del código -->
                     <div class="flex items-center gap-2">
-                        <img id="captcha-img" 
-                             src="{{ route('captcha.image') }}" 
-                             alt="Código de seguridad" 
+                        <img id="captcha-img"
+                             src="{{ route('captcha.image') }}"
+                             alt="Código de seguridad"
                              class="h-10 rounded-lg cursor-pointer hover:opacity-90 transition"
                              title="Haz clic para generar un nuevo código"
                              onclick="refreshCaptcha()"
                         >
-                        <button type="button" 
-                                id="btn-refresh-captcha" 
+                        <button type="button"
+                                id="btn-refresh-captcha"
                                 onclick="refreshCaptcha()"
                                 title="Recargar código"
                                 class="p-2 text-slate-500 hover:text-indigo-600 rounded-lg transition focus:outline-none"
@@ -245,11 +298,11 @@
                     </div>
 
                     <div class="relative">
-                        <input 
-                            type="text" 
-                            id="codigo_cache" 
-                            name="codigo_cache" 
-                            value="{{ old('codigo_cache') }}" 
+                        <input
+                            type="text"
+                            id="codigo_cache"
+                            name="codigo_cache"
+                            value="{{ old('codigo_cache') }}"
                             autocomplete="off"
                             placeholder="Ingresa el código de 5 caracteres"
                             class="w-full px-4 py-3 bg-gray-50 border @error('codigo_cache') border-rose-500 ring-2 ring-rose-200 @else border-gray-200 @enderror rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
@@ -269,25 +322,35 @@
 
                 <!-- Submit Button -->
                 <div id="btnSubmitContainer" class="sm:col-span-2 pt-2">
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         id="btnSubmit"
-                        class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white transition-all duration-200"
+                        class="w-full py-3 px-4 bg-[#1D3557] hover:bg-[#152844] active:bg-[#0f1d32] text-white font-semibold rounded-xl shadow-lg shadow-slate-300 hover:shadow-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D3557] focus:ring-offset-2 focus:ring-offset-white transition-all duration-200"
                     >
-                        Iniciar Sesión
+                        Ingresar al Sistema
                     </button>
                 </div>
             </div>
         </form>
 
         <!-- Hipervínculo para alternar entre Iniciar Sesión y Registrar Cuenta -->
-        <div class="pt-4 border-t border-slate-100 text-center">
+        <div class="pt-3 border-t border-slate-100 text-center">
             <p id="toggleAuthText" class="text-xs text-slate-500">
-                ¿No tienes cuenta? 
+                ¿No tienes cuenta?
                 <button type="button" id="toggleAuthBtn" class="font-semibold text-indigo-600 hover:text-indigo-500 underline transition focus:outline-none ml-0.5">
                     Regístrate aquí
                 </button>
             </p>
+        </div>
+
+        {{-- Pie: soporte técnico y aviso de derechos (antes vivía en el footer
+             global del layout, que dejaba una franja oscura bajo el panel blanco). --}}
+        <div class="pt-2 space-y-1 text-center text-[11px] text-slate-400">
+            <p>
+                Para asistencia técnica, contacte a
+                <a href="mailto:soporte@ejemplo.com" class="font-medium text-slate-500 hover:text-indigo-600 transition">soporte@ejemplo.com</a>
+            </p>
+            <p>&copy; {{ date('Y') }} Sistema de Activos Tecnológicos</p>
         </div>
 
         <script>
@@ -327,6 +390,8 @@
                 var fieldApellido = document.getElementById('field-apellido');
                 var fieldConfirmar = document.getElementById('field-confirmar');
                 var fieldCaptcha = document.getElementById('field-captcha');
+                var fieldRecordarme = document.getElementById('field-recordarme');
+                var heroDescEl = document.getElementById('heroDescription');
 
                 if (mode === 'register') {
                     if (cardContainer) {
@@ -339,14 +404,16 @@
                     if (form) form.action = "{{ route('register') }}";
                     if (titleEl) titleEl.textContent = 'Registrar Cuenta';
                     if (subtitleEl) subtitleEl.textContent = 'Ingresa tus datos para registrarte en el Sistema de Activos';
+                    if (heroDescEl) heroDescEl.textContent = 'Usted se está registrando en SIATEC para obtener acceso al sistema de control y seguimiento de activos tecnológicos de TI de la Unidad Educativa Franco Boliviano.';
                     if (fieldNombre) fieldNombre.classList.remove('hidden');
                     if (fieldApellido) fieldApellido.classList.remove('hidden');
                     if (fieldConfirmar) fieldConfirmar.classList.remove('hidden');
                     if (fieldCaptcha) fieldCaptcha.classList.add('hidden');
+                    if (fieldRecordarme) fieldRecordarme.classList.add('hidden');
                     if (submitBtn) {
                         submitBtn.textContent = 'Registrar Cuenta';
                         submitBtn.disabled = false;
-                        submitBtn.className = 'w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white transition-all duration-200';
+                        submitBtn.className = 'w-full py-3 px-4 bg-[#1D3557] hover:bg-[#152844] active:bg-[#0f1d32] text-white font-semibold rounded-xl shadow-lg shadow-slate-300 hover:shadow-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D3557] focus:ring-offset-2 focus:ring-offset-white transition-all duration-200';
                     }
                     if (toggleText) {
                         toggleText.innerHTML = '¿Ya tienes una cuenta? <button type="button" id="toggleAuthBtn" class="font-semibold text-indigo-600 hover:text-indigo-500 underline transition focus:outline-none ml-0.5">Inicia sesión aquí</button>';
@@ -361,16 +428,18 @@
                         formGrid.className = 'space-y-4 transition-all duration-300';
                     }
                     if (form) form.action = "{{ route('login') }}";
-                    if (titleEl) titleEl.textContent = 'Sistema de Activos';
-                    if (subtitleEl) subtitleEl.textContent = 'Ingresa tus credenciales para acceder';
+                    if (titleEl) titleEl.textContent = 'Iniciar Sesión';
+                    if (subtitleEl) subtitleEl.textContent = 'Ingrese sus credenciales administrativas.';
+                    if (heroDescEl) heroDescEl.textContent = 'Usted está iniciando sesión en SIATEC, el Sistema Centralizado de Control y Seguimiento de Activos Tecnológicos alineado a normativas ISO para la Unidad Educativa Franco Boliviano.';
                     if (fieldNombre) fieldNombre.classList.add('hidden');
                     if (fieldApellido) fieldApellido.classList.add('hidden');
                     if (fieldConfirmar) fieldConfirmar.classList.add('hidden');
                     if (fieldCaptcha) fieldCaptcha.classList.remove('hidden');
+                    if (fieldRecordarme) fieldRecordarme.classList.remove('hidden');
                     if (submitBtn) {
-                        submitBtn.textContent = 'Iniciar Sesión';
+                        submitBtn.textContent = 'Ingresar al Sistema';
                         submitBtn.disabled = false;
-                        submitBtn.className = 'w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white transition-all duration-200';
+                        submitBtn.className = 'w-full py-3 px-4 bg-[#1D3557] hover:bg-[#152844] active:bg-[#0f1d32] text-white font-semibold rounded-xl shadow-lg shadow-slate-300 hover:shadow-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D3557] focus:ring-offset-2 focus:ring-offset-white transition-all duration-200';
                     }
                     if (toggleText) {
                         toggleText.innerHTML = '¿No tienes cuenta? <button type="button" id="toggleAuthBtn" class="font-semibold text-indigo-600 hover:text-indigo-500 underline transition focus:outline-none ml-0.5">Regístrate aquí</button>';
@@ -538,8 +607,35 @@
                 initLoginValidation();
             }
         </script>
-        </div>
 
+        {{-- Auto-refresh del token CSRF cada 10 minutos para evitar 419 --}}
+        <script>
+            (function() {
+                const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutos
+
+                setInterval(function() {
+                    fetch('/csrf-token', {
+                        headers: { 'Accept': 'application/json' },
+                        credentials: 'same-origin',
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.token) {
+                            // Actualizar el meta tag
+                            const meta = document.querySelector('meta[name="csrf-token"]');
+                            if (meta) meta.setAttribute('content', data.token);
+                            // Actualizar todos los inputs _token del formulario
+                            document.querySelectorAll('input[name="_token"]').forEach(input => {
+                                input.value = data.token;
+                            });
+                        }
+                    })
+                    .catch(() => { /* silencioso */ });
+                }, REFRESH_INTERVAL);
+            })();
+        </script>
+            </div>
+        </div>
     </div>
 </div>
 @endsection

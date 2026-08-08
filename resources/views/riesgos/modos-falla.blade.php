@@ -74,12 +74,30 @@
                     <input name="nombre_modo_falla" value="{{ old('nombre_modo_falla') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Ej: Caída del sistema operativo, Falla de disco..." required />
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Severidad Base (Tabla 20) <span class="text-slate-400 font-normal">(1-10)</span></label>
-                    <input type="number" min="1" max="10" name="valor_severidad_base" value="{{ old('valor_severidad_base', 5) }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition font-mono" placeholder="Ej: 10 (Muy Alta), 8 (Alta)..." />
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Severidad (Tabla 20) <span class="text-rose-500">*</span></label>
+                    <select name="nivel_severidad" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="">-- Seleccionar nivel de severidad --</option>
+                        @foreach($opcionesSeveridad as $valor => $etiqueta)
+                            <option value="{{ $valor }}" {{ old('nivel_severidad') == $valor ? 'selected' : '' }}>{{ $etiqueta }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Monitoreo MSR Base (Tabla 22) <span class="text-slate-400 font-normal">(1-10)</span></label>
-                    <input type="number" min="1" max="10" name="valor_msr_base" value="{{ old('valor_msr_base', 4) }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition font-mono" placeholder="Ej: 9 (Bajo control), 4 (Alertas automáticas)..." />
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Monitoreo MSR (Tabla 22) <span class="text-rose-500">*</span></label>
+                    <select name="nivel_msr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="">-- Seleccionar nivel de MSR --</option>
+                        @foreach($opcionesMsr as $valor => $etiqueta)
+                            <option value="{{ $valor }}" {{ old('nivel_msr') == $valor ? 'selected' : '' }}>{{ $etiqueta }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Justificación de Severidad <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <textarea name="justificacion_severidad" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Cite el informe de auditoría o entrevista que respalda esta elección...">{{ old('justificacion_severidad') }}</textarea>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Justificación de MSR <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <textarea name="justificacion_msr" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Cite el informe de auditoría o entrevista que respalda esta elección...">{{ old('justificacion_msr') }}</textarea>
                 </div>
             </div>
             <div class="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
@@ -144,13 +162,17 @@
                     <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Categoría del Activo</th>
                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Modo de Falla</th>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Severidad Base (S)</th>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">MSR Base (Control)</th>
+                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Severidad</th>
+                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">MSR</th>
                     <th class="w-36 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 @forelse($modos as $modo)
+                @php
+                    $labelSeveridad = $modo->nivel_severidad ? ucwords(str_replace('_', ' ', $modo->nivel_severidad)) : null;
+                    $labelMsr = $modo->nivel_msr ? ucwords(str_replace('_', ' ', $modo->nivel_msr)) : null;
+                @endphp
                 <tr class="hover:bg-slate-50/50 transition">
                     <td class="w-16 px-6 py-4 text-center text-sm text-slate-700 font-mono">{{ $modo->id_modo_falla }}</td>
                     <td class="px-6 py-4 text-center text-sm text-slate-900 font-semibold">
@@ -161,15 +183,15 @@
                     <td class="px-6 py-4 text-left text-sm text-slate-800 font-medium leading-relaxed">
                         {{ $modo->nombre_modo_falla }}
                     </td>
-                    <td class="px-6 py-4 text-center text-sm font-mono font-bold text-rose-700">
-                        {{ $modo->valor_severidad_base ?? '-' }}
+                    <td class="px-6 py-4 text-center text-sm font-bold text-rose-700">
+                        {{ $labelSeveridad ?? '-' }} <span class="font-mono text-slate-400 font-normal">({{ $modo->valor_severidad_base ?? '-' }})</span>
                     </td>
-                    <td class="px-6 py-4 text-center text-sm font-mono font-bold text-blue-700">
-                        {{ $modo->valor_msr_base ?? '-' }}
+                    <td class="px-6 py-4 text-center text-sm font-bold text-blue-700">
+                        {{ $labelMsr ?? '-' }} <span class="font-mono text-slate-400 font-normal">({{ $modo->valor_msr_base ?? '-' }})</span>
                     </td>
                     <td class="w-36 px-6 py-4 text-center text-sm">
-                        <button type="button" 
-                                onclick="openEditModal({{ $modo->id_modo_falla }}, '{{ $modo->fk_id_categoria }}', '{{ addslashes($modo->nombre_modo_falla) }}', '{{ $modo->valor_severidad_base }}', '{{ $modo->valor_msr_base }}')" 
+                        <button type="button"
+                                onclick="openEditModal({{ $modo->id_modo_falla }}, '{{ $modo->fk_id_categoria }}', '{{ addslashes($modo->nombre_modo_falla) }}', '{{ $modo->nivel_severidad }}', '{{ $modo->nivel_msr }}', '{{ addslashes($modo->justificacion_severidad ?? '') }}', '{{ addslashes($modo->justificacion_msr ?? '') }}')"
                                 class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -220,15 +242,31 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Nombre del Modo de Falla <span class="text-rose-500">*</span></label>
                     <input id="edit_nombre_modo_falla" name="nombre_modo_falla" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required />
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Severidad Base (1-10)</label>
-                        <input type="number" min="1" max="10" id="edit_valor_severidad_base" name="valor_severidad_base" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition font-mono" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1.5">MSR Base (1-10)</label>
-                        <input type="number" min="1" max="10" id="edit_valor_msr_base" name="valor_msr_base" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition font-mono" />
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Severidad (Tabla 20) <span class="text-rose-500">*</span></label>
+                    <select id="edit_nivel_severidad" name="nivel_severidad" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="">-- Seleccionar nivel de severidad --</option>
+                        @foreach($opcionesSeveridad as $valor => $etiqueta)
+                            <option value="{{ $valor }}">{{ $etiqueta }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Monitoreo MSR (Tabla 22) <span class="text-rose-500">*</span></label>
+                    <select id="edit_nivel_msr" name="nivel_msr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                        <option value="">-- Seleccionar nivel de MSR --</option>
+                        @foreach($opcionesMsr as $valor => $etiqueta)
+                            <option value="{{ $valor }}">{{ $etiqueta }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Justificación de Severidad <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <textarea id="edit_justificacion_severidad" name="justificacion_severidad" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Justificación de MSR <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <textarea id="edit_justificacion_msr" name="justificacion_msr" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
                 </div>
             </div>
 
@@ -257,14 +295,16 @@
         }
     }
 
-    function openEditModal(id, idCategoria, nombreModo, sevBase, msrBase) {
+    function openEditModal(id, idCategoria, nombreModo, nivelSeveridad, nivelMsr, justificacionSeveridad, justificacionMsr) {
         var form = document.getElementById('editForm');
         form.action = '/admin/riesgos/modos-falla/' + id;
 
         document.getElementById('edit_fk_id_categoria').value = idCategoria;
         document.getElementById('edit_nombre_modo_falla').value = nombreModo;
-        document.getElementById('edit_valor_severidad_base').value = sevBase || '';
-        document.getElementById('edit_valor_msr_base').value = msrBase || '';
+        document.getElementById('edit_nivel_severidad').value = nivelSeveridad || '';
+        document.getElementById('edit_nivel_msr').value = nivelMsr || '';
+        document.getElementById('edit_justificacion_severidad').value = justificacionSeveridad || '';
+        document.getElementById('edit_justificacion_msr').value = justificacionMsr || '';
 
         var modal = document.getElementById('editModal');
         var card = document.getElementById('editModalCard');

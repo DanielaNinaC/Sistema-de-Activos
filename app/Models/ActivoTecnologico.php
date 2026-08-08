@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,6 +12,15 @@ class ActivoTecnologico extends Model
 
     protected $table = 'activos_tecnologicos';
     protected $primaryKey = 'id_activo';
+
+    /**
+     * 'criticidad_institucional' es un campo derivado de solo lectura: el
+     * nivel de riesgo (Bajo/Medio/Alto/Crítico) de la última evaluación FMEA
+     * vigente de este activo. NO es el nivel de dependencia institucional de
+     * la categoría (eso vive en categorias.nivel_dependencia). Preferir
+     * EvaluacionRiesgo::where('fk_id_activo', $id)->where('vigente', true)
+     * ->max('score_calculado') como fuente de verdad en vez de este campo.
+     */
 
     protected $fillable = [
         'fk_id_categoria',
@@ -64,5 +74,21 @@ class ActivoTecnologico extends Model
     public function mantenimientos()
     {
         return $this->hasMany(Mantenimiento::class, 'fk_id_activo', 'id_activo');
+    }
+
+    /**
+     * Fecha del mantenimiento más reciente ya ejecutado sobre este activo.
+     * 'Finalizado' es el valor real usado en estado_mantenimiento en todo
+     * el módulo de mantenimiento (ver resources/views/mantenimiento/*.blade.php);
+     * 'Completado' nunca se usa como valor persistido.
+     */
+    public function fechaUltimoMantenimientoCompletado(): ?Carbon
+    {
+        $fecha = $this->mantenimientos()
+            ->where('estado_mantenimiento', 'Finalizado')
+            ->whereNotNull('fecha_ejecucion')
+            ->max('fecha_ejecucion');
+
+        return $fecha ? Carbon::parse($fecha) : null;
     }
 }

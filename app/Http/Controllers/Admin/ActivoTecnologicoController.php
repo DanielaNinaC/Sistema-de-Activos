@@ -125,6 +125,8 @@ class ActivoTecnologicoController extends Controller
             'nombre_categoria' => 'required|string|max:255|unique:categorias,nombre_categoria',
             'vida_util_valor' => 'nullable|integer|min:1',
             'vida_util_unidad' => 'nullable|in:meses,anos',
+            'nivel_dependencia' => 'required|in:Alta,Media,Baja',
+            'justificacion_dependencia' => 'nullable|string',
         ]);
 
         // Convertir a meses si se ingresó en años
@@ -140,6 +142,8 @@ class ActivoTecnologicoController extends Controller
         Categoria::create([
             'nombre_categoria' => $data['nombre_categoria'],
             'vida_util_meses' => $vidaUtilMeses,
+            'nivel_dependencia' => $data['nivel_dependencia'],
+            'justificacion_dependencia' => $data['justificacion_dependencia'] ?? null,
         ]);
 
         return redirect()->route('admin.activos.categorias')->with('success', 'Categoría creada con éxito');
@@ -153,6 +157,8 @@ class ActivoTecnologicoController extends Controller
             'nombre_categoria' => 'required|string|max:255|unique:categorias,nombre_categoria,' . $id . ',id_categoria',
             'vida_util_valor' => 'nullable|integer|min:1',
             'vida_util_unidad' => 'nullable|in:meses,anos',
+            'nivel_dependencia' => 'required|in:Alta,Media,Baja',
+            'justificacion_dependencia' => 'nullable|string',
         ]);
 
         $vidaUtilMeses = null;
@@ -167,6 +173,8 @@ class ActivoTecnologicoController extends Controller
         $categoria->update([
             'nombre_categoria' => $data['nombre_categoria'],
             'vida_util_meses' => $vidaUtilMeses,
+            'nivel_dependencia' => $data['nivel_dependencia'],
+            'justificacion_dependencia' => $data['justificacion_dependencia'] ?? null,
         ]);
 
         return redirect()->route('admin.activos.categorias')->with('success', 'Categoría actualizada con éxito');

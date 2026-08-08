@@ -17,6 +17,7 @@ class Incidente extends Model
         'fk_id_usuario_reporta',
         'fecha_incidente',
         'descripcion_falla',
+        'fk_id_modo_falla',
         'estado_incidente',
     ];
 
@@ -28,5 +29,10 @@ class Incidente extends Model
     public function usuarioReporta()
     {
         return $this->belongsTo(Usuario::class, 'fk_id_usuario_reporta', 'id_usuario');
+    }
+
+    public function modoFalla()
+    {
+        return $this->belongsTo(ModoFalla::class, 'fk_id_modo_falla', 'id_modo_falla');
     }
 }

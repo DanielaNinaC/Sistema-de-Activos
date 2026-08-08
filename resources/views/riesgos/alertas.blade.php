@@ -59,7 +59,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Evaluación FMEA Origen <span class="text-rose-500">*</span></label>
-                    <select name="fk_id_evaluacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                    <select name="fk_id_evaluacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar evaluación..." required>
                         <option value="">-- Seleccionar Evaluación --</option>
                         @foreach($evaluaciones as $evaluacion)
                             <option value="{{ $evaluacion->id_evaluacion }}" {{ old('fk_id_evaluacion') == $evaluacion->id_evaluacion ? 'selected' : '' }}>

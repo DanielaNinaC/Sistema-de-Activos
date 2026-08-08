@@ -3,7 +3,7 @@
 @section('title', 'Seguimiento de Incidentes - Activos Tecnológicos')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
     {{-- Header con botón de registro --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3">
@@ -85,7 +85,6 @@
                         <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo Tecnológico</th>
                         <th class="px-3 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Reportado Por</th>
                         <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
-                        <th class="px-3 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Descripción de Falla</th>
                         <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
@@ -119,9 +118,6 @@
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border {{ $badgeStyle }}">
                                     {{ $incidente->estado_incidente }}
                                 </span>
-                            </td>
-                            <td class="px-3 py-4 text-left text-sm text-slate-600 max-w-xs leading-relaxed truncate" title="{{ $incidente->descripcion_falla }}">
-                                {{ $incidente->descripcion_falla }}
                             </td>
                             <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
                                 <div class="flex items-center justify-center gap-1.5">

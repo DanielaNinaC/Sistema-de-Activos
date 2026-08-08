@@ -7,8 +7,11 @@ use App\Models\ActivoTecnologico;
 use App\Models\EvaluacionRiesgo;
 use App\Models\Incidente;
 use App\Models\Mantenimiento;
+use App\Models\ModoFalla;
 use App\Models\OrigenMantenimiento;
+use App\Models\PlanTratamientoRiesgo;
 use App\Models\Usuario;
+use App\Services\MotorFmeaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -18,8 +21,9 @@ class ProcesoActivoController extends Controller
     {
         $activos = ActivoTecnologico::with(['categoria', 'ubicacion'])->orderBy('nombre_equipo')->get();
         $usuarios = Usuario::with('rol')->orderBy('nombre')->get();
+        $modos = ModoFalla::orderBy('nombre_modo_falla')->get();
 
-        return view('incidentes.registrar', compact('activos', 'usuarios'));
+        return view('incidentes.registrar', compact('activos', 'usuarios', 'modos'));
     }
 
     public function incidentesStore(Request $request)
@@ -42,6 +46,7 @@ class ProcesoActivoController extends Controller
             'fk_id_usuario_reporta' => 'required|integer|exists:usuarios,id_usuario',
             'fecha_incidente' => 'required|date',
             'descripcion_falla' => 'required|string',
+            'fk_id_modo_falla' => 'nullable|integer|exists:modos_falla,id_modo_falla',
             'estado_incidente' => 'required|string|max:255',
         ]);
 
@@ -50,6 +55,7 @@ class ProcesoActivoController extends Controller
             'fk_id_usuario_reporta' => $data['fk_id_usuario_reporta'],
             'fecha_incidente' => $data['fecha_incidente'],
             'descripcion_falla' => $data['descripcion_falla'],
+            'fk_id_modo_falla' => $data['fk_id_modo_falla'] ?? null,
             'estado_incidente' => $data['estado_incidente'],
         ]);
 
@@ -209,7 +215,7 @@ class ProcesoActivoController extends Controller
         return view('mantenimiento.cronograma', compact('mantenimientos', 'alertasProx3Dias'));
     }
 
-    public function mantenimientoUpdate(Request $request, $id)
+    public function mantenimientoUpdate(Request $request, $id, MotorFmeaService $service)
     {
         $mantenimiento = Mantenimiento::findOrFail($id);
 
@@ -218,11 +224,29 @@ class ProcesoActivoController extends Controller
             'descripcion_trabajo' => 'nullable|string',
         ]);
 
-        if (in_array($data['estado_mantenimiento'], ['Finalizado', 'Completado']) && !$mantenimiento->fecha_ejecucion) {
+        $seFinalizo = in_array($data['estado_mantenimiento'], ['Finalizado', 'Completado']) && !$mantenimiento->fecha_ejecucion;
+
+        if ($seFinalizo) {
             $data['fecha_ejecucion'] = date('Y-m-d');
         }
 
         $mantenimiento->update($data);
+
+        // Cierre del ciclo (disparador inverso): el hecho físico que cambia
+        // el riesgo es la ejecución real del Mantenimiento, no el cambio de
+        // estado del Tratamiento. Al finalizar un Mantenimiento vinculado a
+        // una evaluación (id_evaluacion_origen, ya existente en el
+        // diccionario de datos), se cierra el Tratamiento "Mitigar" que lo
+        // originó y se dispara una nueva evaluación del activo.
+        if ($seFinalizo && $mantenimiento->id_evaluacion_origen) {
+            $actualizados = PlanTratamientoRiesgo::where('fk_id_evaluacion', $mantenimiento->id_evaluacion_origen)
+                ->where('estado_tratamiento', '!=', 'Completado')
+                ->update(['estado_tratamiento' => 'Completado']);
+
+            if ($actualizados > 0) {
+                $service->evaluarActivo($mantenimiento->fk_id_activo);
+            }
+        }
 
         return redirect()->back()->with('success', 'Mantenimiento actualizado con éxito');
     }

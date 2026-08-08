@@ -20,7 +20,14 @@ class EvaluacionRiesgo extends Model
         'valor_msr',
         'score_calculado',
         'nivel_riesgo',
+        'vigente',
         'fecha_evaluacion',
+        'conteo_generico',
+    ];
+
+    protected $casts = [
+        'vigente' => 'boolean',
+        'conteo_generico' => 'boolean',
     ];
 
     public function activo()
@@ -31,5 +38,25 @@ class EvaluacionRiesgo extends Model
     public function modoFalla()
     {
         return $this->belongsTo(ModoFalla::class, 'fk_id_modo_falla', 'id_modo_falla');
+    }
+
+    public function planesTratamiento()
+    {
+        return $this->hasMany(PlanTratamientoRiesgo::class, 'fk_id_evaluacion', 'id_evaluacion');
+    }
+
+    /**
+     * Evaluaciones vigentes en Alto/Crítico sin ningún plan de tratamiento
+     * asociado (ni Pendiente, En Proceso ni Completado). Única fuente de
+     * verdad reutilizada por el módulo de Plan de Tratamiento y por el
+     * módulo de Informes — no duplicar esta consulta en otro lugar.
+     */
+    public function scopeSinTratamiento($query)
+    {
+        return $query->where('vigente', true)
+            ->whereIn('nivel_riesgo', ['Alto', 'Crítico'])
+            ->whereDoesntHave('planesTratamiento', function ($q) {
+                $q->whereIn('estado_tratamiento', ['Pendiente', 'En Proceso', 'Completado']);
+            });
     }
 }

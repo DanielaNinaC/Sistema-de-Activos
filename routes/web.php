@@ -3,13 +3,17 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InicioController;
 
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+Route::get('/', [InicioController::class, 'index'])->name('inicio');
 
 // Rutas para usuarios no autenticados (Invitados)
 Route::middleware(['web'])->group(function () {
+    // Endpoint para refrescar el token CSRF (evita errores 419 por inactividad)
+    Route::get('/csrf-token', function () {
+        return response()->json(['token' => csrf_token()]);
+    })->name('csrf.refresh');
+
     Route::middleware('guest')->group(function () {
         Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
         Route::post('/login', [AuthController::class, 'login']);
@@ -78,5 +82,31 @@ Route::middleware('auth')->group(function () {
             Route::post('/riesgos/alertas', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'alertasStore'])->name('riesgos.alertas.store');
             Route::get('/riesgos/plan-tratamiento', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'tratamientoIndex'])->name('riesgos.tratamiento');
             Route::post('/riesgos/plan-tratamiento', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'tratamientoStore'])->name('riesgos.tratamiento.store');
+            Route::put('/riesgos/plan-tratamiento/{id}', [App\Http\Controllers\Admin\ProcesoRiesgoController::class, 'tratamientoUpdate'])->name('riesgos.tratamiento.update');
+
+            // Informes y Reportes (Sprint 6) — reportes agregados, nunca listados operativos
+            Route::prefix('informes')->name('informes.')->group(function () {
+
+                Route::get('/vida-util', [App\Http\Controllers\Admin\InformesController::class, 'vidaUtilRemanente'])->name('vida-util');
+                Route::get('/vida-util/pdf', [App\Http\Controllers\Admin\InformesController::class, 'vidaUtilPdf'])->name('vida-util.pdf');
+                Route::get('/vida-util/excel', [App\Http\Controllers\Admin\InformesController::class, 'vidaUtilExcel'])->name('vida-util.excel');
+
+                Route::get('/evolucion-score', [App\Http\Controllers\Admin\InformesController::class, 'evolucionScore'])->name('evolucion-score');
+                Route::get('/evolucion-score/excel', [App\Http\Controllers\Admin\InformesController::class, 'evolucionScoreExcel'])->name('evolucion-score.excel');
+
+                Route::get('/modos-falla-frecuentes', [App\Http\Controllers\Admin\InformesController::class, 'modosFallaFrecuentes'])->name('modos-falla');
+
+                Route::get('/mantenimiento-tipo', [App\Http\Controllers\Admin\InformesController::class, 'mantenimientoPreventivoCorrectivo'])->name('mantenimiento-tipo');
+
+                Route::get('/sin-tratamiento', [App\Http\Controllers\Admin\InformesController::class, 'evaluacionesSinTratamiento'])->name('sin-tratamiento');
+                Route::get('/sin-tratamiento/pdf', [App\Http\Controllers\Admin\InformesController::class, 'evaluacionesSinTratamientoPdf'])->name('sin-tratamiento.pdf');
+                Route::get('/sin-tratamiento/excel', [App\Http\Controllers\Admin\InformesController::class, 'evaluacionesSinTratamientoExcel'])->name('sin-tratamiento.excel');
+
+                Route::get('/trazabilidad', [App\Http\Controllers\Admin\InformesController::class, 'trazabilidadUsuarios'])->name('trazabilidad');
+                Route::get('/trazabilidad/excel', [App\Http\Controllers\Admin\InformesController::class, 'trazabilidadExcel'])->name('trazabilidad.excel');
+
+                Route::get('/auditoria-consolidado', [App\Http\Controllers\Admin\InformesController::class, 'auditoriaConsolidado'])->name('auditoria');
+                Route::get('/auditoria-consolidado/pdf', [App\Http\Controllers\Admin\InformesController::class, 'auditoriaConsolidadoPdf'])->name('auditoria.pdf');
+            });
         });
 });

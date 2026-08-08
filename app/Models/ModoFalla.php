@@ -17,6 +17,10 @@ class ModoFalla extends Model
         'nombre_modo_falla',
         'valor_severidad_base',
         'valor_msr_base',
+        'nivel_severidad',
+        'nivel_msr',
+        'justificacion_severidad',
+        'justificacion_msr',
     ];
 
     public function categoria()
