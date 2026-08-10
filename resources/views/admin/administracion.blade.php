@@ -69,7 +69,7 @@
                 <input name="contrasena" type="password" class="w-full max-w-md border @error('contrasena') border-rose-500 @else border-gray-200 @enderror px-3 py-2.5 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-500" required />
             </div>
             <div class="flex items-end">
-                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded text-sm transition">Crear</button>
+                <button class="btn btn-primary">Crear</button>
             </div>
         </form>
     </div>
@@ -99,15 +99,15 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 text-center text-sm text-gray-700 space-x-2">
-                        <a href="{{ route('admin.usuarios.show', $u->id_usuario) }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition text-xs font-medium shadow-sm">Ver</a>
-                        <a href="{{ route('admin.usuarios.edit', $u->id_usuario) }}" class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded transition text-xs font-medium shadow-sm">Editar</a>
+                        <a href="{{ route('admin.usuarios.show', $u->id_usuario) }}" class="btn btn-xs btn-primary">Ver</a>
+                        <a href="{{ route('admin.usuarios.edit', $u->id_usuario) }}" class="btn btn-xs btn-warning">Editar</a>
                         
                         <form id="user-status-form-{{ $u->id_usuario }}" action="{{ route('admin.usuarios.destroy', $u->id_usuario) }}" method="POST" class="inline-block">
                             @csrf
                             @method('DELETE')
                             <button type="button" 
                                     onclick="openConfirmModal('user-status-form-{{ $u->id_usuario }}', {{ $u->estado ? 'true' : 'false' }}, '{{ addslashes($u->nombre . ' ' . ($u->apellido ?? '')) }}')"
-                                    class="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-3 py-1 rounded transition text-xs font-medium shadow-sm">
+                                    class="btn btn-xs btn-dark">
                                 {{ $u->estado ? 'Desactivar cuenta' : 'Activar cuenta' }}
                             </button>
                         </form>
@@ -143,10 +143,10 @@
         </p>
 
         <div class="flex items-center justify-end gap-3 pt-2">
-            <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+            <button type="button" onclick="closeConfirmModal()" class="btn btn-secondary">
                 Cancelar
             </button>
-            <button type="button" id="confirmSubmitBtn" onclick="submitConfirmedForm()" class="px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-sm transition">
+            <button type="button" id="confirmSubmitBtn" onclick="submitConfirmedForm()" class="btn btn-danger">
                 Confirmar
             </button>
         </div>
@@ -171,14 +171,14 @@
             desc.innerText = 'Restricción de acceso';
             text.innerText = '¿Está seguro de que desea desactivar la cuenta de ' + userName + '? El usuario no podrá acceder al sistema.';
             iconContainer.className = 'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-rose-100 text-rose-600';
-            confirmBtn.className = 'px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition';
+            confirmBtn.className = 'btn btn-danger';
             confirmBtn.innerText = 'Desactivar';
         } else {
             title.innerText = 'Activar Cuenta';
             desc.innerText = 'Habilitar acceso';
             text.innerText = '¿Está seguro de que desea activar la cuenta de ' + userName + '? El usuario podrá acceder normalmente al sistema.';
             iconContainer.className = 'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-emerald-100 text-emerald-600';
-            confirmBtn.className = 'px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition';
+            confirmBtn.className = 'btn btn-success';
             confirmBtn.innerText = 'Activar';
         }
 

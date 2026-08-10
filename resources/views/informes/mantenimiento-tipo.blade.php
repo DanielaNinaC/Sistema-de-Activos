@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
 
     <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver" title="Volver">
+        <a href="{{ url()->previous() }}" class="btn btn-outline btn-icon" aria-label="Volver" title="Volver">
             <span aria-hidden="true">&#8592;</span>
         </a>
         <div>
@@ -34,7 +34,7 @@
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm">Filtrar</button>
+            <button type="submit" class="btn btn-dark">Filtrar</button>
         </form>
     </div>
 

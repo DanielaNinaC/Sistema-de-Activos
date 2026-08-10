@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 class="text-2xl font-semibold text-slate-900">Lista de Usuarios</h2>
-        <a href="{{ route('admin.usuarios.create') }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-200 self-start sm:self-auto">
+        <a href="{{ route('admin.usuarios.create') }}" class="btn btn-primary self-start sm:self-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -43,12 +43,12 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                <button type="submit" class="btn btn-dark">
                     Buscar
                 </button>
 
                 @if(!empty($search))
-                    <a href="{{ route('admin.usuarios.index') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition flex items-center gap-1">
+                    <a href="{{ route('admin.usuarios.index') }}" class="btn btn-secondary">
                         ✕ Limpiar
                     </a>
                 @endif
@@ -94,10 +94,10 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 text-center text-sm space-x-1.5">
-                        <a href="{{ route('admin.usuarios.show', $u->id_usuario) }}" class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
+                        <a href="{{ route('admin.usuarios.show', $u->id_usuario) }}" class="btn btn-sm btn-primary">
                             Ver
                         </a>
-                        <a href="{{ route('admin.usuarios.edit', $u->id_usuario) }}" class="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
+                        <a href="{{ route('admin.usuarios.edit', $u->id_usuario) }}" class="btn btn-sm btn-warning">
                             Editar
                         </a>
                         <form id="user-status-form-{{ $u->id_usuario }}" action="{{ route('admin.usuarios.destroy', $u->id_usuario) }}" method="POST" class="inline-block">
@@ -105,7 +105,7 @@
                             @method('DELETE')
                             <button type="button" 
                                     onclick="openConfirmModal('user-status-form-{{ $u->id_usuario }}', {{ $u->estado ? 'true' : 'false' }}, '{{ addslashes($u->nombre . ' ' . ($u->apellido ?? '')) }}')"
-                                    class="inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
+                                    class="btn btn-sm btn-dark">
                                 {{ $u->estado ? 'Desactivar cuenta' : 'Activar cuenta' }}
                             </button>
                         </form>
@@ -147,10 +147,10 @@
         </p>
 
         <div class="flex items-center justify-end gap-3 pt-2">
-            <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+            <button type="button" onclick="closeConfirmModal()" class="btn btn-secondary">
                 Cancelar
             </button>
-            <button type="button" id="confirmSubmitBtn" onclick="submitConfirmedForm()" class="px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-sm transition">
+            <button type="button" id="confirmSubmitBtn" onclick="submitConfirmedForm()" class="btn btn-danger">
                 Confirmar
             </button>
         </div>
@@ -175,14 +175,14 @@
             desc.innerText = 'Restricción de acceso';
             text.innerText = '¿Está seguro de que desea desactivar la cuenta de ' + userName + '? El usuario no podrá acceder al sistema.';
             iconContainer.className = 'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-rose-100 text-rose-600';
-            confirmBtn.className = 'px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition';
+            confirmBtn.className = 'btn btn-danger';
             confirmBtn.innerText = 'Desactivar';
         } else {
             title.innerText = 'Activar Cuenta';
             desc.innerText = 'Habilitar acceso';
             text.innerText = '¿Está seguro de que desea activar la cuenta de ' + userName + '? El usuario podrá acceder normalmente al sistema.';
             iconContainer.className = 'w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-emerald-100 text-emerald-600';
-            confirmBtn.className = 'px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition';
+            confirmBtn.className = 'btn btn-success';
             confirmBtn.innerText = 'Activar';
         }
 

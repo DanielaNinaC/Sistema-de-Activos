@@ -42,8 +42,43 @@
     border-radius: 0.625rem !important;
 }
 
-/* Buttons inside forms: slightly more rounded */
-#main-content form button[type="submit"],
-#main-content form .bg-blue-600 {
-    border-radius: 0.625rem;
+/* ── Sistema de botones ───────────────────────────────────────────────
+   Fuente única de verdad del estilo de los botones. Las vistas usan
+   `btn` + una variante (`btn-primary`, `btn-secondary`, …) y, si hace
+   falta, un tamaño (`btn-sm`, `btn-xs`). No repetir cadenas sueltas de
+   utilidades en los Blade: si un botón necesita otro aspecto, se agrega
+   una variante aquí.
+
+   Antes existía aquí una regla `#main-content form button[type="submit"]`
+   que fijaba otro border-radius; se eliminó porque, al tener
+   especificidad de ID, le ganaba a estas clases.
+   ──────────────────────────────────────────────────────────────────── */
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap
+               px-4 py-2.5 text-sm font-semibold rounded-xl transition
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+               disabled:opacity-50 disabled:pointer-events-none;
+    }
+
+    /* Tamaños (el tamaño por defecto vive en .btn) */
+    .btn-sm { @apply gap-1.5 px-3 py-1.5 text-xs; }
+    .btn-xs { @apply gap-1 px-2.5 py-1 text-xs; }
+
+    /* Variantes por intención, no por color */
+    .btn-primary   { @apply bg-blue-600 hover:bg-blue-700 text-white shadow-sm focus-visible:ring-blue-500; }
+    .btn-secondary { @apply bg-slate-100 hover:bg-slate-200 text-slate-700 focus-visible:ring-slate-400; }
+    .btn-success   { @apply bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm focus-visible:ring-emerald-500; }
+    .btn-warning   { @apply bg-amber-500 hover:bg-amber-600 text-white shadow-sm focus-visible:ring-amber-500; }
+    .btn-danger    { @apply bg-rose-600 hover:bg-rose-700 text-white shadow-sm focus-visible:ring-rose-500; }
+    /* Acciones secundarias destacadas (exportar PDF, generar documento) */
+    .btn-accent    { @apply bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm focus-visible:ring-indigo-500; }
+    .btn-dark      { @apply bg-slate-900 hover:bg-slate-800 text-white shadow-sm focus-visible:ring-slate-700; }
+    .btn-outline   { @apply border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-sm focus-visible:ring-slate-400; }
+    /* Acción terciaria: sin fondo hasta el hover (p. ej. "Cancelar") */
+    .btn-ghost     { @apply bg-transparent hover:bg-slate-100 text-slate-600 focus-visible:ring-slate-400; }
+
+    /* Botón cuadrado de sólo icono (p. ej. el "Volver" de las cabeceras) */
+    .btn-icon    { @apply w-10 h-10 p-0 gap-0; }
+    .btn-icon-sm { @apply w-8 h-8 p-0 gap-0; }
 }

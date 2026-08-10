@@ -9,7 +9,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3">
             <a href="{{ url()->previous() != url()->current() ? url()->previous() : route('admin.mantenimiento.programar') }}" 
-               class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" 
+               class="btn btn-outline btn-icon" 
                aria-label="Volver" 
                title="Volver">
                 <span aria-hidden="true">&#8592;</span>
@@ -22,11 +22,11 @@
 
         <div class="flex items-center gap-2.5">
             <a href="{{ route('admin.mantenimiento.programar') }}" 
-               class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-200">
+               class="btn btn-primary">
                 Registrar Mantenimiento
             </a>
             <a href="{{ route('admin.mantenimiento.historial') }}" 
-               class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition">
+               class="btn btn-secondary">
                 Ver Historial
             </a>
         </div>
@@ -199,7 +199,7 @@
                                 <span class="text-[11px] font-semibold text-slate-700">Estado: {{ $alerta->estado_mantenimiento }}</span>
                                 <button type="button" 
                                         onclick="openUpdateModal({{ $alerta->id_mantenimiento }}, '{{ addslashes($alerta->estado_mantenimiento) }}', '{{ addslashes($alerta->descripcion_trabajo) }}')" 
-                                        class="text-[11px] bg-slate-900 hover:bg-slate-800 text-white px-2.5 py-0.5 rounded-md transition font-medium">
+                                        class="btn btn-xs btn-dark">
                                     Editar
                                 </button>
                             </div>
@@ -250,10 +250,10 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
-                <button type="button" onclick="closeUpdateModal()" class="px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                <button type="button" onclick="closeUpdateModal()" class="btn btn-secondary">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition">
+                <button type="submit" class="btn btn-primary">
                     Guardar Cambios
                 </button>
             </div>

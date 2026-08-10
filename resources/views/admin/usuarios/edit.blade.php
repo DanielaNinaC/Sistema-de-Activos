@@ -37,8 +37,8 @@
         </div>
 
         <div class="mt-4">
-            <button class="bg-yellow-600 text-white px-4 py-2 rounded">Actualizar</button>
-            <a href="{{ route('admin.administracion.index') }}" class="ml-2 text-gray-600">Cancelar</a>
+            <button class="btn btn-primary">Actualizar</button>
+            <a href="{{ route('admin.administracion.index') }}" class="btn btn-ghost">Cancelar</a>
         </div>
     </form>
 </div>

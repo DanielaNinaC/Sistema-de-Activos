@@ -101,7 +101,7 @@
                         <a href="{{ route('admin.riesgos.alertas') }}" class="block p-2 rounded hover:bg-white/5">Alertas</a>
                         <a href="{{ route('admin.riesgos.modos') }}" class="block p-2 rounded hover:bg-white/5">Modos de Falla</a>
                         <a href="{{ route('admin.riesgos.score') }}" class="block p-2 rounded hover:bg-white/5">Score de Riesgo</a>
-                        <a href="{{ route('admin.riesgos.tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Tratamiento</a>
+                        <a href="{{ route('admin.riesgos.tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Plan de Tratamiento</a>
                     </div>
                 </div>
 
@@ -135,11 +135,11 @@
 
                 <div class="p-2 rounded hover:bg-white/5 has-submenu cursor-pointer" tabindex="0" role="button" aria-expanded="false">
                     <div class="flex items-center justify-between">
-                        <div>Administración</div>
+                        <div>Usuarios</div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="submenu-arrow h-5 w-5 transform transition-transform text-white/90" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 8l4 4 4-4" clip-rule="evenodd" /></svg>
                     </div>
                     <div class="submenu hidden mt-1 pl-3 space-y-0.5">
-                        <a href="{{ route('admin.usuarios.index') }}" class="block p-2 rounded hover:bg-white/5">Usuarios</a>
+                        <a href="{{ route('admin.usuarios.index') }}" class="block p-2 rounded hover:bg-white/5">Lista de Usuarios</a>
                         <a href="{{ route('admin.usuarios.create') }}" class="block p-2 rounded hover:bg-white/5">Crear Usuario</a>
                     </div>
                 </div>
@@ -339,10 +339,10 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button type="button" onclick="closeProfileEditModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                <button type="button" onclick="closeProfileEditModal()" class="btn btn-secondary">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-200 transition">
+                <button type="submit" class="btn btn-accent">
                     Guardar Cambios
                 </button>
             </div>

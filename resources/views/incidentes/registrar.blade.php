@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
     {{-- Header idéntico al registro de activo --}}
     <div class="flex items-center gap-3">
-        <a href="{{ route('admin.incidentes.seguimiento') }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver a la pantalla anterior" title="Volver">
+        <a href="{{ route('admin.incidentes.seguimiento') }}" class="btn btn-outline btn-icon" aria-label="Volver a la pantalla anterior" title="Volver">
             <span aria-hidden="true">&#8592;</span>
         </a>
         <div>
@@ -196,10 +196,10 @@
 
             <!-- Botones de Acción idénticos a registrar-activo -->
             <div class="md:col-span-2 flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <a href="{{ route('admin.incidentes.seguimiento') }}" class="px-5 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition">
+                <a href="{{ route('admin.incidentes.seguimiento') }}" class="btn btn-outline">
                     Ver seguimiento
                 </a>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition shadow-md shadow-blue-200 flex items-center gap-2">
+                <button type="submit" class="btn btn-primary flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>

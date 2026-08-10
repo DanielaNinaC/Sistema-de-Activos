@@ -8,7 +8,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3">
             <a href="{{ url()->previous() != url()->current() ? url()->previous() : route('admin.mantenimiento.cronograma') }}" 
-               class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" 
+               class="btn btn-outline btn-icon" 
                aria-label="Volver" title="Volver">
                 <span aria-hidden="true">&#8592;</span>
             </a>
@@ -20,11 +20,11 @@
 
         <div class="flex items-center gap-2.5">
             <a href="{{ route('admin.mantenimiento.programar') }}" 
-               class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-200">
+               class="btn btn-primary">
                 Registrar Mantenimiento
             </a>
             <a href="{{ route('admin.mantenimiento.cronograma') }}" 
-               class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition">
+               class="btn btn-secondary">
                 Ver Cronograma
             </a>
         </div>
@@ -59,12 +59,12 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                <button type="submit" class="btn btn-dark">
                     Buscar
                 </button>
 
                 @if(request('buscar'))
-                    <a href="{{ route('admin.mantenimiento.historial') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition flex items-center gap-1">
+                    <a href="{{ route('admin.mantenimiento.historial') }}" class="btn btn-secondary">
                         ✕ Limpiar
                     </a>
                 @endif
@@ -145,7 +145,7 @@
                             <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
                                 <div class="flex items-center justify-center gap-1.5">
                                     <a href="{{ route('admin.mantenimiento.show', $mantenimiento->id_mantenimiento) }}" 
-                                       class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                       class="btn btn-xs btn-primary"
                                        title="Ver vista completa de detalles del mantenimiento">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -156,7 +156,7 @@
 
                                     <button type="button" 
                                             onclick="openUpdateModal({{ $mantenimiento->id_mantenimiento }}, '{{ addslashes($mantenimiento->estado_mantenimiento) }}', '{{ addslashes($mantenimiento->descripcion_trabajo) }}')" 
-                                            class="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                            class="btn btn-xs btn-warning"
                                             title="Cambiar estado del mantenimiento">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -166,7 +166,7 @@
 
                                     @if($mantenimiento->evidencia_pdf)
                                         <a href="{{ Storage::url($mantenimiento->evidencia_pdf) }}" target="_blank" 
-                                           class="inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                           class="btn btn-xs btn-dark"
                                            title="Ver PDF adjunto">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V7.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 1H7a2 2 0 00-2 2v16a2 2 0 002 2z" />
@@ -230,10 +230,10 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
-                <button type="button" onclick="closeUpdateModal()" class="px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                <button type="button" onclick="closeUpdateModal()" class="btn btn-secondary">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition">
+                <button type="submit" class="btn btn-primary">
                     Guardar Cambios
                 </button>
             </div>

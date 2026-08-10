@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
 
     <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver" title="Volver">
+        <a href="{{ url()->previous() }}" class="btn btn-outline btn-icon" aria-label="Volver" title="Volver">
             <span aria-hidden="true">&#8592;</span>
         </a>
         <div>
@@ -37,9 +37,9 @@
                 </select>
             </div>
             <div class="flex items-center gap-2">
-                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm">Filtrar</button>
-                <a href="{{ route('admin.informes.vida-util.pdf', request()->query()) }}" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition shadow-sm inline-flex items-center gap-1.5">PDF</a>
-                <a href="{{ route('admin.informes.vida-util.excel', request()->query()) }}" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition shadow-sm inline-flex items-center gap-1.5">Excel</a>
+                <button type="submit" class="btn btn-dark">Filtrar</button>
+                <a href="{{ route('admin.informes.vida-util.pdf', request()->query()) }}" class="btn btn-accent">PDF</a>
+                <a href="{{ route('admin.informes.vida-util.excel', request()->query()) }}" class="btn btn-success">Excel</a>
             </div>
         </form>
     </div>

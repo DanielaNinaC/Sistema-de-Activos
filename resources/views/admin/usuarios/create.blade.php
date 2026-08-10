@@ -4,7 +4,10 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <a href="{{ url()->previous() }}" class="btn btn-outline btn-icon" aria-label="Volver" title="Volver">
+            <span aria-hidden="true">&#8592;</span>
+        </a>
         <h2 class="text-2xl font-semibold text-slate-900">Registrar Usuario</h2>
     </div>
 
@@ -87,13 +90,13 @@
                 <input name="contrasena" type="password" placeholder="••••••••" class="w-full max-w-md border @error('contrasena') border-rose-500 @else border-gray-200 @enderror px-4 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50" required />
             </div>
 
-            <div class="md:col-span-2 pt-2 flex items-center gap-3">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition shadow-md shadow-blue-200">
-                    Registrar Usuario
-                </button>
-                <a href="{{ route('admin.usuarios.index') }}" class="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            <div class="md:col-span-2 pt-2 flex items-center justify-end gap-3">
+                <a href="{{ route('admin.usuarios.index') }}" class="btn btn-ghost">
                     Ver Lista de Usuarios
                 </a>
+                <button type="submit" class="btn btn-primary">
+                    Registrar Usuario
+                </button>
             </div>
         </form>
     </div>

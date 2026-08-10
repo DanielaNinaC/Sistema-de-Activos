@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 class="text-2xl font-semibold text-slate-900">Categorías</h2>
-        <button onclick="toggleRegistroForm()" id="btnToggleForm" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-200 self-start sm:self-auto">
+        <button onclick="toggleRegistroForm()" id="btnToggleForm" class="btn btn-primary self-start sm:self-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -76,10 +76,10 @@
                 </div>
             </div>
             <div class="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
-                <button type="button" onclick="toggleRegistroForm()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition">
+                <button type="button" onclick="toggleRegistroForm()" class="btn btn-secondary">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                <button type="submit" class="btn btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -108,12 +108,12 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                <button type="submit" class="btn btn-dark">
                     Buscar
                 </button>
 
                 @if(!empty($search))
-                    <a href="{{ route('admin.activos.categorias') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition flex items-center gap-1">
+                    <a href="{{ route('admin.activos.categorias') }}" class="btn btn-secondary">
                         ✕ Limpiar
                     </a>
                 @endif
@@ -181,13 +181,13 @@
                     </td>
                     <td class="px-6 py-4 text-center text-sm">
                         <div class="flex items-center justify-center gap-2">
-                            <a href="{{ route('admin.activos.categorias.equipos', $categoria->id_categoria) }}" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
+                            <a href="{{ route('admin.activos.categorias.equipos', $categoria->id_categoria) }}" class="btn btn-sm btn-primary">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                                 </svg>
                                 Ver Equipos
                             </a>
-                            <button type="button" onclick="openEditModal({{ $categoria->id_categoria }}, '{{ addslashes($categoria->nombre_categoria) }}', {{ $categoria->vida_util_meses ?? 'null' }}, '{{ $categoria->nivel_dependencia ?? 'Media' }}', '{{ addslashes($categoria->justificacion_dependencia ?? '') }}')" class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
+                            <button type="button" onclick="openEditModal({{ $categoria->id_categoria }}, '{{ addslashes($categoria->nombre_categoria) }}', {{ $categoria->vida_util_meses ?? 'null' }}, '{{ $categoria->nivel_dependencia ?? 'Media' }}', '{{ addslashes($categoria->justificacion_dependencia ?? '') }}')" class="btn btn-sm btn-warning">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
@@ -252,10 +252,10 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
-                <button type="button" onclick="closeEditModal()" class="px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                <button type="button" onclick="closeEditModal()" class="btn btn-secondary">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2.5 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-xl shadow-sm transition">
+                <button type="submit" class="btn btn-warning">
                     Guardar Cambios
                 </button>
             </div>

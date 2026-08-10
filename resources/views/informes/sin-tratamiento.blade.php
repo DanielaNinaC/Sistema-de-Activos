@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
 
     <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver" title="Volver">
+        <a href="{{ url()->previous() }}" class="btn btn-outline btn-icon" aria-label="Volver" title="Volver">
             <span aria-hidden="true">&#8592;</span>
         </a>
         <div>
@@ -14,8 +14,8 @@
             <p class="text-xs text-slate-500">Evaluaciones vigentes en nivel Alto o Crítico que no tienen ningún plan de tratamiento asociado</p>
         </div>
         <div class="ml-auto flex items-center gap-2">
-            <a href="{{ route('admin.informes.sin-tratamiento.pdf') }}" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition shadow-sm">PDF</a>
-            <a href="{{ route('admin.informes.sin-tratamiento.excel') }}" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition shadow-sm">Excel</a>
+            <a href="{{ route('admin.informes.sin-tratamiento.pdf') }}" class="btn btn-accent">PDF</a>
+            <a href="{{ route('admin.informes.sin-tratamiento.excel') }}" class="btn btn-success">Excel</a>
         </div>
     </div>
 
@@ -56,7 +56,7 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <a href="{{ route('admin.riesgos.tratamiento', ['crear' => $ev->id_evaluacion]) }}" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl transition text-xs font-semibold shadow-sm">
+                                <a href="{{ route('admin.riesgos.tratamiento', ['crear' => $ev->id_evaluacion]) }}" class="btn btn-sm btn-primary">
                                     Crear tratamiento
                                 </a>
                             </td>

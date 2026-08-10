@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
 
     <div class="flex items-center gap-3">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver" title="Volver">
+        <a href="{{ url()->previous() }}" class="btn btn-outline btn-icon" aria-label="Volver" title="Volver">
             <span aria-hidden="true">&#8592;</span>
         </a>
         <div>
@@ -35,9 +35,9 @@
                 <input type="date" name="fecha_fin" value="{{ request('fecha_fin') }}" class="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
             </div>
             <div class="flex items-center gap-2">
-                <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition shadow-sm">Ver Evolución</button>
+                <button type="submit" class="btn btn-primary">Ver Evolución</button>
                 @if($activoSeleccionado)
-                    <a href="{{ route('admin.informes.evolucion-score.excel', request()->query()) }}" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition shadow-sm">Excel</a>
+                    <a href="{{ route('admin.informes.evolucion-score.excel', request()->query()) }}" class="btn btn-success">Excel</a>
                 @endif
             </div>
         </form>

@@ -7,7 +7,7 @@
     {{-- Header con botón de registro --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3">
-            <a href="{{ url()->previous() }}" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm" aria-label="Volver" title="Volver">
+            <a href="{{ url()->previous() }}" class="btn btn-outline btn-icon" aria-label="Volver" title="Volver">
                 <span aria-hidden="true">&#8592;</span>
             </a>
             <div>
@@ -16,7 +16,7 @@
             </div>
         </div>
 
-        <a href="{{ route('admin.incidentes.registrar') }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-200 self-start sm:self-auto">
+        <a href="{{ route('admin.incidentes.registrar') }}" class="btn btn-primary self-start sm:self-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -53,12 +53,12 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                <button type="submit" class="btn btn-dark">
                     Buscar
                 </button>
 
                 @if(request('buscar'))
-                    <a href="{{ route('admin.incidentes.seguimiento') }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-sm transition flex items-center gap-1">
+                    <a href="{{ route('admin.incidentes.seguimiento') }}" class="btn btn-secondary">
                         ✕ Limpiar
                     </a>
                 @endif
@@ -122,7 +122,7 @@
                             <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
                                 <div class="flex items-center justify-center gap-1.5">
                                     <a href="{{ route('admin.incidentes.show', $incidente->id_incidente) }}" 
-                                       class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                       class="btn btn-xs btn-primary"
                                        title="Ver vista completa de detalles del incidente y su seguimiento">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -133,7 +133,7 @@
 
                                     <button type="button" 
                                             onclick="openUpdateModal({{ $incidente->id_incidente }}, '{{ addslashes($incidente->estado_incidente) }}', '{{ addslashes($incidente->descripcion_falla) }}')" 
-                                            class="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                            class="btn btn-xs btn-warning"
                                             title="Cambiar estado del incidente">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -142,7 +142,7 @@
                                     </button>
 
                                     <a href="{{ route('admin.mantenimiento.programar', ['origen' => 3, 'incidente_id' => $incidente->id_incidente, 'activo_id' => $incidente->fk_id_activo]) }}" 
-                                       class="inline-flex items-center gap-1 bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1 rounded-xl transition text-xs font-semibold shadow-sm"
+                                       class="btn btn-xs btn-dark"
                                        title="Programar mantenimiento derivado de este incidente">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -203,10 +203,10 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
-                <button type="button" onclick="closeUpdateModal()" class="px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                <button type="button" onclick="closeUpdateModal()" class="btn btn-secondary">
                     Cancelar
                 </button>
-                <button type="submit" class="px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition">
+                <button type="submit" class="btn btn-primary">
                     Guardar Cambios
                 </button>
             </div>
