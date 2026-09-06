@@ -279,9 +279,8 @@ class DatosPruebaSeeder extends Seeder
         // =====================================================================
         // 15. Datos adicionales para variedad en Evaluación e Informes: más
         // activos, modos de falla y evaluaciones con score en todos los
-        // niveles (no solo Alto/Crítico). Los IDs usan un rango alto
-        // (900+ en evaluacion_riesgo/alertas/tratamientos) para no chocar con
-        // filas ya generadas por uso real del motor en un entorno existente.
+        // niveles (no solo Alto/Crítico). Todos los IDs son estrictamente
+        // correlativos (evaluaciones 6..20, alertas 4..18, tratamientos 4..8).
         // =====================================================================
 
         // 15.1 Modos de falla adicionales (uno más por categoría, con
@@ -355,53 +354,45 @@ class DatosPruebaSeeder extends Seeder
             ],
         ]);
 
-        // 15.3 Evaluaciones de riesgo adicionales. Los valores de Severidad y
-        // MSR replican el modo de falla correspondiente (igual que hace el
-        // motor); Score = round(0.75*(S*0.648 + F*0.230 + MSR*0.122) + 0.25*D, 2)
-        // con los pesos vigentes actuales (peso_severidad=0.648,
-        // peso_frecuencia=0.230, peso_msr=0.122, peso_riesgo_tecnico=0.75,
-        // peso_dependencia=0.25) y D según nivel_dependencia de la categoría
-        // (Alta=9, Media=5). El resultado cubre los 4 niveles de riesgo, no
-        // solo Alto/Crítico.
+        // 15.3 Evaluaciones de riesgo adicionales (IDs correlativos 6 a 20)
         DB::table('evaluacion_riesgo')->insertOrIgnore([
-            ['id_evaluacion' => 900, 'fk_id_activo' => 5, 'fk_id_modo_falla' => 7, 'valor_severidad' => 5, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 5.57, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(45)],
-            ['id_evaluacion' => 901, 'fk_id_activo' => 6, 'fk_id_modo_falla' => 4, 'valor_severidad' => 8, 'valor_frecuencia' => 9, 'valor_msr' => 6, 'score_calculado' => 8.24, 'nivel_riesgo' => 'Crítico', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(38)],
-            ['id_evaluacion' => 902, 'fk_id_activo' => 7, 'fk_id_modo_falla' => 3, 'valor_severidad' => 5, 'valor_frecuencia' => 6, 'valor_msr' => 9, 'score_calculado' => 5.54, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(30)],
-            ['id_evaluacion' => 903, 'fk_id_activo' => 8, 'fk_id_modo_falla' => 9, 'valor_severidad' => 3, 'valor_frecuencia' => 2, 'valor_msr' => 4, 'score_calculado' => 3.42, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(25)],
-            ['id_evaluacion' => 904, 'fk_id_activo' => 10, 'fk_id_modo_falla' => 10, 'valor_severidad' => 5, 'valor_frecuencia' => 9, 'valor_msr' => 6, 'score_calculado' => 6.78, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(20)],
-            ['id_evaluacion' => 905, 'fk_id_activo' => 11, 'fk_id_modo_falla' => 1, 'valor_severidad' => 10, 'valor_frecuencia' => 2, 'valor_msr' => 4, 'score_calculado' => 7.82, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(15)],
-            ['id_evaluacion' => 906, 'fk_id_activo' => 11, 'fk_id_modo_falla' => 6, 'valor_severidad' => 8, 'valor_frecuencia' => 6, 'valor_msr' => 6, 'score_calculado' => 7.72, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(12)],
-            ['id_evaluacion' => 907, 'fk_id_activo' => 12, 'fk_id_modo_falla' => 7, 'valor_severidad' => 5, 'valor_frecuencia' => 6, 'valor_msr' => 6, 'score_calculado' => 6.26, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(10)],
-            ['id_evaluacion' => 908, 'fk_id_activo' => 13, 'fk_id_modo_falla' => 4, 'valor_severidad' => 8, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 7.03, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(8)],
-            ['id_evaluacion' => 909, 'fk_id_activo' => 14, 'fk_id_modo_falla' => 2, 'valor_severidad' => 3, 'valor_frecuencia' => 2, 'valor_msr' => 9, 'score_calculado' => 3.88, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(6)],
-            ['id_evaluacion' => 910, 'fk_id_activo' => 15, 'fk_id_modo_falla' => 8, 'valor_severidad' => 1, 'valor_frecuencia' => 2, 'valor_msr' => 9, 'score_calculado' => 2.90, 'nivel_riesgo' => 'Bajo', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(5)],
-            ['id_evaluacion' => 911, 'fk_id_activo' => 16, 'fk_id_modo_falla' => 3, 'valor_severidad' => 5, 'valor_frecuencia' => 9, 'valor_msr' => 9, 'score_calculado' => 6.06, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(4)],
-            ['id_evaluacion' => 912, 'fk_id_activo' => 17, 'fk_id_modo_falla' => 5, 'valor_severidad' => 8, 'valor_frecuencia' => 2, 'valor_msr' => 2, 'score_calculado' => 6.67, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(3)],
-            ['id_evaluacion' => 913, 'fk_id_activo' => 18, 'fk_id_modo_falla' => 10, 'valor_severidad' => 5, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 5.57, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(2)],
-            ['id_evaluacion' => 914, 'fk_id_activo' => 2, 'fk_id_modo_falla' => 8, 'valor_severidad' => 1, 'valor_frecuencia' => 6, 'valor_msr' => 9, 'score_calculado' => 3.59, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(1)],
+            ['id_evaluacion' => 6, 'fk_id_activo' => 5, 'fk_id_modo_falla' => 7, 'valor_severidad' => 5, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 5.57, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(45)],
+            ['id_evaluacion' => 7, 'fk_id_activo' => 6, 'fk_id_modo_falla' => 4, 'valor_severidad' => 8, 'valor_frecuencia' => 9, 'valor_msr' => 6, 'score_calculado' => 8.24, 'nivel_riesgo' => 'Crítico', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(38)],
+            ['id_evaluacion' => 8, 'fk_id_activo' => 7, 'fk_id_modo_falla' => 3, 'valor_severidad' => 5, 'valor_frecuencia' => 6, 'valor_msr' => 9, 'score_calculado' => 5.54, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(30)],
+            ['id_evaluacion' => 9, 'fk_id_activo' => 8, 'fk_id_modo_falla' => 9, 'valor_severidad' => 3, 'valor_frecuencia' => 2, 'valor_msr' => 4, 'score_calculado' => 3.42, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(25)],
+            ['id_evaluacion' => 10, 'fk_id_activo' => 10, 'fk_id_modo_falla' => 10, 'valor_severidad' => 5, 'valor_frecuencia' => 9, 'valor_msr' => 6, 'score_calculado' => 6.78, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(20)],
+            ['id_evaluacion' => 11, 'fk_id_activo' => 11, 'fk_id_modo_falla' => 1, 'valor_severidad' => 10, 'valor_frecuencia' => 2, 'valor_msr' => 4, 'score_calculado' => 7.82, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(15)],
+            ['id_evaluacion' => 12, 'fk_id_activo' => 11, 'fk_id_modo_falla' => 6, 'valor_severidad' => 8, 'valor_frecuencia' => 6, 'valor_msr' => 6, 'score_calculado' => 7.72, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(12)],
+            ['id_evaluacion' => 13, 'fk_id_activo' => 12, 'fk_id_modo_falla' => 7, 'valor_severidad' => 5, 'valor_frecuencia' => 6, 'valor_msr' => 6, 'score_calculado' => 6.26, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(10)],
+            ['id_evaluacion' => 14, 'fk_id_activo' => 13, 'fk_id_modo_falla' => 4, 'valor_severidad' => 8, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 7.03, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(8)],
+            ['id_evaluacion' => 15, 'fk_id_activo' => 14, 'fk_id_modo_falla' => 2, 'valor_severidad' => 3, 'valor_frecuencia' => 2, 'valor_msr' => 9, 'score_calculado' => 3.88, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(6)],
+            ['id_evaluacion' => 16, 'fk_id_activo' => 15, 'fk_id_modo_falla' => 8, 'valor_severidad' => 1, 'valor_frecuencia' => 2, 'valor_msr' => 9, 'score_calculado' => 2.90, 'nivel_riesgo' => 'Bajo', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(5)],
+            ['id_evaluacion' => 17, 'fk_id_activo' => 16, 'fk_id_modo_falla' => 3, 'valor_severidad' => 5, 'valor_frecuencia' => 9, 'valor_msr' => 9, 'score_calculado' => 6.06, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(4)],
+            ['id_evaluacion' => 18, 'fk_id_activo' => 17, 'fk_id_modo_falla' => 5, 'valor_severidad' => 8, 'valor_frecuencia' => 2, 'valor_msr' => 2, 'score_calculado' => 6.67, 'nivel_riesgo' => 'Alto', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(3)],
+            ['id_evaluacion' => 19, 'fk_id_activo' => 18, 'fk_id_modo_falla' => 10, 'valor_severidad' => 5, 'valor_frecuencia' => 2, 'valor_msr' => 6, 'score_calculado' => 5.57, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(2)],
+            ['id_evaluacion' => 20, 'fk_id_activo' => 2, 'fk_id_modo_falla' => 8, 'valor_severidad' => 1, 'valor_frecuencia' => 6, 'valor_msr' => 9, 'score_calculado' => 3.59, 'nivel_riesgo' => 'Medio', 'vigente' => true, 'fecha_evaluacion' => now()->subDays(1)],
         ]);
 
-        // 15.4 Alertas correspondientes a cada evaluación adicional (tipo
-        // según nivel_riesgo: Crítico=Roja, Alto=Naranja, Medio=Amarilla, Bajo=Verde).
+        // 15.4 Alertas correspondientes (IDs correlativos 4 a 18)
         DB::table('alertas')->insertOrIgnore([
-            ['id_alerta' => 900, 'fk_id_evaluacion' => 900, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(45), 'notificacion_enviada' => true],
-            ['id_alerta' => 901, 'fk_id_evaluacion' => 901, 'tipo_alerta' => 'Roja', 'fecha_generacion' => now()->subDays(38), 'notificacion_enviada' => true],
-            ['id_alerta' => 902, 'fk_id_evaluacion' => 902, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(30), 'notificacion_enviada' => false],
-            ['id_alerta' => 903, 'fk_id_evaluacion' => 903, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(25), 'notificacion_enviada' => true],
-            ['id_alerta' => 904, 'fk_id_evaluacion' => 904, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(20), 'notificacion_enviada' => true],
-            ['id_alerta' => 905, 'fk_id_evaluacion' => 905, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(15), 'notificacion_enviada' => false],
-            ['id_alerta' => 906, 'fk_id_evaluacion' => 906, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(12), 'notificacion_enviada' => true],
-            ['id_alerta' => 907, 'fk_id_evaluacion' => 907, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(10), 'notificacion_enviada' => true],
-            ['id_alerta' => 908, 'fk_id_evaluacion' => 908, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(8), 'notificacion_enviada' => false],
-            ['id_alerta' => 909, 'fk_id_evaluacion' => 909, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(6), 'notificacion_enviada' => true],
-            ['id_alerta' => 910, 'fk_id_evaluacion' => 910, 'tipo_alerta' => 'Verde', 'fecha_generacion' => now()->subDays(5), 'notificacion_enviada' => true],
-            ['id_alerta' => 911, 'fk_id_evaluacion' => 911, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(4), 'notificacion_enviada' => false],
-            ['id_alerta' => 912, 'fk_id_evaluacion' => 912, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(3), 'notificacion_enviada' => true],
-            ['id_alerta' => 913, 'fk_id_evaluacion' => 913, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(2), 'notificacion_enviada' => true],
-            ['id_alerta' => 914, 'fk_id_evaluacion' => 914, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(1), 'notificacion_enviada' => false],
+            ['id_alerta' => 4, 'fk_id_evaluacion' => 6, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(45), 'notificacion_enviada' => true],
+            ['id_alerta' => 5, 'fk_id_evaluacion' => 7, 'tipo_alerta' => 'Roja', 'fecha_generacion' => now()->subDays(38), 'notificacion_enviada' => true],
+            ['id_alerta' => 6, 'fk_id_evaluacion' => 8, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(30), 'notificacion_enviada' => false],
+            ['id_alerta' => 7, 'fk_id_evaluacion' => 9, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(25), 'notificacion_enviada' => true],
+            ['id_alerta' => 8, 'fk_id_evaluacion' => 10, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(20), 'notificacion_enviada' => true],
+            ['id_alerta' => 9, 'fk_id_evaluacion' => 11, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(15), 'notificacion_enviada' => false],
+            ['id_alerta' => 10, 'fk_id_evaluacion' => 12, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(12), 'notificacion_enviada' => true],
+            ['id_alerta' => 11, 'fk_id_evaluacion' => 13, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(10), 'notificacion_enviada' => true],
+            ['id_alerta' => 12, 'fk_id_evaluacion' => 14, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(8), 'notificacion_enviada' => false],
+            ['id_alerta' => 13, 'fk_id_evaluacion' => 15, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(6), 'notificacion_enviada' => true],
+            ['id_alerta' => 14, 'fk_id_evaluacion' => 16, 'tipo_alerta' => 'Verde', 'fecha_generacion' => now()->subDays(5), 'notificacion_enviada' => true],
+            ['id_alerta' => 15, 'fk_id_evaluacion' => 17, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(4), 'notificacion_enviada' => false],
+            ['id_alerta' => 16, 'fk_id_evaluacion' => 18, 'tipo_alerta' => 'Naranja', 'fecha_generacion' => now()->subDays(3), 'notificacion_enviada' => true],
+            ['id_alerta' => 17, 'fk_id_evaluacion' => 19, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(2), 'notificacion_enviada' => true],
+            ['id_alerta' => 18, 'fk_id_evaluacion' => 20, 'tipo_alerta' => 'Amarilla', 'fecha_generacion' => now()->subDays(1), 'notificacion_enviada' => false],
         ]);
 
-        // 15.5 Incidentes adicionales.
+        // 15.5 Incidentes adicionales (IDs correlativos 4 a 9)
         DB::table('incidentes')->insertOrIgnore([
             [
                 'id_incidente' => 4, 'fk_id_activo' => 6, 'fk_id_usuario_reporta' => 2,
@@ -435,78 +426,75 @@ class DatosPruebaSeeder extends Seeder
             ],
         ]);
 
-        // 15.6 Mantenimientos adicionales, cubriendo los 4 tipos reales del
-        // formulario (Preventivo, Correctivo, Programado, Inspección).
+        // 15.6 Mantenimientos adicionales (IDs correlativos 4 a 8)
         DB::table('mantenimientos')->insertOrIgnore([
             [
                 'id_mantenimiento' => 4, 'fk_id_activo' => 6, 'fk_id_usuario_asignado' => 2,
-                'id_evaluacion_origen' => 901, 'tipo_mantenimiento' => 'Correctivo',
+                'id_evaluacion_origen' => 7, 'tipo_mantenimiento' => 'Correctivo',
                 'fecha_programada' => now()->subDays(9), 'fecha_ejecucion' => now()->subDays(8),
                 'descripcion_trabajo' => 'Reemplazo de disco duro por fallas de lectura.',
                 'estado_mantenimiento' => 'Finalizado', 'evidencia_pdf' => null
             ],
             [
                 'id_mantenimiento' => 5, 'fk_id_activo' => 10, 'fk_id_usuario_asignado' => 2,
-                'id_evaluacion_origen' => 904, 'tipo_mantenimiento' => 'Correctivo',
+                'id_evaluacion_origen' => 10, 'tipo_mantenimiento' => 'Correctivo',
                 'fecha_programada' => now()->subDays(3), 'fecha_ejecucion' => now()->subDays(2),
                 'descripcion_trabajo' => 'Actualización de firmware y reinicio del enrutador.',
                 'estado_mantenimiento' => 'Finalizado', 'evidencia_pdf' => null
             ],
             [
                 'id_mantenimiento' => 6, 'fk_id_activo' => 11, 'fk_id_usuario_asignado' => 2,
-                'id_evaluacion_origen' => 905, 'tipo_mantenimiento' => 'Preventivo',
+                'id_evaluacion_origen' => 11, 'tipo_mantenimiento' => 'Preventivo',
                 'fecha_programada' => now()->addWeeks(2), 'fecha_ejecucion' => null,
                 'descripcion_trabajo' => 'Limpieza del sistema de ventilación y cambio de pasta térmica.',
                 'estado_mantenimiento' => 'Pendiente', 'evidencia_pdf' => null
             ],
             [
                 'id_mantenimiento' => 7, 'fk_id_activo' => 16, 'fk_id_usuario_asignado' => 2,
-                'id_evaluacion_origen' => 911, 'tipo_mantenimiento' => 'Programado',
+                'id_evaluacion_origen' => 17, 'tipo_mantenimiento' => 'Programado',
                 'fecha_programada' => now()->addDays(10), 'fecha_ejecucion' => null,
                 'descripcion_trabajo' => 'Revisión y calibración de la lámpara del proyector.',
                 'estado_mantenimiento' => 'Programado', 'evidencia_pdf' => null
             ],
             [
                 'id_mantenimiento' => 8, 'fk_id_activo' => 17, 'fk_id_usuario_asignado' => 2,
-                'id_evaluacion_origen' => 912, 'tipo_mantenimiento' => 'Inspección',
+                'id_evaluacion_origen' => 18, 'tipo_mantenimiento' => 'Inspección',
                 'fecha_programada' => now()->subDay(), 'fecha_ejecucion' => now(),
                 'descripcion_trabajo' => 'Inspección técnica y actualización de firmware del access point.',
                 'estado_mantenimiento' => 'Finalizado', 'evidencia_pdf' => null
             ],
         ]);
 
-        // 15.7 Planes de tratamiento para parte de las evaluaciones
-        // Alto/Crítico agregadas (905, 907 y 911 se dejan sin tratamiento a
-        // propósito, para poblar el informe "Evaluaciones Sin Tratamiento").
+        // 15.7 Planes de tratamiento adicionales (IDs correlativos 4 a 8)
         DB::table('plan_tratamiento_riesgo')->insertOrIgnore([
             [
-                'id_tratamiento' => 900, 'fk_id_evaluacion' => 901,
+                'id_tratamiento' => 4, 'fk_id_evaluacion' => 7,
                 'estrategia' => 'Mitigar', 'accion_preventiva' => 'Migrar el disco duro a SSD y programar respaldo diario automático.',
                 'estado_tratamiento' => 'Pendiente', 'origen' => 'automatico', 'fecha_compromiso' => now()->addDays(3)
             ],
             [
-                'id_tratamiento' => 901, 'fk_id_evaluacion' => 904,
+                'id_tratamiento' => 5, 'fk_id_evaluacion' => 10,
                 'estrategia' => 'Mitigar', 'accion_preventiva' => 'Actualizar firmware del enrutador y revisar reglas de firewall.',
                 'estado_tratamiento' => 'En Proceso', 'origen' => 'automatico', 'fecha_compromiso' => now()->addDays(15)
             ],
             [
-                'id_tratamiento' => 902, 'fk_id_evaluacion' => 906,
+                'id_tratamiento' => 6, 'fk_id_evaluacion' => 12,
                 'estrategia' => 'Mitigar', 'accion_preventiva' => 'Instalar sistema de refrigeración adicional en el rack del servidor.',
                 'estado_tratamiento' => 'Completado', 'origen' => 'manual', 'fecha_compromiso' => now()->subWeek()
             ],
             [
-                'id_tratamiento' => 903, 'fk_id_evaluacion' => 908,
+                'id_tratamiento' => 7, 'fk_id_evaluacion' => 14,
                 'estrategia' => 'Mitigar', 'accion_preventiva' => 'Reemplazar el disco duro mecánico por una unidad de estado sólido.',
                 'estado_tratamiento' => 'Pendiente', 'origen' => 'automatico', 'fecha_compromiso' => now()->addDays(15)
             ],
             [
-                'id_tratamiento' => 904, 'fk_id_evaluacion' => 912,
+                'id_tratamiento' => 8, 'fk_id_evaluacion' => 18,
                 'estrategia' => 'Transferir', 'accion_preventiva' => 'Contratar soporte externo especializado en redes inalámbricas.',
                 'estado_tratamiento' => 'En Proceso', 'origen' => 'manual', 'fecha_compromiso' => now()->addDays(15)
             ],
         ]);
 
-        // 15.8 Logs de auditoría adicionales.
+        // 15.8 Logs de auditoría adicionales (IDs correlativos 4 a 6)
         DB::table('logs')->insertOrIgnore([
             [
                 'id_log' => 4, 'id_usuario' => 2, 'accion_realizada' => 'Registro de incidente',
@@ -515,12 +503,12 @@ class DatosPruebaSeeder extends Seeder
             ],
             [
                 'id_log' => 5, 'id_usuario' => 1, 'accion_realizada' => 'Evaluación de riesgo ejecutada',
-                'tabla_afectada' => 'evaluacion_riesgo', 'registro_id' => 901,
+                'tabla_afectada' => 'evaluacion_riesgo', 'registro_id' => 7,
                 'fecha_hora' => now()->subDays(38), 'valor_anterior' => null, 'valor_nuevo' => 'Score: 8.24 (Crítico)'
             ],
             [
                 'id_log' => 6, 'id_usuario' => 3, 'accion_realizada' => 'Actualización de plan de tratamiento',
-                'tabla_afectada' => 'plan_tratamiento_riesgo', 'registro_id' => 901,
+                'tabla_afectada' => 'plan_tratamiento_riesgo', 'registro_id' => 5,
                 'fecha_hora' => now()->subDays(5), 'valor_anterior' => 'Pendiente', 'valor_nuevo' => 'En Proceso'
             ],
         ]);

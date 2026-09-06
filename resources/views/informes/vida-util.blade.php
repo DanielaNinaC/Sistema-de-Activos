@@ -32,7 +32,7 @@
                 <select name="fk_id_ubicacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition">
                     <option value="">Todas las ubicaciones</option>
                     @foreach($ubicaciones as $ubicacion)
-                        <option value="{{ $ubicacion->id_ubicacion }}" {{ request('fk_id_ubicacion') == $ubicacion->id_ubicacion ? 'selected' : '' }}>{{ $ubicacion->seccion }} - {{ $ubicacion->aula }}</option>
+                        <option value="{{ $ubicacion->id_ubicacion }}" {{ request('fk_id_ubicacion') == $ubicacion->id_ubicacion ? 'selected' : '' }}>{{ $ubicacion->seccion }}{{ $ubicacion->aula ? ' - ' . $ubicacion->aula : '' }}</option>
                     @endforeach
                 </select>
             </div>

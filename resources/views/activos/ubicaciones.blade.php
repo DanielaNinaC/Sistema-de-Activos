@@ -52,8 +52,8 @@
                     <input name="seccion" value="{{ old('seccion') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Ej: Bloque A, Edificio Central..." required />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Aula <span class="text-rose-500">*</span></label>
-                    <input name="aula" value="{{ old('aula') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Ej: Aula 101, Lab. Redes..." required />
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Aula <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <input name="aula" value="{{ old('aula') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Ej: Aula 101, Lab. Redes..." />
                 </div>
             </div>
             <div class="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
@@ -127,7 +127,7 @@
                 <tr class="hover:bg-slate-50/50 transition">
                     <td class="px-6 py-4 text-center text-sm text-slate-700 font-mono">{{ $ubicacion->id_ubicacion }}</td>
                     <td class="px-6 py-4 text-center text-sm text-slate-900 font-semibold">{{ $ubicacion->seccion }}</td>
-                    <td class="px-6 py-4 text-center text-sm text-slate-700">{{ $ubicacion->aula }}</td>
+                    <td class="px-6 py-4 text-center text-sm text-slate-700">{{ $ubicacion->aula ?? '—' }}</td>
                     <td class="px-6 py-4 text-center text-sm text-slate-700 font-medium font-mono">
                         {{ $ubicacion->activos_count }}
                     </td>
@@ -139,7 +139,7 @@
                                 </svg>
                                 Ver Equipos
                             </a>
-                            <button type="button" onclick="openEditModal({{ $ubicacion->id_ubicacion }}, '{{ addslashes($ubicacion->seccion) }}', '{{ addslashes($ubicacion->aula) }}')" class="btn btn-sm btn-warning">
+                            <button type="button" onclick="openEditModal({{ $ubicacion->id_ubicacion }}, '{{ addslashes($ubicacion->seccion) }}', '{{ addslashes($ubicacion->aula ?? '') }}')" class="btn btn-sm btn-warning">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
@@ -177,8 +177,8 @@
                     <input id="edit_seccion" name="seccion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Aula <span class="text-rose-500">*</span></label>
-                    <input id="edit_aula" name="aula" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required />
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Aula <span class="text-slate-400 font-normal">(Opcional)</span></label>
+                    <input id="edit_aula" name="aula" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
                 </div>
             </div>
 

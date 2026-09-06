@@ -119,7 +119,7 @@ class InformesController extends Controller
             $a->codigo_patrimonial,
             $a->nombre_equipo,
             $a->categoria->nombre_categoria ?? '-',
-            $a->ubicacion ? $a->ubicacion->seccion . ' - ' . $a->ubicacion->aula : '-',
+            $a->ubicacion ? $a->ubicacion->seccion . ($a->ubicacion->aula ? ' - ' . $a->ubicacion->aula : '') : '-',
             $a->vida_util['antiguedad_meses'],
             $a->vida_util['vida_util_meses'],
             $a->vida_util['meses_restantes'],

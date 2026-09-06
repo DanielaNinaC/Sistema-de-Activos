@@ -33,6 +33,11 @@ class PlanTratamientoTest extends TestCase
             'estado' => 1,
         ]);
 
+        // Los permisos por módulo (permiso_riesgos, permiso_mantenimiento…)
+        // tienen DEFAULT en la base de datos; sin recargar, la instancia no los
+        // trae y CheckModuleAccess los leería como null → 403.
+        $admin->refresh();
+
         $this->actingAs($admin);
 
         return $admin;

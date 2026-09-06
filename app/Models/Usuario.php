@@ -20,6 +20,13 @@ class Usuario extends Authenticatable
         'correo',
         'contrasena',
         'estado',
+        'permiso_dashboard',
+        'permiso_activos',
+        'permiso_incidentes',
+        'permiso_riesgos',
+        'permiso_mantenimiento',
+        'permiso_informes',
+        'permiso_usuarios',
     ];
 
     protected $hidden = [
@@ -108,5 +115,71 @@ class Usuario extends Authenticatable
     {
         $id = config('roles.director');
         return $id ? $this->hasRoleId((int) $id) : false;
+    }
+
+    /**
+     * Verifica si el usuario tiene acceso a un módulo específico.
+     *
+     * @param string $modulo  Clave del módulo (dashboard, activos, incidentes, riesgos, mantenimiento, informes, usuarios)
+     * @return bool
+     */
+    public function tieneAccesoModulo(string $modulo): bool
+    {
+        $campo = 'permiso_' . $modulo;
+        return (bool) ($this->{$campo} ?? false);
+    }
+
+    /**
+     * Retorna el mapeo de permisos por defecto según el rol.
+     *
+     * @param int $rolId
+     * @return array
+     */
+    public static function permisosDefaultPorRol(int $rolId): array
+    {
+        $adminId    = (int) config('roles.admin', 1);
+        $soporteId  = (int) config('roles.soporte', 2);
+        $directorId = (int) config('roles.director', 3);
+
+        $mapeo = [
+            $adminId => [
+                'permiso_dashboard'      => true,
+                'permiso_activos'        => true,
+                'permiso_incidentes'     => true,
+                'permiso_riesgos'        => true,
+                'permiso_mantenimiento'  => true,
+                'permiso_informes'       => true,
+                'permiso_usuarios'       => true,
+            ],
+            $soporteId => [
+                'permiso_dashboard'      => true,
+                'permiso_activos'        => true,
+                'permiso_incidentes'     => true,
+                'permiso_riesgos'        => true,
+                'permiso_mantenimiento'  => true,
+                'permiso_informes'       => false,
+                'permiso_usuarios'       => false,
+            ],
+            $directorId => [
+                'permiso_dashboard'      => true,
+                'permiso_activos'        => false,
+                'permiso_incidentes'     => false,
+                'permiso_riesgos'        => false,
+                'permiso_mantenimiento'  => false,
+                'permiso_informes'       => true,
+                'permiso_usuarios'       => false,
+            ],
+        ];
+
+        // Default: todo habilitado excepto usuarios
+        return $mapeo[$rolId] ?? [
+            'permiso_dashboard'      => true,
+            'permiso_activos'        => true,
+            'permiso_incidentes'     => true,
+            'permiso_riesgos'        => true,
+            'permiso_mantenimiento'  => true,
+            'permiso_informes'       => true,
+            'permiso_usuarios'       => false,
+        ];
     }
 }

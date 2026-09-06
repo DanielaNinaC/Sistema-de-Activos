@@ -28,8 +28,28 @@
 
             <div class="space-y-4 text-sm">
                 <div>
-                    <p class="text-gray-500">Correo</p>
-                    <p class="font-medium text-gray-900 break-words">{{ $usuario->correo }}</p>
+                    <p class="text-gray-500">Correo Electrónico</p>
+                    <p class="font-medium text-gray-900 break-words font-mono">{{ $usuario->correo }}</p>
+                    
+                    <div class="mt-2">
+                        @if(isset($emailEstado) && $emailEstado['valid'])
+                            <div class="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+                                <svg class="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <div>
+                                    <strong class="font-semibold">Dominio MX Activo (@{{ $emailEstado['domain'] }})</strong>
+                                    <p class="text-[11px] text-emerald-700 mt-0.5 leading-snug">{{ $emailEstado['message'] }}</p>
+                                </div>
+                            </div>
+                        @else
+                            <div class="flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                                <svg class="h-4 w-4 text-rose-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <div>
+                                    <strong class="font-semibold">Dominio Inexistente / Inactivo</strong>
+                                    <p class="text-[11px] text-rose-700 mt-0.5 leading-snug">{{ $emailEstado['message'] ?? 'No se detectaron servidores MX activos para este correo.' }}</p>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
                 </div>
                 <div>
                     <p class="text-gray-500">Estado</p>

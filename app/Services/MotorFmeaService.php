@@ -27,10 +27,15 @@ class MotorFmeaService
     ];
 
     /**
-     * Mapeo fijo de nivel de Monitoreo/MSR (Tabla 22 de la tesis) a valor numérico.
+     * Mapeo fijo de nivel de Monitoreo/MSR (Tabla 22/29 de la tesis) a valor
+     * numérico. Incluye 'baja' => 7: nivel intermedio entre "no hay ninguna
+     * alerta" (muy_baja) y "hay logs pero requieren revisión manual"
+     * (moderada) — detección solo por inspección/reporte manual directo,
+     * sin registro ni alerta automática.
      */
     public const MAPA_MSR = [
         'muy_baja' => 9,
+        'baja' => 7,
         'moderada' => 6,
         'alta' => 4,
         'muy_alta' => 2,
@@ -266,7 +271,7 @@ class MotorFmeaService
     /**
      * Ejecuta el motor de inferencia automatizado para un activo específico.
      */
-    public function evaluarActivo(int $idActivo): array
+    public function evaluarActivo(int $idActivo, ?array $idsModosFalla = null): array
     {
         $activo = ActivoTecnologico::with(['categoria.modosFalla', 'incidentes', 'mantenimientos'])->findOrFail($idActivo);
 
@@ -278,7 +283,33 @@ class MotorFmeaService
         // Modos de falla de la categoría del activo. Si no tiene ninguno
         // definido, NO se evalúa contra modos de otras categorías: se
         // reporta explícitamente y no se generan evaluaciones ni alertas.
-        $modosFalla = $activo->categoria->modosFalla ?? collect();
+        $modosCategoria = $activo->categoria->modosFalla ?? collect();
+        if ($modosCategoria->isEmpty()) {
+            return [
+                'activo' => $activo,
+                'antiguedad_meses' => $antiguedadMeses,
+                'vida_util_meses' => $vidaUtilMeses,
+                'porcentaje_desgaste' => $porcentajeDesgaste,
+                'total_incidentes' => $activo->incidentes->count(),
+                'max_score' => null,
+                'criticidad_global' => null,
+                'alerta_global' => null,
+                'evaluaciones' => [],
+                'sin_modos_falla' => true,
+                'evaluacion_parcial' => false,
+                'modos_categoria' => 0,
+                'modos_conservados' => 0,
+            ];
+        }
+
+        // Selección granular: con $idsModosFalla se procesan sólo esos pares
+        // (activo, modo_falla). Los no incluidos quedan intactos —no se
+        // recalculan, conservan su evaluación vigente y no generan alertas—.
+        // Sin argumento se evalúan todos, que es el comportamiento por defecto.
+        $modosFalla = $idsModosFalla === null
+            ? $modosCategoria
+            : $modosCategoria->whereIn('id_modo_falla', $idsModosFalla)->values();
+
         if ($modosFalla->isEmpty()) {
             return [
                 'activo' => $activo,
@@ -291,6 +322,9 @@ class MotorFmeaService
                 'alerta_global' => null,
                 'evaluaciones' => [],
                 'sin_modos_falla' => true,
+                'evaluacion_parcial' => false,
+                'modos_categoria' => $modosCategoria->count(),
+                'modos_conservados' => 0,
             ];
         }
 
@@ -440,6 +474,12 @@ class MotorFmeaService
             'alerta_global' => $infoGlobal['tipo_alerta'],
             'evaluaciones' => $evaluacionesRealizadas,
             'sin_modos_falla' => false,
+            // Contexto de la selección granular: permite a la vista explicar
+            // que los modos no incluidos conservan su evaluación vigente, en
+            // vez de dar a entender que quedaron sin evaluar.
+            'evaluacion_parcial' => $modosFalla->count() < $modosCategoria->count(),
+            'modos_categoria' => $modosCategoria->count(),
+            'modos_conservados' => $modosCategoria->count() - $modosFalla->count(),
         ];
     }
 

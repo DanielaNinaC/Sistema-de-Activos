@@ -75,6 +75,12 @@
                         {{ $incidente->estado_incidente }}
                     </span>
                 </div>
+                <div class="pl-6 border-l border-slate-200">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Prioridad de Atención</span>
+                    <div class="mt-1">
+                        @include('incidentes.partials.badge-prioridad', ['prioridad' => $incidente->prioridad])
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center gap-6 text-xs text-slate-600">

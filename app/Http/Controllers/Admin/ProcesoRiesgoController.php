@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\EvaluarActivoRequest;
 use App\Models\ActivoTecnologico;
 use App\Models\Alerta;
 use App\Models\Categoria;
@@ -32,10 +33,26 @@ class ProcesoRiesgoController extends Controller
      */
     private const OPCIONES_MSR = [
         'muy_baja' => 'Muy Baja (9) — No existen alertas, se detecta solo cuando el servicio colapsa totalmente',
+        'baja' => 'Baja (7) — Detección solo por inspección o reporte manual directo (rondas de soporte, reporte del usuario), sin logs ni alertas',
         'moderada' => 'Moderada (6) — Registra logs pero requiere revisión manual',
         'alta' => 'Alta (4) — Alertas automáticas antes del colapso',
         'muy_alta' => 'Muy Alta (2) — Mitigación autónoma o aviso instantáneo',
     ];
+
+    /**
+     * Pantalla intermedia que agrupa los accesos de configuración del módulo
+     * de Evaluación de Riesgos: catálogo de Modos de Falla y pesos AHP
+     * (Score). No implementa lógica propia — solo navega a las pantallas que
+     * ya existen; se limita a mostrar un resumen del estado de cada una.
+     */
+    public function configuracionIndex()
+    {
+        $totalModos = ModoFalla::count();
+        $categoriasSinModos = Categoria::whereDoesntHave('modosFalla')->count();
+        $pesosVigentes = PesoAhp::where('vigente', true)->first();
+
+        return view('riesgos.configuracion', compact('totalModos', 'categoriasSinModos', 'pesosVigentes'));
+    }
 
     public function modosIndex(Request $request)
     {
@@ -62,7 +79,7 @@ class ProcesoRiesgoController extends Controller
             'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
             'nombre_modo_falla' => 'required|string|max:255',
             'nivel_severidad' => 'required|in:muy_alta,alta,moderada,baja,insignificante',
-            'nivel_msr' => 'required|in:muy_baja,moderada,alta,muy_alta',
+            'nivel_msr' => 'required|in:muy_baja,baja,moderada,alta,muy_alta',
             'justificacion_severidad' => 'nullable|string',
             'justificacion_msr' => 'nullable|string',
         ]);
@@ -83,7 +100,7 @@ class ProcesoRiesgoController extends Controller
             'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
             'nombre_modo_falla' => 'required|string|max:255',
             'nivel_severidad' => 'required|in:muy_alta,alta,moderada,baja,insignificante',
-            'nivel_msr' => 'required|in:muy_baja,moderada,alta,muy_alta',
+            'nivel_msr' => 'required|in:muy_baja,baja,moderada,alta,muy_alta',
             'justificacion_severidad' => 'nullable|string',
             'justificacion_msr' => 'nullable|string',
         ]);
@@ -116,13 +133,14 @@ class ProcesoRiesgoController extends Controller
         return view('riesgos.evaluacion-fmea', compact('activos', 'modos', 'evaluaciones', 'ultimoPeso'));
     }
 
-    public function evaluarActivo(Request $request, MotorFmeaService $service)
+    public function evaluarActivo(EvaluarActivoRequest $request, MotorFmeaService $service)
     {
-        $request->validate([
-            'fk_id_activo' => 'required|integer|exists:activos_tecnologicos,id_activo',
-        ]);
-
-        $resultado = $service->evaluarActivo($request->input('fk_id_activo'));
+        // idsModosFalla() devuelve null cuando se pidió "todos", que es lo que
+        // el motor interpreta como el catálogo completo de la categoría.
+        $resultado = $service->evaluarActivo(
+            (int) $request->input('fk_id_activo'),
+            $request->idsModosFalla()
+        );
 
         if ($resultado['sin_modos_falla']) {
             return redirect()->route('admin.riesgos.evaluacion')
@@ -130,8 +148,24 @@ class ProcesoRiesgoController extends Controller
                 ->with('resultadoMotor', $resultado);
         }
 
+        $mensaje = "Evaluación automatizada FMEA ejecutada con éxito para '{$resultado['activo']->nombre_equipo}'. Max Score: {$resultado['max_score']} (Nivel: {$resultado['criticidad_global']}).";
+
+        // En una evaluación parcial se aclara qué pasó con los modos no
+        // seleccionados: conservan su evaluación vigente, no quedan pendientes.
+        if ($resultado['evaluacion_parcial']) {
+            $evaluados = count($resultado['evaluaciones']);
+            $restantes = $resultado['modos_conservados'];
+
+            $verbo = $evaluados === 1 ? 'Se evaluó' : 'Se evaluaron';
+            $frase = $restantes === 1
+                ? 'el restante conserva su última evaluación vigente'
+                : "los {$restantes} restantes conservan su última evaluación vigente";
+
+            $mensaje .= " {$verbo} {$evaluados} de {$resultado['modos_categoria']} modos de falla; {$frase}.";
+        }
+
         return redirect()->route('admin.riesgos.evaluacion')
-            ->with('success', "Evaluación automatizada FMEA ejecutada con éxito para '{$resultado['activo']->nombre_equipo}'. Max Score: {$resultado['max_score']} (Nivel: {$resultado['criticidad_global']}).")
+            ->with('success', $mensaje)
             ->with('resultadoMotor', $resultado);
     }
 
@@ -372,13 +406,11 @@ class ProcesoRiesgoController extends Controller
         }
 
         $alertas = $query->orderByDesc('fecha_generacion')->paginate(15)->withQueryString();
-        $evaluaciones = EvaluacionRiesgo::with('activo:id_activo,nombre_equipo,codigo_patrimonial')
-            ->where('vigente', true)
-            ->select('id_evaluacion', 'fk_id_activo', 'nivel_riesgo', 'score_calculado')
-            ->orderByDesc('score_calculado')
-            ->get();
 
-        return view('riesgos.alertas', compact('alertas', 'evaluaciones'));
+        // Ya no se consultan las evaluaciones vigentes: alimentaban el
+        // formulario de alta manual de alertas, que se retiró porque las
+        // alertas las genera el motor FMEA.
+        return view('riesgos.alertas', compact('alertas'));
     }
 
     public function alertasStore(Request $request)

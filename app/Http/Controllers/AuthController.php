@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use App\Rules\ValidEmailDomain;
 
 class AuthController extends Controller
 {
@@ -181,9 +182,9 @@ SVG;
         // Éxito: limpiar el código de la cache y regenerar sesión
         Cache::forget($sessionKey);
         $request->session()->regenerate();
+        $request->session()->forget('url.intended');
 
-        return redirect()->intended(route('dashboard'))
-            ->with('success', '¡Bienvenido de nuevo!');
+        return redirect()->route('dashboard');
     }
 
     /**
@@ -194,7 +195,7 @@ SVG;
         $request->validate([
             'nombre' => 'required|string|max:255',
             'apellido' => 'required|string|max:255',
-            'correo' => 'required|email|max:255|unique:usuarios,correo',
+            'correo' => ['required', 'email', 'max:255', 'unique:usuarios,correo', new ValidEmailDomain()],
             'contrasena' => 'required|string|min:6|confirmed',
         ], [
             'nombre.required' => 'El nombre es obligatorio.',

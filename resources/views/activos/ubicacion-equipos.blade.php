@@ -1,6 +1,6 @@
 @extends('layouts.principal')
 
-@section('title', 'Equipos: ' . $ubicacion->seccion . ' - ' . $ubicacion->aula)
+@section('title', 'Equipos: ' . $ubicacion->seccion . ($ubicacion->aula ? ' - ' . $ubicacion->aula : ''))
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
@@ -12,7 +12,7 @@
             </a>
             <div>
                 <h2 class="text-2xl font-semibold text-slate-900">{{ $ubicacion->seccion }}</h2>
-                <p class="text-sm text-slate-500">{{ $ubicacion->aula }} — Equipos registrados en esta ubicación</p>
+                <p class="text-sm text-slate-500">{{ $ubicacion->aula ? $ubicacion->aula . ' — ' : '' }}Equipos registrados en esta ubicación</p>
             </div>
         </div>
 

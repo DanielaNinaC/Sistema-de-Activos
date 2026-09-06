@@ -483,6 +483,132 @@ class MotorFmeaServiceTest extends TestCase
         $this->assertSame(1, Mantenimiento::count());
     }
 
+    /**
+     * Escenario con varios modos de falla en la misma categoría, para probar
+     * la selección granular.
+     *
+     * @return array{0: ActivoTecnologico, 1: \Illuminate\Support\Collection}
+     */
+    private function crearEscenarioConCincoModos(): array
+    {
+        PesoAhp::create([
+            'peso_severidad' => 0.648,
+            'peso_frecuencia' => 0.230,
+            'peso_msr' => 0.122,
+            'fecha_actualizacion' => now(),
+        ]);
+
+        $categoria = Categoria::create([
+            'nombre_categoria' => 'Multimodo',
+            'vida_util_meses' => 60,
+            'nivel_dependencia' => 'Media',
+        ]);
+
+        $modos = collect(range(1, 5))->map(function ($i) use ($categoria) {
+            return ModoFalla::create([
+                'fk_id_categoria' => $categoria->id_categoria,
+                'nombre_modo_falla' => "Modo {$i}",
+                'valor_severidad_base' => 5,
+                'valor_msr_base' => 6,
+            ]);
+        });
+
+        $ubicacion = Ubicacion::create(['seccion' => 'Lab', 'aula' => 'M-1']);
+
+        $activo = ActivoTecnologico::create([
+            'fk_id_categoria' => $categoria->id_categoria,
+            'fk_id_ubicacion' => $ubicacion->id_ubicacion,
+            'codigo_patrimonial' => 'MUL-001',
+            'nombre_equipo' => 'Equipo Multimodo',
+            'fecha_adquisicion' => now()->subMonths(6)->format('Y-m-d'),
+        ]);
+
+        return [$activo, $modos];
+    }
+
+    public function test_evaluar_todos_los_modos_genera_una_evaluacion_vigente_por_modo(): void
+    {
+        [$activo, $modos] = $this->crearEscenarioConCincoModos();
+
+        $resultado = $this->service->evaluarActivo($activo->id_activo);
+
+        $this->assertCount(5, $resultado['evaluaciones']);
+        $this->assertFalse($resultado['evaluacion_parcial']);
+        $this->assertSame(0, $resultado['modos_conservados']);
+
+        $this->assertSame(5, EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)->count());
+        $this->assertSame(5, EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)->where('vigente', true)->count());
+
+        foreach ($modos as $modo) {
+            $this->assertDatabaseHas('evaluacion_riesgo', [
+                'fk_id_activo' => $activo->id_activo,
+                'fk_id_modo_falla' => $modo->id_modo_falla,
+                'vigente' => true,
+            ]);
+        }
+    }
+
+    public function test_evaluar_un_solo_modo_deja_intactas_las_evaluaciones_de_los_demas(): void
+    {
+        [$activo, $modos] = $this->crearEscenarioConCincoModos();
+
+        // Punto de partida: los 5 modos ya tienen evaluación vigente.
+        $this->service->evaluarActivo($activo->id_activo);
+
+        $vigentesAntes = EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)
+            ->where('vigente', true)
+            ->pluck('id_evaluacion', 'fk_id_modo_falla');
+
+        $modoElegido = $modos[1];
+
+        $resultado = $this->service->evaluarActivo($activo->id_activo, [$modoElegido->id_modo_falla]);
+
+        $this->assertCount(1, $resultado['evaluaciones']);
+        $this->assertTrue($resultado['evaluacion_parcial']);
+        $this->assertSame(5, $resultado['modos_categoria']);
+        $this->assertSame(4, $resultado['modos_conservados']);
+
+        // Sólo el par evaluado generó un registro nuevo: 5 + 1 = 6.
+        $this->assertSame(6, EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)->count());
+        $this->assertSame(5, EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)->where('vigente', true)->count());
+
+        foreach ($modos as $modo) {
+            $vigente = EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)
+                ->where('fk_id_modo_falla', $modo->id_modo_falla)
+                ->where('vigente', true)
+                ->firstOrFail();
+
+            if ($modo->id_modo_falla === $modoElegido->id_modo_falla) {
+                // El evaluado sí cambió de registro vigente.
+                $this->assertNotSame($vigentesAntes[$modo->id_modo_falla], $vigente->id_evaluacion);
+            } else {
+                // Los no seleccionados conservan exactamente el mismo registro.
+                $this->assertSame($vigentesAntes[$modo->id_modo_falla], $vigente->id_evaluacion);
+                $this->assertSame(
+                    1,
+                    EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)
+                        ->where('fk_id_modo_falla', $modo->id_modo_falla)
+                        ->count(),
+                    'No debe crearse un registro nuevo para un modo no seleccionado.'
+                );
+            }
+        }
+    }
+
+    public function test_evaluacion_parcial_no_genera_alertas_de_los_modos_no_seleccionados(): void
+    {
+        [$activo, $modos] = $this->crearEscenarioConCincoModos();
+
+        $this->service->evaluarActivo($activo->id_activo);
+        $alertasAntes = Alerta::count();
+
+        // Reevaluar un solo modo: su nivel no cambia, así que por idempotencia
+        // no debe generarse ninguna alerta nueva, ni suya ni de los otros.
+        $this->service->evaluarActivo($activo->id_activo, [$modos[0]->id_modo_falla]);
+
+        $this->assertSame($alertasAntes, Alerta::count());
+    }
+
     public function test_tratamiento_transferir_no_programa_mantenimiento(): void
     {
         [$activo, $modo] = $this->crearEscenarioCritico();

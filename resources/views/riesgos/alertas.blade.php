@@ -5,7 +5,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
 
-    {{-- Encabezado con Botón de Registro --}}
+    {{-- Encabezado --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center gap-3">
             <a href="{{ url()->previous() }}" class="btn btn-outline btn-icon" aria-label="Volver" title="Volver">
@@ -13,16 +13,9 @@
             </a>
             <div>
                 <h2 class="text-2xl font-bold text-slate-900">Alertas de Riesgo</h2>
-                <p class="text-sm text-slate-500">Gestiona las alertas automáticas y manuales vinculadas a las evaluaciones FMEA</p>
+                <p class="text-sm text-slate-500">Alertas generadas automáticamente por el motor FMEA a partir de las evaluaciones de riesgo</p>
             </div>
         </div>
-
-        <button onclick="toggleRegistroForm()" id="btnToggleForm" class="btn btn-primary self-start sm:self-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Registrar Alerta
-        </button>
     </div>
 
     {{-- Alerta de Éxito --}}
@@ -46,64 +39,6 @@
             </ul>
         </div>
     @endif
-
-    {{-- Formulario de Registro (colapsable) --}}
-    <div id="registroForm" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300" style="display: none;">
-        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
-            <h3 class="text-base font-bold text-slate-900">Nueva Alerta de Riesgo</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Asocie una alerta a una evaluación de riesgo FMEA</p>
-        </div>
-
-        <form method="POST" action="{{ route('admin.riesgos.alertas.store') }}" class="p-6 space-y-4">
-            @csrf
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="sm:col-span-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Evaluación FMEA Origen <span class="text-rose-500">*</span></label>
-                    <select name="fk_id_evaluacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar evaluación..." required>
-                        <option value="">-- Seleccionar Evaluación --</option>
-                        @foreach($evaluaciones as $evaluacion)
-                            <option value="{{ $evaluacion->id_evaluacion }}" {{ old('fk_id_evaluacion') == $evaluacion->id_evaluacion ? 'selected' : '' }}>
-                                [#{{ $evaluacion->id_evaluacion }}] {{ $evaluacion->activo->nombre_equipo ?? 'Activo' }} ({{ $evaluacion->activo->codigo_patrimonial ?? '' }}) — Nivel: {{ $evaluacion->nivel_riesgo }} (Score: {{ $evaluacion->score_calculado }})
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Tipo de Alerta <span class="text-rose-500">*</span></label>
-                    <select name="tipo_alerta" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="">-- Seleccionar Tipo --</option>
-                        <option value="Roja" {{ old('tipo_alerta') == 'Roja' ? 'selected' : '' }}>🔴 Alerta Roja (Crítico)</option>
-                        <option value="Naranja" {{ old('tipo_alerta') == 'Naranja' ? 'selected' : '' }}>🟠 Alerta Naranja (Alto)</option>
-                        <option value="Amarilla" {{ old('tipo_alerta') == 'Amarilla' ? 'selected' : '' }}>🟡 Alerta Amarilla (Medio)</option>
-                        <option value="Verde" {{ old('tipo_alerta') == 'Verde' ? 'selected' : '' }}>🟢 Alerta Verde (Bajo)</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Fecha y Hora de Generación <span class="text-rose-500">*</span></label>
-                    <input type="datetime-local" name="fecha_generacion" value="{{ old('fecha_generacion', date('Y-m-d\TH:i')) }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition font-mono" required />
-                </div>
-            </div>
-
-            <div class="flex items-center gap-2 pt-2">
-                <input type="checkbox" id="notificacion_enviada" name="notificacion_enviada" value="1" {{ old('notificacion_enviada') ? 'checked' : '' }} class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                <label for="notificacion_enviada" class="text-xs font-medium text-slate-700">Marcar como notificación enviada al equipo técnico</label>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onclick="toggleRegistroForm()" class="btn btn-secondary">
-                    Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Guardar Alerta
-                </button>
-            </div>
-        </form>
-    </div>
 
     {{-- Barra de Búsqueda --}}
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
@@ -234,23 +169,4 @@
 
 </div>
 
-<script>
-    function toggleRegistroForm() {
-        var form = document.getElementById('registroForm');
-        var btn = document.getElementById('btnToggleForm');
-        if (form.style.display === 'none') {
-            form.style.display = 'block';
-            btn.style.display = 'none';
-        } else {
-            form.style.display = 'none';
-            btn.style.display = 'inline-flex';
-        }
-    }
-
-    @if($errors->any())
-        document.addEventListener('DOMContentLoaded', function() {
-            toggleRegistroForm();
-        });
-    @endif
-</script>
 @endsection

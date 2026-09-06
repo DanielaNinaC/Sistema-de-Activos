@@ -17,13 +17,48 @@ use Illuminate\Support\Facades\Storage;
 
 class ProcesoActivoController extends Controller
 {
+    /**
+     * Vocabulario canónico de priorización de incidentes. Validado por lista
+     * blanca (no hay ENUM en BD), igual que el resto de vocabularios del
+     * sistema.
+     */
+    public const PRIORIDADES_INCIDENTE = ['Alta', 'Media', 'Baja'];
+
+    /**
+     * Prioridad sugerida a partir de la criticidad institucional del activo,
+     * que el motor FMEA mantiene actualizada. La criticidad tiene cuatro
+     * niveles y la prioridad tres, por lo que 'Crítica' se absorbe en 'Alta'.
+     * Es solo una sugerencia: quien reporta puede cambiarla.
+     */
+    public const MAPA_PRIORIDAD_SUGERIDA = [
+        'Crítica' => 'Alta',
+        'Alta' => 'Alta',
+        'Media' => 'Media',
+        'Baja' => 'Baja',
+    ];
+
+    /**
+     * Orden de atención: primero lo más urgente. Se usa para ordenar el
+     * seguimiento sin depender del orden alfabético (que pondría Alta, Baja,
+     * Media) ni de valores numéricos en la base de datos.
+     */
+    private const PESO_PRIORIDAD = ['Alta' => 1, 'Media' => 2, 'Baja' => 3];
+
+    /**
+     * Estados que sacan a un incidente del seguimiento activo. Se comparan las
+     * variantes en minúscula porque el dato histórico no es homogéneo.
+     */
+    private const ESTADOS_INCIDENTE_CERRADOS = ['Resuelto', 'Cerrado', 'resuelto', 'cerrado'];
+
     public function incidentesIndex()
     {
         $activos = ActivoTecnologico::with(['categoria', 'ubicacion'])->orderBy('nombre_equipo')->get();
         $usuarios = Usuario::with('rol')->orderBy('nombre')->get();
         $modos = ModoFalla::orderBy('nombre_modo_falla')->get();
+        $prioridades = self::PRIORIDADES_INCIDENTE;
+        $prioridadPorCriticidad = self::MAPA_PRIORIDAD_SUGERIDA;
 
-        return view('incidentes.registrar', compact('activos', 'usuarios', 'modos'));
+        return view('incidentes.registrar', compact('activos', 'usuarios', 'modos', 'prioridades', 'prioridadPorCriticidad'));
     }
 
     public function incidentesStore(Request $request)
@@ -48,6 +83,7 @@ class ProcesoActivoController extends Controller
             'descripcion_falla' => 'required|string',
             'fk_id_modo_falla' => 'nullable|integer|exists:modos_falla,id_modo_falla',
             'estado_incidente' => 'required|string|max:255',
+            'prioridad' => 'required|string|in:' . implode(',', self::PRIORIDADES_INCIDENTE),
         ]);
 
         Incidente::create([
@@ -57,6 +93,7 @@ class ProcesoActivoController extends Controller
             'descripcion_falla' => $data['descripcion_falla'],
             'fk_id_modo_falla' => $data['fk_id_modo_falla'] ?? null,
             'estado_incidente' => $data['estado_incidente'],
+            'prioridad' => $data['prioridad'],
         ]);
 
         return redirect()->route('admin.incidentes.seguimiento')->with('success', 'Incidente registrado con éxito. Ahora puede realizar su seguimiento.');
@@ -65,7 +102,7 @@ class ProcesoActivoController extends Controller
     public function incidentesSeguimiento(Request $request)
     {
         $query = Incidente::with(['activo.categoria', 'activo.ubicacion', 'usuarioReporta.rol'])
-            ->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado', 'resuelto', 'cerrado']);
+            ->whereNotIn('estado_incidente', self::ESTADOS_INCIDENTE_CERRADOS);
 
         if ($buscar = $request->input('buscar')) {
             $query->where(function ($q) use ($buscar) {
@@ -76,27 +113,72 @@ class ProcesoActivoController extends Controller
             });
         }
 
-        $incidentes = $query->orderByDesc('fecha_incidente')->paginate(15)->withQueryString();
+        // Priorización: primero lo más urgente y, dentro de cada prioridad,
+        // lo más reciente.
+        $incidentes = $this->ordenarPorPrioridad($query)
+            ->orderByDesc('fecha_incidente')
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('incidentes.seguimiento', compact('incidentes'));
+        $prioridades = self::PRIORIDADES_INCIDENTE;
+
+        return view('incidentes.seguimiento', compact('incidentes', 'prioridades'));
     }
 
+    /**
+     * Historial agrupado por activo: cada fila es un activo que ha tenido al
+     * menos un incidente, con el resumen de su historial. El detalle de cada
+     * activo (incidentesHistorialActivo) lista sus incidentes uno por uno.
+     */
     public function incidentesHistorial(Request $request)
     {
-        $query = Incidente::with(['activo.categoria', 'activo.ubicacion', 'usuarioReporta.rol']);
+        $query = ActivoTecnologico::query()
+            ->with(['categoria', 'ubicacion'])
+            ->whereHas('incidentes')
+            ->withCount([
+                'incidentes',
+                'incidentes as incidentes_abiertos_count' => function ($q) {
+                    $q->whereNotIn('estado_incidente', self::ESTADOS_INCIDENTE_CERRADOS);
+                },
+            ])
+            ->withMax('incidentes', 'fecha_incidente');
 
         if ($buscar = $request->input('buscar')) {
             $query->where(function ($q) use ($buscar) {
-                $q->where('estado_incidente', 'like', "%{$buscar}%")
-                  ->orWhere('descripcion_falla', 'like', "%{$buscar}%")
-                  ->orWhereHas('activo', fn($a) => $a->where('nombre_equipo', 'like', "%{$buscar}%")->orWhere('codigo_patrimonial', 'like', "%{$buscar}%"))
-                  ->orWhereHas('usuarioReporta', fn($u) => $u->where('nombre', 'like', "%{$buscar}%"));
+                $q->where('nombre_equipo', 'like', "%{$buscar}%")
+                  ->orWhere('codigo_patrimonial', 'like', "%{$buscar}%")
+                  ->orWhereHas('categoria', fn($c) => $c->where('nombre_categoria', 'like', "%{$buscar}%"))
+                  ->orWhereHas('ubicacion', fn($u) => $u->where('seccion', 'like', "%{$buscar}%")->orWhere('aula', 'like', "%{$buscar}%"));
             });
         }
 
-        $incidentes = $query->orderByDesc('fecha_incidente')->paginate(15)->withQueryString();
+        // Primero los activos con actividad más reciente.
+        $activos = $query->orderByDesc('incidentes_max_fecha_incidente')
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('incidentes.historial', compact('incidentes'));
+        return view('incidentes.historial', compact('activos'));
+    }
+
+    /**
+     * Todos los incidentes registrados para un activo concreto.
+     */
+    public function incidentesHistorialActivo($id)
+    {
+        $activo = ActivoTecnologico::with(['categoria', 'ubicacion'])->findOrFail($id);
+
+        $incidentes = Incidente::with(['usuarioReporta.rol', 'modoFalla'])
+            ->where('fk_id_activo', $activo->id_activo)
+            ->orderByDesc('fecha_incidente')
+            ->paginate(15);
+
+        $totalAbiertos = Incidente::where('fk_id_activo', $activo->id_activo)
+            ->whereNotIn('estado_incidente', self::ESTADOS_INCIDENTE_CERRADOS)
+            ->count();
+
+        $prioridades = self::PRIORIDADES_INCIDENTE;
+
+        return view('incidentes.historial-activo', compact('activo', 'incidentes', 'totalAbiertos', 'prioridades'));
     }
 
     public function incidentesShow($id)
@@ -106,6 +188,25 @@ class ProcesoActivoController extends Controller
         return view('incidentes.show', compact('incidente'));
     }
 
+    /**
+     * Ordena por prioridad de atención. Se construye un CASE a partir de
+     * self::PESO_PRIORIDAD en vez de ordenar por la columna directamente
+     * (alfabéticamente daría Alta, Baja, Media) y sin usar FIELD(), que es
+     * exclusivo de MySQL y rompería las pruebas en SQLite.
+     */
+    private function ordenarPorPrioridad($query)
+    {
+        $casos = '';
+        foreach (self::PESO_PRIORIDAD as $prioridad => $peso) {
+            $casos .= " WHEN ? THEN {$peso}";
+        }
+
+        return $query->orderByRaw(
+            "CASE prioridad{$casos} ELSE 99 END",
+            array_keys(self::PESO_PRIORIDAD)
+        );
+    }
+
     public function incidentesUpdate(Request $request, $id)
     {
         $incidente = Incidente::findOrFail($id);
@@ -113,7 +214,14 @@ class ProcesoActivoController extends Controller
         $data = $request->validate([
             'estado_incidente' => 'required|string|max:255',
             'descripcion_falla' => 'nullable|string',
+            'prioridad' => 'nullable|string|in:' . implode(',', self::PRIORIDADES_INCIDENTE),
         ]);
+
+        // Campo opcional: si el formulario no lo envía, se conserva la
+        // prioridad actual en vez de sobrescribirla con null.
+        if (empty($data['prioridad'])) {
+            unset($data['prioridad']);
+        }
 
         $incidente->update($data);
 

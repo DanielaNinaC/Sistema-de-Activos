@@ -51,7 +51,7 @@
                     <option value="">Seleccione un activo tecnológico</option>
                     @foreach($activos as $activo)
                         @php
-                            $ubicacionTxt = $activo->ubicacion ? ($activo->ubicacion->seccion . ' - ' . $activo->ubicacion->aula) : 'Sin ubicación';
+                            $ubicacionTxt = $activo->ubicacion ? ($activo->ubicacion->seccion . ($activo->ubicacion->aula ? ' - ' . $activo->ubicacion->aula : '')) : 'Sin ubicación';
                             $categoriaTxt = $activo->categoria ? $activo->categoria->nombre_categoria : 'Sin categoría';
                             $marcaModeloTxt = trim(($activo->marca ?? '') . ' ' . ($activo->modelo ?? ''));
                         @endphp
@@ -64,6 +64,8 @@
                             data-categoria-id="{{ $activo->fk_id_categoria }}"
                             data-ubicacion="{{ $ubicacionTxt }}"
                             data-estado="{{ $activo->estado_operativo ?? 'No especificado' }}"
+                            data-criticidad="{{ $activo->criticidad_institucional ?? '' }}"
+                            data-prioridad-sugerida="{{ $prioridadPorCriticidad[$activo->criticidad_institucional] ?? '' }}"
                             {{ old('fk_id_activo') == $activo->id_activo ? 'selected' : '' }}
                         >
                             [{{ $activo->codigo_patrimonial ?? 'ID: '.$activo->id_activo }}] {{ $activo->nombre_equipo }} - {{ $categoriaTxt }} ({{ $ubicacionTxt }})
@@ -114,6 +116,19 @@
                     <option value="En proceso" {{ old('estado_incidente') == 'En proceso' ? 'selected' : '' }}>En proceso (En revisión o diagnóstico)</option>
                     <option value="En espera" {{ old('estado_incidente') == 'En espera' ? 'selected' : '' }}>En espera (Pendiente de repuestos o soporte externo)</option>
                 </select>
+            </div>
+
+            <!-- Prioridad de Atención -->
+            <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Prioridad de Atención *</label>
+                <select name="prioridad" id="selectPrioridad" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                    @foreach($prioridades as $prioridad)
+                        <option value="{{ $prioridad }}" {{ old('prioridad', 'Media') == $prioridad ? 'selected' : '' }}>{{ $prioridad }}</option>
+                    @endforeach
+                </select>
+                <p id="avisoPrioridadSugerida" class="mt-1.5 text-xs text-blue-700 hidden">
+                    Sugerida según la criticidad del activo (<span id="prevCriticidad" class="font-semibold"></span>). Puedes cambiarla.
+                </p>
             </div>
 
             <!-- Sección Dinámica Informativa del Activo Seleccionado (Ancho completo) -->
@@ -220,8 +235,34 @@
             var prevUbicacion = document.getElementById('prevUbicacion');
             var prevEstado = document.getElementById('prevEstado');
             var descripcionFalla = document.getElementById('descripcionFalla');
+            var selectPrioridad = document.getElementById('selectPrioridad');
+            var avisoPrioridad = document.getElementById('avisoPrioridadSugerida');
+            var prevCriticidad = document.getElementById('prevCriticidad');
 
             if (!selectActivo) return;
+
+            // La sugerencia solo se aplica mientras el usuario no haya elegido
+            // una prioridad a mano; si ya decidió, no se le sobrescribe.
+            var prioridadElegidaPorUsuario = @json(old('prioridad') !== null);
+            if (selectPrioridad) {
+                selectPrioridad.addEventListener('change', function () {
+                    prioridadElegidaPorUsuario = true;
+                    if (avisoPrioridad) avisoPrioridad.classList.add('hidden');
+                });
+            }
+
+            function sugerirPrioridad(opcionActivo) {
+                if (!selectPrioridad || !opcionActivo) return;
+
+                var sugerida = opcionActivo.getAttribute('data-prioridad-sugerida') || '';
+                var criticidad = opcionActivo.getAttribute('data-criticidad') || '';
+
+                if (!sugerida || prioridadElegidaPorUsuario) return;
+
+                selectPrioridad.value = sugerida;
+                if (prevCriticidad) prevCriticidad.textContent = criticidad;
+                if (avisoPrioridad) avisoPrioridad.classList.remove('hidden');
+            }
 
             function updateActivoPreview() {
                 var selectedOpt = selectActivo.options[selectActivo.selectedIndex];
@@ -249,6 +290,8 @@
                         prevEstado.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-800 mt-0.5';
                     }
                 }
+
+                sugerirPrioridad(selectedOpt);
 
                 if (secDetalle) secDetalle.classList.remove('hidden');
             }

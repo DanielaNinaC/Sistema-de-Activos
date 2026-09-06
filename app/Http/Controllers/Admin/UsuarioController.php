@@ -8,6 +8,8 @@ use App\Models\Usuario;
 use App\Models\Rol;
 use App\Models\Log;
 use Illuminate\Support\Facades\Hash;
+use App\Rules\ValidEmailDomain;
+use App\Services\EmailVerificationService;
 
 class UsuarioController extends Controller
 {
@@ -40,7 +42,13 @@ class UsuarioController extends Controller
         $roles_count = $roles->count();
         $logs_count = Log::count();
 
-        return view('admin.usuarios.create', compact('roles', 'usuarios_count', 'roles_count', 'logs_count'));
+        // Mapeo de permisos por defecto para cada rol (para JavaScript)
+        $permisosDefault = [];
+        foreach ($roles as $r) {
+            $permisosDefault[$r->id_rol] = Usuario::permisosDefaultPorRol($r->id_rol);
+        }
+
+        return view('admin.usuarios.create', compact('roles', 'usuarios_count', 'roles_count', 'logs_count', 'permisosDefault'));
     }
 
     public function store(Request $request)
@@ -48,7 +56,7 @@ class UsuarioController extends Controller
         $data = $request->validate([
             'nombre' => 'required|string|max:255',
             'apellido' => 'nullable|string|max:255',
-            'correo' => 'required|email|unique:usuarios,correo',
+            'correo' => ['required', 'email', 'unique:usuarios,correo', new ValidEmailDomain()],
             'contrasena' => 'required|string|min:6',
             'fk_id_rol' => 'required|integer|exists:roles,id_rol',
         ], [
@@ -63,6 +71,12 @@ class UsuarioController extends Controller
         $data['contrasena'] = Hash::make($data['contrasena']);
         $data['estado'] = 1;
 
+        // Permisos por módulo (checkboxes envían '1' si marcados, ausentes si no)
+        $modulos = ['dashboard', 'activos', 'incidentes', 'riesgos', 'mantenimiento', 'informes', 'usuarios'];
+        foreach ($modulos as $mod) {
+            $data['permiso_' . $mod] = $request->has('permiso_' . $mod) ? 1 : 0;
+        }
+
         Usuario::create($data);
 
         return redirect()->route('admin.usuarios.create')->with('success', 'Usuario creado con éxito');
@@ -74,7 +88,9 @@ class UsuarioController extends Controller
             $query->orderByDesc('fecha_hora');
         }])->findOrFail($id);
 
-        return view('admin.usuarios.show', compact('usuario'));
+        $emailEstado = EmailVerificationService::verificarDominio($usuario->correo);
+
+        return view('admin.usuarios.show', compact('usuario', 'emailEstado'));
     }
 
     public function edit($id)
@@ -82,7 +98,13 @@ class UsuarioController extends Controller
         $usuario = Usuario::findOrFail($id);
         $roles = Rol::orderBy('nombre_rol')->get();
 
-        return view('admin.usuarios.edit', compact('usuario', 'roles'));
+        // Mapeo de permisos por defecto para cada rol (para JavaScript)
+        $permisosDefault = [];
+        foreach ($roles as $r) {
+            $permisosDefault[$r->id_rol] = Usuario::permisosDefaultPorRol($r->id_rol);
+        }
+
+        return view('admin.usuarios.edit', compact('usuario', 'roles', 'permisosDefault'));
     }
 
     public function update(Request $request, $id)
@@ -91,7 +113,7 @@ class UsuarioController extends Controller
         $data = $request->validate([
             'nombre' => 'required|string|max:255',
             'apellido' => 'nullable|string|max:255',
-            'correo' => 'required|email|unique:usuarios,correo,' . $usuario->id_usuario . ',id_usuario',
+            'correo' => ['required', 'email', 'unique:usuarios,correo,' . $usuario->id_usuario . ',id_usuario', new ValidEmailDomain()],
             'contrasena' => 'nullable|string|min:6',
             'fk_id_rol' => 'required|integer|exists:roles,id_rol',
         ]);
@@ -100,6 +122,12 @@ class UsuarioController extends Controller
             $data['contrasena'] = Hash::make($data['contrasena']);
         } else {
             unset($data['contrasena']);
+        }
+
+        // Permisos por módulo
+        $modulos = ['dashboard', 'activos', 'incidentes', 'riesgos', 'mantenimiento', 'informes', 'usuarios'];
+        foreach ($modulos as $mod) {
+            $data['permiso_' . $mod] = $request->has('permiso_' . $mod) ? 1 : 0;
         }
 
         $usuario->update($data);
@@ -118,4 +146,35 @@ class UsuarioController extends Controller
 
         return back()->with('success', $mensaje);
     }
+
+    /**
+     * Endpoint AJAX para verificar la validez DNS/MX de un correo específico.
+     */
+    public function verificarEmail(Request $request)
+    {
+        $email = $request->input('email', '');
+        $resultado = EmailVerificationService::verificarDominio((string) $email);
+
+        return response()->json($resultado);
+    }
+
+    /**
+     * Endpoint AJAX para verificar masivamente el estado del dominio de correos de usuarios.
+     */
+    public function verificarTodos(Request $request)
+    {
+        $usuarios = Usuario::select('id_usuario', 'correo')->get();
+        $resultados = [];
+
+        foreach ($usuarios as $u) {
+            $resultados[$u->id_usuario] = EmailVerificationService::verificarDominio($u->correo);
+        }
+
+        return response()->json([
+            'success' => true,
+            'total' => count($resultados),
+            'resultados' => $resultados,
+        ]);
+    }
 }
+

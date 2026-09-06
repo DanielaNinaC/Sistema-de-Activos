@@ -84,6 +84,7 @@
                         <th class="w-28 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha / Hora</th>
                         <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo Tecnológico</th>
                         <th class="px-3 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Reportado Por</th>
+                        <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Prioridad</th>
                         <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
                         <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
                     </tr>
@@ -104,6 +105,9 @@
                             </td>
                             <td class="px-3 py-4 text-left text-sm text-slate-700 whitespace-nowrap">
                                 {{ $incidente->usuarioReporta ? $incidente->usuarioReporta->nombre . ' ' . ($incidente->usuarioReporta->apellido ?? '') : '-' }}
+                            </td>
+                            <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
+                                @include('incidentes.partials.badge-prioridad', ['prioridad' => $incidente->prioridad])
                             </td>
                             <td class="px-3 py-4 text-center text-sm whitespace-nowrap">
                                 @php
@@ -132,7 +136,7 @@
                                     </a>
 
                                     <button type="button" 
-                                            onclick="openUpdateModal({{ $incidente->id_incidente }}, '{{ addslashes($incidente->estado_incidente) }}', '{{ addslashes($incidente->descripcion_falla) }}')" 
+                                            onclick="openUpdateModal({{ $incidente->id_incidente }}, '{{ addslashes($incidente->estado_incidente) }}', '{{ addslashes($incidente->descripcion_falla) }}', '{{ addslashes($incidente->prioridad ?? '') }}')"
                                             class="btn btn-xs btn-warning"
                                             title="Cambiar estado del incidente">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -197,6 +201,14 @@
                     </select>
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Prioridad de Atención</label>
+                    <select id="update_prioridad" name="prioridad" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                        @foreach($prioridades as $prioridad)
+                            <option value="{{ $prioridad }}">{{ $prioridad }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Descripción de la falla / Notas de avance</label>
                     <textarea id="update_descripcion_falla" name="descripcion_falla" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
                 </div>
@@ -215,12 +227,15 @@
 </div>
 
 <script>
-    function openUpdateModal(id, estado, descripcion) {
+    function openUpdateModal(id, estado, descripcion, prioridad) {
         var form = document.getElementById('updateForm');
         form.action = '/admin/incidentes/' + id;
 
         document.getElementById('update_estado_incidente').value = estado;
         document.getElementById('update_descripcion_falla').value = descripcion;
+
+        var selPrioridad = document.getElementById('update_prioridad');
+        if (selPrioridad && prioridad) selPrioridad.value = prioridad;
 
         var modal = document.getElementById('updateModal');
         var card = document.getElementById('updateModalCard');

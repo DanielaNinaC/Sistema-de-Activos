@@ -53,16 +53,19 @@
                 </select>
             </div>
 
-            <!-- Ubicación -->
+            <!-- Ubicación: Sección -->
             <div>
-                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Ubicación *</label>
-                <select name="fk_id_ubicacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                    <option value="">Seleccione una ubicación</option>
-                    @foreach($ubicaciones as $ubicacion)
-                        <option value="{{ $ubicacion->id_ubicacion }}" {{ old('fk_id_ubicacion') == $ubicacion->id_ubicacion ? 'selected' : '' }}>
-                            {{ $ubicacion->seccion }} - {{ $ubicacion->aula }}
-                        </option>
-                    @endforeach
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Sección *</label>
+                <select id="selectSeccionUbicacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
+                    <option value="">Seleccione una sección</option>
+                </select>
+            </div>
+
+            <!-- Ubicación: Aula -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Aula *</label>
+                <select name="fk_id_ubicacion" id="selectAulaUbicacion" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition disabled:opacity-50 disabled:cursor-not-allowed" required disabled>
+                    <option value="">Seleccione una sección primero</option>
                 </select>
             </div>
 
@@ -307,6 +310,74 @@
                 initDynamicSections();
             }
         });
+    })();
+
+    // ===== Ubicación en cascada: Sección -> Aula =====
+    (function () {
+        var UBICACIONES = @json($ubicaciones->map(fn($u) => ['id' => $u->id_ubicacion, 'seccion' => $u->seccion, 'aula' => $u->aula]));
+        var preseleccionId = @json(old('fk_id_ubicacion'));
+
+        function poblarAulas(selectAula, seccion, aulaIdSeleccionado) {
+            selectAula.innerHTML = '';
+            if (!seccion) {
+                selectAula.innerHTML = '<option value="">Seleccione una sección primero</option>';
+                selectAula.disabled = true;
+                return;
+            }
+            var opciones = UBICACIONES.filter(function (u) { return u.seccion === seccion; });
+            selectAula.disabled = false;
+            selectAula.innerHTML = '<option value="">Seleccione un aula</option>';
+            opciones.forEach(function (u) {
+                var opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = u.aula ? u.aula : 'General (sin aula específica)';
+                if (aulaIdSeleccionado && String(aulaIdSeleccionado) === String(u.id)) {
+                    opt.selected = true;
+                }
+                selectAula.appendChild(opt);
+            });
+            if (opciones.length === 1 && !aulaIdSeleccionado) {
+                selectAula.value = opciones[0].id;
+            }
+        }
+
+        function initUbicacionCascada() {
+            var selectSeccion = document.getElementById('selectSeccionUbicacion');
+            var selectAula = document.getElementById('selectAulaUbicacion');
+            if (!selectSeccion || !selectAula) return;
+
+            var secciones = [];
+            UBICACIONES.forEach(function (u) {
+                if (secciones.indexOf(u.seccion) === -1) secciones.push(u.seccion);
+            });
+            secciones.sort(function (a, b) { return a.localeCompare(b); });
+
+            selectSeccion.innerHTML = '<option value="">Seleccione una sección</option>';
+            secciones.forEach(function (s) {
+                var opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                selectSeccion.appendChild(opt);
+            });
+
+            selectSeccion.addEventListener('change', function () {
+                poblarAulas(selectAula, selectSeccion.value, null);
+            });
+
+            if (preseleccionId) {
+                var actual = UBICACIONES.find(function (u) { return String(u.id) === String(preseleccionId); });
+                if (actual) {
+                    selectSeccion.value = actual.seccion;
+                    poblarAulas(selectAula, actual.seccion, actual.id);
+                }
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initUbicacionCascada);
+        } else {
+            initUbicacionCascada();
+        }
     })();
 </script>
 @endsection

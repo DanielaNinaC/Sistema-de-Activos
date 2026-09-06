@@ -225,7 +225,7 @@ class ActivoTecnologicoController extends Controller
     {
         $data = $request->validate([
             'seccion' => 'required|string|max:255',
-            'aula' => 'required|string|max:255',
+            'aula' => 'nullable|string|max:255',
         ]);
 
         Ubicacion::create($data);
@@ -239,7 +239,7 @@ class ActivoTecnologicoController extends Controller
 
         $data = $request->validate([
             'seccion' => 'required|string|max:255',
-            'aula' => 'required|string|max:255',
+            'aula' => 'nullable|string|max:255',
         ]);
 
         $ubicacion->update($data);
@@ -273,9 +273,28 @@ class ActivoTecnologicoController extends Controller
 
     public function show($id)
     {
-        $activo = ActivoTecnologico::with(['categoria', 'ubicacion', 'detalleComputadora', 'detalleEquipoRed', 'detalleProyector'])->findOrFail($id);
+        $activo = ActivoTecnologico::with([
+            'categoria',
+            'ubicacion',
+            'detalleComputadora',
+            'detalleEquipoRed',
+            'detalleProyector',
+            'incidentes.usuarioReporta',
+            'incidentes.modoFalla',
+            'mantenimientos.usuarioAsignado',
+            'mantenimientos.origenMantenimiento',
+            'evaluaciones.modoFalla',
+            'evaluaciones.planesTratamiento',
+        ])->findOrFail($id);
 
-        return view('activos.show', compact('activo'));
+        // Logs de auditoría sobre este activo
+        $logs = \App\Models\Log::with('usuario')
+            ->where('tabla_afectada', 'activos_tecnologicos')
+            ->where('registro_id', $id)
+            ->orderByDesc('fecha_hora')
+            ->get();
+
+        return view('activos.show', compact('activo', 'logs'));
     }
 
     public function edit($id)

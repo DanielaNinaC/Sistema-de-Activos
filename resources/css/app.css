@@ -81,4 +81,13 @@
     /* Botón cuadrado de sólo icono (p. ej. el "Volver" de las cabeceras) */
     .btn-icon    { @apply w-10 h-10 p-0 gap-0; }
     .btn-icon-sm { @apply w-8 h-8 p-0 gap-0; }
+
+    /* Botón grande tipo panel: ocupa el ancho disponible y apila su contenido
+       a la izquierda, para pantallas que son un menú de opciones (p. ej.
+       Configuración de Evaluación). Va después de .btn para poder anular su
+       centrado y su whitespace-nowrap. */
+    .btn-tile {
+        @apply w-full h-auto flex-col items-stretch text-left gap-3 p-5 whitespace-normal
+               shadow-md hover:shadow-lg hover:-translate-y-0.5;
+    }
 }

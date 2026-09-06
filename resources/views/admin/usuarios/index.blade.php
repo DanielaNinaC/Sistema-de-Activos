@@ -6,12 +6,20 @@
 <div class="max-w-7xl mx-auto space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 class="text-2xl font-semibold text-slate-900">Lista de Usuarios</h2>
-        <a href="{{ route('admin.usuarios.create') }}" class="btn btn-primary self-start sm:self-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Registrar Nuevo Usuario
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" id="btnAuditarCorreos" onclick="auditarCorreosVisibles()" class="btn btn-secondary flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 0118 0z" />
+                </svg>
+                Auditar Correos (DNS/MX)
+            </button>
+            <a href="{{ route('admin.usuarios.create') }}" class="btn btn-primary self-start sm:self-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Registrar Nuevo Usuario
+            </a>
+        </div>
     </div>
 
     {{-- Alerta de éxito --}}
@@ -72,6 +80,7 @@
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Nombre</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Correo</th>
+                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Dominio DNS/MX</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Rol</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
@@ -82,7 +91,13 @@
                 <tr class="hover:bg-slate-50/50 transition">
                     <td class="px-6 py-4 text-center text-sm text-slate-700 font-mono">{{ $u->id_usuario }}</td>
                     <td class="px-6 py-4 text-center text-sm text-slate-900 font-semibold">{{ $u->nombre }} {{ $u->apellido ?? '' }}</td>
-                    <td class="px-6 py-4 text-center text-sm text-slate-600">{{ $u->correo }}</td>
+                    <td class="px-6 py-4 text-center text-sm text-slate-600 font-mono user-email-text" data-email="{{ $u->correo }}">{{ $u->correo }}</td>
+                    <td class="px-6 py-4 text-center text-sm">
+                        <span id="email-badge-{{ $u->id_usuario }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                            <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                            Sin auditar
+                        </span>
+                    </td>
                     <td class="px-6 py-4 text-center text-sm text-slate-700">
                         <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-700">
                             {{ $u->rol->nombre_rol ?? 'Sin rol' }}
@@ -113,7 +128,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                    <td colspan="7" class="px-6 py-12 text-center text-slate-500">
                         No se encontraron usuarios que coincidan con la búsqueda.
                     </td>
                 </tr>
@@ -210,5 +225,66 @@
             if (form) form.submit();
         }
     }
+
+    // Auditoría de correos electrónicos mediante DNS/MX
+    async function auditarCorreosVisibles() {
+        const btn = document.getElementById('btnAuditarCorreos');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Auditando DNS/MX...
+            `;
+        }
+
+        try {
+            const response = await fetch("{{ route('admin.usuarios.verificar-todos') }}");
+            const data = await response.json();
+
+            if (data.success && data.resultados) {
+                Object.keys(data.resultados).forEach(userId => {
+                    const res = data.resultados[userId];
+                    const badge = document.getElementById(`email-badge-${userId}`);
+                    if (badge) {
+                        if (res.valid) {
+                            badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200";
+                            badge.innerHTML = `
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                Dominio MX Válido
+                            `;
+                            badge.title = res.message;
+                        } else {
+                            badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200";
+                            badge.innerHTML = `
+                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                Dominio Inexistente
+                            `;
+                            badge.title = res.message;
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("Error al auditar correos:", e);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 0118 0z" />
+                    </svg>
+                    Re-auditar Correos (DNS/MX)
+                `;
+            }
+        }
+    }
+
+    // Auditar automáticamente al cargar la pantalla
+    document.addEventListener('DOMContentLoaded', () => {
+        auditarCorreosVisibles();
+    });
 </script>
 @endsection

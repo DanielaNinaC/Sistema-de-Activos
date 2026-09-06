@@ -19,6 +19,7 @@ class Incidente extends Model
         'descripcion_falla',
         'fk_id_modo_falla',
         'estado_incidente',
+        'prioridad',
     ];
 
     public function activo()

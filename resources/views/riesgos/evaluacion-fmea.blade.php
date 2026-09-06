@@ -12,7 +12,7 @@
                 <span aria-hidden="true">&#8592;</span>
             </a>
             <div>
-                <h2 class="text-2xl font-bold text-slate-900">Evaluación FMEA (Motor de Inferencia ISO 31000)</h2>
+                <h2 class="text-2xl font-bold text-slate-900">Evaluación FMEA </h2>
                 <p class="text-xs text-slate-500">Cálculo automatizado de Severidad, Frecuencia dinámicas y MSR según estándares FMEA-MSR y pesos AHP</p>
             </div>
         </div>
@@ -28,12 +28,12 @@
                 </button>
             </form>
 
-            <button onclick="toggleManualForm()" id="btnToggleManual" class="btn btn-dark">
+            <!-- <button onclick="toggleManualForm()" id="btnToggleManual" class="btn btn-dark">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
                 Evaluación Manual
-            </button>
+            </button> -->
         </div>
     </div>
 
@@ -154,6 +154,20 @@
                     </div>
                     <h3 class="text-xl font-bold text-slate-900 mt-1">Resultado de Inferencia: {{ $res['activo']->nombre_equipo }}</h3>
                     <p class="text-xs text-slate-500 font-mono">{{ $res['activo']->codigo_patrimonial }} • Categoría: {{ $res['activo']->categoria->nombre_categoria ?? 'Sin Categoría' }}</p>
+
+                    @if($res['evaluacion_parcial'] ?? false)
+                        @php $conservados = $res['modos_conservados']; @endphp
+                        <p class="mt-2 text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 inline-block">
+                            Evaluación parcial: se recalcularon <strong>{{ count($res['evaluaciones']) }}</strong> de
+                            <strong>{{ $res['modos_categoria'] }}</strong> modos de falla.
+                            @if($conservados === 1)
+                                El modo restante <strong>conserva su última evaluación vigente</strong>
+                            @else
+                                Los <strong>{{ $conservados }}</strong> modos restantes <strong>conservan su última evaluación vigente</strong>
+                            @endif
+                            — no quedaron pendientes ni sin evaluar.
+                        </p>
+                    @endif
                 </div>
 
                 <div class="flex items-center gap-3 bg-slate-50 px-4 py-3 rounded-xl border border-slate-200">
@@ -261,27 +275,67 @@
             </span>
         </div>
 
-        <form method="POST" action="{{ route('admin.riesgos.evaluar.activo') }}" class="flex flex-col sm:flex-row gap-4 items-end">
+        <form method="POST" action="{{ route('admin.riesgos.evaluar.activo') }}" class="space-y-4" id="formEvaluarActivo">
             @csrf
-            <div class="flex-1 space-y-1">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Seleccionar Activo Tecnológico <span class="text-rose-500">*</span></label>
-                <select name="fk_id_activo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar activo del inventario..." required>
-                    <option value="">-- Seleccionar Activo del Inventario --</option>
-                    @foreach($activos as $activo)
-                        <option value="{{ $activo->id_activo }}">
-                            [{{ $activo->codigo_patrimonial }}] {{ $activo->nombre_equipo }} — Categoría: {{ $activo->categoria->nombre_categoria ?? 'Sin Cat.' }} (Antigüedad: {{ $activo->antiguedad_meses }}m, Desgaste: {{ $activo->porcentaje_desgaste }}%){{ $activo->sin_modos_falla ? ' — ⚠ Sin modos de falla definidos' : '' }}
-                        </option>
-                    @endforeach
-                </select>
+            <div class="flex flex-col sm:flex-row gap-4 items-end">
+                <div class="flex-1 space-y-1">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Seleccionar Activo Tecnológico <span class="text-rose-500">*</span></label>
+                    <select name="fk_id_activo" id="selectActivoEvaluar" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar activo del inventario..." required>
+                        <option value="">-- Seleccionar Activo del Inventario --</option>
+                        @foreach($activos as $activo)
+                            <option value="{{ $activo->id_activo }}"
+                                    data-categoria="{{ $activo->fk_id_categoria }}"
+                                    data-sin-modos="{{ $activo->sin_modos_falla ? '1' : '0' }}"
+                                    {{ old('fk_id_activo') == $activo->id_activo ? 'selected' : '' }}>
+                                [{{ $activo->codigo_patrimonial }}] {{ $activo->nombre_equipo }} — Categoría: {{ $activo->categoria->nombre_categoria ?? 'Sin Cat.' }} (Antigüedad: {{ $activo->antiguedad_meses }}m, Desgaste: {{ $activo->porcentaje_desgaste }}%){{ $activo->sin_modos_falla ? ' — ⚠ Sin modos de falla definidos' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary shrink-0" id="btnEjecutarEvaluacion">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Ejecutar Evaluación
+                </button>
             </div>
 
-            <button type="submit" class="btn btn-primary shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Ejecutar Inferencia FMEA
-            </button>
+            {{-- Selección granular de modos de falla --}}
+            <div id="bloqueModosEvaluar" class="border-t border-slate-100 pt-4 space-y-3 hidden">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Modos de falla a evaluar</label>
+
+                {{-- El oculto define el valor cuando el checkbox va desmarcado:
+                     sin él, el navegador no enviaría el campo y el request lo
+                     interpretaría como "todos". --}}
+                <input type="hidden" name="modo_evaluacion" value="especificos">
+                <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="chkTodosModos" name="modo_evaluacion" value="todos" checked
+                           class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
+                    <span class="text-sm font-semibold text-slate-800">
+                        Todos los modos de falla de la categoría
+                        <span id="conteoModosCategoria" class="font-mono text-xs text-slate-500"></span>
+                    </span>
+                </label>
+
+                {{-- Lista filtrada en cliente por la categoría del activo, con el
+                     mismo patrón data-categoria/hidden que ya usa esta vista. --}}
+                <div id="listaModosEvaluar" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6 opacity-50 pointer-events-none transition">
+                    @foreach($modos as $modo)
+                        <label class="opcion-modo inline-flex items-start gap-2 cursor-pointer select-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                               data-categoria="{{ $modo->fk_id_categoria }}">
+                            <input type="checkbox" name="modos_falla_ids[]" value="{{ $modo->id_modo_falla }}"
+                                   class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
+                            <span class="text-xs text-slate-700 leading-snug">{{ $modo->nombre_modo_falla }}</span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <p id="avisoSinModosEvaluar" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    ⚠ La categoría de este activo no tiene modos de falla registrados. No se puede ejecutar la evaluación hasta definir al menos uno.
+                </p>
+            </div>
         </form>
     </div>
 
@@ -396,12 +450,151 @@
         }
     }
 
-    (function initFiltroModosManual() {
+    function initFiltroModosManual() {
         var selectActivo = document.getElementById('selectActivoManual');
         if (!selectActivo) return;
-        selectActivo.removeEventListener('change', filtrarModosPorActivo);
-        selectActivo.addEventListener('change', filtrarModosPorActivo);
+
+        if (selectActivo.dataset.filtroBound !== '1') {
+            selectActivo.addEventListener('change', filtrarModosPorActivo);
+            selectActivo.dataset.filtroBound = '1';
+        }
+
         filtrarModosPorActivo();
-    })();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFiltroModosManual);
+    } else {
+        initFiltroModosManual();
+    }
+    document.addEventListener('turbo:load', initFiltroModosManual);
+
+    // ── Selección granular de modos de falla en "Ejecutar Evaluación" ──
+    // Mismo enfoque que el filtro manual: las opciones ya vienen renderizadas y
+    // se ocultan las que no son de la categoría del activo. La pertenencia se
+    // vuelve a validar en el backend (EvaluarActivoRequest).
+    function actualizarModosEvaluar() {
+        var selectActivo = document.getElementById('selectActivoEvaluar');
+        var bloque = document.getElementById('bloqueModosEvaluar');
+        var lista = document.getElementById('listaModosEvaluar');
+        var aviso = document.getElementById('avisoSinModosEvaluar');
+        var btn = document.getElementById('btnEjecutarEvaluacion');
+        if (!selectActivo || !bloque || !lista) return;
+
+        var opcion = selectActivo.options[selectActivo.selectedIndex];
+        var hayActivo = !!selectActivo.value;
+        // Sin activo elegido la categoría es null y no coincide con ninguna,
+        // de modo que el estado por defecto es "ningún modo aplicable".
+        var categoriaId = hayActivo && opcion ? opcion.getAttribute('data-categoria') : null;
+        var sinModos = hayActivo && opcion ? opcion.getAttribute('data-sin-modos') === '1' : false;
+
+        // El filtro se aplica SIEMPRE, incluso sin activo seleccionado. Antes
+        // se salía antes de este bucle y las etiquetas conservaban su estado
+        // inicial del HTML —todas las categorías visibles—, así que cualquier
+        // camino que mostrara el bloque sin una pasada previa del filtro
+        // dejaba a la vista el catálogo completo.
+        var visibles = 0;
+        Array.prototype.forEach.call(lista.querySelectorAll('.opcion-modo'), function (opt) {
+            var coincide = categoriaId !== null && opt.getAttribute('data-categoria') === categoriaId;
+            // Se oculta con la propiedad DOM, no con la clase `hidden`: la
+            // etiqueta lleva `inline-flex`, y Tailwind v4 emite las utilidades
+            // de display en orden alfabético dentro de la misma capa, así que
+            // `.inline-flex` va DESPUÉS de `.hidden` y le gana por orden a
+            // igual especificidad. El atributo, en cambio, lo cubre el
+            // preflight con `[hidden]{display:none!important}`. Es el mismo
+            // patrón que ya usan el filtro manual e incidentes/registrar.
+            opt.hidden = !coincide;
+
+            var chk = opt.querySelector('input[type="checkbox"]');
+            if (chk && !coincide) {
+                // Desmarcar no basta: deshabilitado garantiza que un modo de
+                // otra categoría no viaje en el envío bajo ninguna circunstancia.
+                chk.checked = false;
+                chk.disabled = true;
+            }
+            if (coincide) visibles++;
+        });
+
+        if (!hayActivo) {
+            bloque.classList.add('hidden');
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        bloque.classList.remove('hidden');
+
+        // Deja explícito cuántos modos abarca realmente "Todos".
+        var conteo = document.getElementById('conteoModosCategoria');
+        if (conteo) conteo.textContent = visibles > 0 ? '(' + visibles + ')' : '';
+
+        // Estado explícito cuando la categoría no tiene catálogo definido.
+        var vacio = sinModos || visibles === 0;
+        if (aviso) aviso.classList.toggle('hidden', !vacio);
+        lista.classList.toggle('hidden', vacio);
+        if (btn) btn.disabled = vacio;
+
+        sincronizarModoTodos();
+    }
+
+    // "Todos" desactiva la selección específica (y limpia lo marcado).
+    function sincronizarModoTodos() {
+        var chkTodos = document.getElementById('chkTodosModos');
+        var lista = document.getElementById('listaModosEvaluar');
+        if (!chkTodos || !lista) return;
+
+        var todos = chkTodos.checked;
+        lista.classList.toggle('opacity-50', todos);
+        lista.classList.toggle('pointer-events-none', todos);
+
+        // Un checkbox sólo se habilita si es de la categoría del activo (es
+        // decir, si el filtro lo dejó visible) y "Todos" está desmarcado. Así
+        // la re-habilitación nunca revive modos de otra categoría.
+        Array.prototype.forEach.call(lista.querySelectorAll('.opcion-modo'), function (opt) {
+            var chk = opt.querySelector('input[type="checkbox"]');
+            if (!chk) return;
+
+            // Misma fuente de verdad que el filtro: la propiedad `hidden`.
+            // Leer la clase aquí dejaría este bucle desincronizado y "Todos"
+            // volvería a abarcar modos ocultos de otra categoría.
+            var esDeLaCategoria = !opt.hidden;
+            var bloqueado = todos || !esDeLaCategoria;
+
+            chk.disabled = bloqueado;
+            if (bloqueado) chk.checked = false;
+        });
+    }
+
+    function initModosEvaluar() {
+        var selectActivo = document.getElementById('selectActivoEvaluar');
+        var chkTodos = document.getElementById('chkTodosModos');
+        if (!selectActivo) return;
+
+        // El guard va en el propio elemento, no en una variable del script:
+        // así se re-liga cuando turbo-nav inserta un DOM nuevo, y no se
+        // duplica el listener si init vuelve a ejecutarse sobre el mismo.
+        if (selectActivo.dataset.modosBound !== '1') {
+            selectActivo.addEventListener('change', actualizarModosEvaluar);
+            selectActivo.dataset.modosBound = '1';
+        }
+
+        if (chkTodos && chkTodos.dataset.modosBound !== '1') {
+            chkTodos.addEventListener('change', sincronizarModoTodos);
+            chkTodos.dataset.modosBound = '1';
+        }
+
+        // Se re-sincroniza siempre, para que un DOM restaurado desde la caché
+        // de navegación no quede mostrando los modos del activo anterior.
+        actualizarModosEvaluar();
+    }
+
+    // Patrón de arranque del sistema: carga normal + cada navegación SPA.
+    // Sin el listener de turbo:load, al volver a esta pantalla por el menú el
+    // select se quedaba sin listener y cambiar de activo no refrescaba la lista.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initModosEvaluar);
+    } else {
+        initModosEvaluar();
+    }
+    document.addEventListener('turbo:load', initModosEvaluar);
 </script>
 @endsection
