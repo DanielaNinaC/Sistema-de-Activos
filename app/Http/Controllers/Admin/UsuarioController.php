@@ -8,8 +8,11 @@ use App\Models\Usuario;
 use App\Models\Rol;
 use App\Models\Log;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log as LogFacade;
 use App\Rules\ValidEmailDomain;
 use App\Services\EmailVerificationService;
+use App\Mail\CuentaHabilitadaMail;
 
 class UsuarioController extends Controller
 {
@@ -141,6 +144,14 @@ class UsuarioController extends Controller
         $nuevoEstado = !$usuario->estado;
         $usuario->estado = $nuevoEstado;
         $usuario->save();
+
+        if ($nuevoEstado) {
+            try {
+                Mail::to($usuario->correo)->queue(new CuentaHabilitadaMail($usuario));
+            } catch (\Throwable $e) {
+                LogFacade::error('Error al encolar correo de cuenta habilitada: ' . $e->getMessage());
+            }
+        }
 
         $mensaje = $nuevoEstado ? 'Cuenta de usuario activada con éxito.' : 'Cuenta de usuario desactivada con éxito.';
 

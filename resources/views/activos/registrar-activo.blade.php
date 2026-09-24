@@ -120,16 +120,6 @@
                 </select>
             </div>
 
-            <!-- Criticidad Institucional -->
-            <div>
-                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Criticidad Institucional</label>
-                <select name="criticidad_institucional" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
-                    <option value="">Seleccione criticidad</option>
-                    <option value="Alta" {{ old('criticidad_institucional') == 'Alta' ? 'selected' : '' }}>Alta</option>
-                    <option value="Media" {{ old('criticidad_institucional') == 'Media' ? 'selected' : '' }}>Media</option>
-                    <option value="Baja" {{ old('criticidad_institucional') == 'Baja' ? 'selected' : '' }}>Baja</option>
-                </select>
-            </div>
 
             <!-- ===== SECCIÓN DINÁMICA: COMPUTADORA ===== -->
             <div id="secComputadora" class="md:col-span-2 hidden bg-slate-50 border border-blue-100 rounded-2xl p-5 space-y-4">

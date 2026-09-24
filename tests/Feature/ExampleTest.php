@@ -8,12 +8,12 @@ use Tests\TestCase;
 class ExampleTest extends TestCase
 {
     /**
-     * La raíz de la aplicación redirige al login para visitantes no autenticados.
+     * La raíz de la aplicación sirve la landing pública a visitantes no autenticados.
      */
-    public function test_the_application_redirects_guests_to_login(): void
+    public function test_the_application_serves_the_public_landing_page(): void
     {
         $response = $this->get('/');
 
-        $response->assertRedirect(route('login'));
+        $response->assertOk();
     }
 }

@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use App\Rules\ValidEmailDomain;
+use App\Mail\RegistroUsuarioMail;
 
 class AuthController extends Controller
 {
@@ -219,7 +222,7 @@ SVG;
         }
 
         // Crear el usuario con estado deshabilitado (0) y rol por defecto (2 = Soporte)
-        \App\Models\Usuario::create([
+        $nuevoUsuario = \App\Models\Usuario::create([
             'nombre' => $nombre,
             'apellido' => $apellido,
             'correo' => $request->correo,
@@ -227,6 +230,13 @@ SVG;
             'fk_id_rol' => 2,
             'estado' => 0,
         ]);
+
+        // Enviar correo de notificación al usuario registrado
+        try {
+            Mail::to($nuevoUsuario->correo)->queue(new RegistroUsuarioMail($nuevoUsuario));
+        } catch (\Throwable $e) {
+            Log::error('Error al encolar correo de bienvenida/registro: ' . $e->getMessage());
+        }
 
         $this->generateNewCacheCode();
 

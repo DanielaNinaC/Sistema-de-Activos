@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
     <style>
         /* Turbo Navigation — Progress bar */
@@ -108,7 +109,7 @@
                     </div>
                     <div class="submenu hidden mt-1 pl-3" data-submenu-panel="activos">
                         <a href="{{ route('admin.activos.registrar') }}" class="block p-2 rounded hover:bg-white/5">Registrar Activo</a>
-                        <a href="{{ route('admin.activos.inventario') }}" class="block p-2 rounded hover:bg-white/5">Inventario</a>
+                        <a href="{{ route('admin.activos.inventario') }}" class="block p-2 rounded hover:bg-white/5">Lista de activos</a>
                         <a href="{{ route('admin.activos.categorias') }}" class="block p-2 rounded hover:bg-white/5">Categorías</a>
                         <a href="{{ route('admin.activos.ubicaciones') }}" class="block p-2 rounded hover:bg-white/5">Ubicaciones</a>
                     </div>
@@ -189,12 +190,15 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="submenu-arrow h-5 w-5 transform transition-transform text-white/90" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 8l4 4 4-4" clip-rule="evenodd" /></svg>
                     </div>
                     <div class="submenu hidden mt-1 pl-3" data-submenu-panel="informes">
+                        <a href="{{ route('admin.informes.estado-activos') }}" class="block p-2 rounded hover:bg-white/5">Estado de Activos</a>
+                        <a href="{{ route('admin.informes.activos-baja') }}" class="block p-2 rounded hover:bg-white/5">Activos Dados de Baja</a>
+                        <a href="{{ route('admin.informes.historial-tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Historial de Tratamiento</a>
                         <!-- <a href="{{ route('admin.informes.evolucion-score') }}" class="block p-2 rounded hover:bg-white/5">Evolución de Score</a> -->
                         <a href="{{ route('admin.informes.modos-falla') }}" class="block p-2 rounded hover:bg-white/5">Modos de Falla Frecuentes</a>
                         <a href="{{ route('admin.informes.mantenimiento-tipo') }}" class="block p-2 rounded hover:bg-white/5">Preventivo vs. Correctivo</a>
                         <a href="{{ route('admin.informes.sin-tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Sin Tratamiento</a>
                         <!-- <a href="{{ route('admin.informes.trazabilidad') }}" class="block p-2 rounded hover:bg-white/5">Trazabilidad de Usuarios</a> -->
-                         <a href="{{ route('admin.informes.vida-util') }}" class="block p-2 rounded hover:bg-white/5">Vida Útil Remanente</a>
+                        <a href="{{ route('admin.informes.vida-util') }}" class="block p-2 rounded hover:bg-white/5">Vida Útil</a>
                         <a href="{{ route('admin.informes.auditoria') }}" class="block p-2 rounded hover:bg-white/5">Informe General</a>
                     </div>
                 </div>

@@ -9,10 +9,28 @@ use App\Models\Ubicacion;
 use App\Models\DetalleComputadora;
 use App\Models\DetalleEquipoRed;
 use App\Models\DetalleProyector;
+use App\Exports\InventarioActivosExport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 
 class ActivoTecnologicoController extends Controller
 {
+    /**
+     * Vocabulario canónico del motivo de baja (lista blanca en PHP, sin ENUM
+     * en BD, siguiendo el mismo criterio que ESTRATEGIAS_TRATAMIENTO en
+     * ProcesoRiesgoController). Usado por el formulario de edición y por
+     * InformesController::activosDeBaja().
+     */
+    public const MOTIVOS_BAJA = [
+        'Obsolescencia',
+        'Daño irreparable',
+        'Robo o extravío',
+        'Reemplazo tecnológico',
+        'Fin de vida útil',
+        'Otro',
+    ];
+
     public function index(Request $request)
     {
         $query = ActivoTecnologico::with(['categoria', 'ubicacion']);
@@ -54,7 +72,6 @@ class ActivoTecnologicoController extends Controller
             'fecha_adquisicion' => 'nullable|date',
             'estado_operativo' => 'required|string|max:255',
             'etapa_ciclo_vida' => 'required|string|max:255',
-            'criticidad_institucional' => 'nullable|string|max:255',
             'observaciones' => 'nullable|string',
         ]);
 
@@ -274,7 +291,7 @@ class ActivoTecnologicoController extends Controller
     public function show($id)
     {
         $activo = ActivoTecnologico::with([
-            'categoria',
+            'categoria.modosFalla',
             'ubicacion',
             'detalleComputadora',
             'detalleEquipoRed',
@@ -294,7 +311,42 @@ class ActivoTecnologicoController extends Controller
             ->orderByDesc('fecha_hora')
             ->get();
 
-        return view('activos.show', compact('activo', 'logs'));
+        $usuarios = \App\Models\Usuario::orderBy('nombre')->get();
+        $modosFalla = \App\Models\ModoFalla::where('fk_id_categoria', $activo->fk_id_categoria)->orderBy('nombre_modo_falla')->get();
+        if ($modosFalla->isEmpty()) {
+            $modosFalla = \App\Models\ModoFalla::orderBy('nombre_modo_falla')->get();
+        }
+
+        return view('activos.show', compact('activo', 'logs', 'usuarios', 'modosFalla'));
+    }
+
+    public function storeHistorial(Request $request, $id)
+    {
+        $activo = ActivoTecnologico::findOrFail($id);
+
+        $data = $request->validate([
+            'accion_realizada' => 'required|string|max:255',
+            'observaciones' => 'nullable|string',
+            'tipo_evento' => 'nullable|string|max:100',
+        ]);
+
+        $accion = $data['accion_realizada'];
+        if (!empty($data['tipo_evento'])) {
+            $accion = '[' . $data['tipo_evento'] . '] ' . $accion;
+        }
+
+        \App\Models\Log::create([
+            'id_usuario' => auth()->id() ?? (\App\Models\Usuario::first()->id_usuario ?? 1),
+            'accion_realizada' => $accion,
+            'tabla_afectada' => 'activos_tecnologicos',
+            'registro_id' => $activo->id_activo,
+            'fecha_hora' => now(),
+            'valor_anterior' => null,
+            'valor_nuevo' => $data['observaciones'] ?? 'Anotación manual en bitácora',
+        ]);
+
+        return redirect()->to(route('admin.activos.show', $activo->id_activo) . '#historial')
+            ->with('success', 'Anotación registrada en el historial y bitácora con éxito.');
     }
 
     public function edit($id)
@@ -320,11 +372,72 @@ class ActivoTecnologicoController extends Controller
             'fecha_adquisicion' => 'nullable|date',
             'estado_operativo' => 'required|string|max:255',
             'etapa_ciclo_vida' => 'required|string|max:255',
-            'criticidad_institucional' => 'nullable|string|max:255',
+            'motivo_baja' => 'nullable|required_if:estado_operativo,De Baja|in:' . implode(',', self::MOTIVOS_BAJA),
             'observaciones' => 'nullable|string',
         ]);
 
+        // Trazabilidad de la baja: 'De Baja' es un estado_operativo más, pero
+        // fecha_baja/motivo_baja/fk_id_usuario_baja solo tienen sentido en el
+        // momento en que el activo entra o sale de esa condición.
+        $estadoAnterior = $activo->estado_operativo;
+        $pasaABaja = $data['estado_operativo'] === 'De Baja' && $estadoAnterior !== 'De Baja';
+        $saleDeBaja = $data['estado_operativo'] !== 'De Baja' && $estadoAnterior === 'De Baja';
+
+        if ($pasaABaja) {
+            $data['fecha_baja'] = now()->toDateString();
+            $data['estado_previo_baja'] = $estadoAnterior;
+            $data['fk_id_usuario_baja'] = auth()->id();
+        } elseif ($saleDeBaja) {
+            $data['fecha_baja'] = null;
+            $data['motivo_baja'] = null;
+            $data['estado_previo_baja'] = null;
+            $data['fk_id_usuario_baja'] = null;
+        } elseif ($data['estado_operativo'] !== 'De Baja') {
+            unset($data['motivo_baja']);
+        }
+
+        // Registrar cambios para auditoría en el historial
+        $cambios = [];
+        $camposAuditables = [
+            'codigo_patrimonial' => 'Código Patrimonial',
+            'nombre_equipo' => 'Nombre del Equipo',
+            'fk_id_categoria' => 'Categoría',
+            'fk_id_ubicacion' => 'Ubicación',
+            'marca' => 'Marca',
+            'modelo' => 'Modelo',
+            'fecha_adquisicion' => 'Fecha Adquisición',
+            'estado_operativo' => 'Estado Operativo',
+            'etapa_ciclo_vida' => 'Etapa Ciclo de Vida',
+            'motivo_baja' => 'Motivo de Baja',
+        ];
+
+        foreach ($camposAuditables as $col => $lbl) {
+            if (isset($data[$col]) && $activo->$col != $data[$col]) {
+                $anterior = $activo->$col;
+                $nuevo = $data[$col];
+                if ($col === 'fk_id_ubicacion') {
+                    $uAnt = Ubicacion::find($anterior);
+                    $uNue = Ubicacion::find($nuevo);
+                    $anterior = $uAnt ? ($uAnt->seccion . ' ' . ($uAnt->aula ?? '')) : $anterior;
+                    $nuevo = $uNue ? ($uNue->seccion . ' ' . ($uNue->aula ?? '')) : $nuevo;
+                }
+                $cambios[] = "{$lbl}: {$anterior} → {$nuevo}";
+            }
+        }
+
         $activo->update($data);
+
+        if (!empty($cambios)) {
+            \App\Models\Log::create([
+                'id_usuario' => auth()->id() ?? (\App\Models\Usuario::first()->id_usuario ?? 1),
+                'accion_realizada' => 'Modificación de Activo Tecnológico',
+                'tabla_afectada' => 'activos_tecnologicos',
+                'registro_id' => $activo->id_activo,
+                'fecha_hora' => now(),
+                'valor_anterior' => 'Datos previos actualizados',
+                'valor_nuevo' => implode(' | ', $cambios),
+            ]);
+        }
 
         // Actualizar/Crear detalles según la categoría elegida
         $categoria = Categoria::find($request->fk_id_categoria);
@@ -366,5 +479,124 @@ class ActivoTecnologicoController extends Controller
         }
 
         return redirect()->route('admin.activos.inventario')->with('success', 'Activo tecnológico actualizado con éxito.');
+    }
+
+    /**
+     * Exportar el inventario de activos a Excel, agrupado por categoría.
+     * Respeta el filtro de búsqueda activo.
+     */
+    public function exportExcel(Request $request)
+    {
+        $buscar = $request->input('buscar');
+        return Excel::download(new InventarioActivosExport($buscar), 'Inventario_Activos_Tecnologicos.xlsx');
+    }
+
+    /**
+     * Exportar el inventario de activos a PDF, agrupado por categoría.
+     * Respeta el filtro de búsqueda activo.
+     */
+    public function exportPdf(Request $request)
+    {
+        $buscar = $request->input('buscar');
+
+        $query = ActivoTecnologico::with(['categoria', 'ubicacion']);
+
+        if ($buscar) {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('codigo_patrimonial', 'like', "%{$buscar}%")
+                  ->orWhere('nombre_equipo', 'like', "%{$buscar}%")
+                  ->orWhere('marca', 'like', "%{$buscar}%")
+                  ->orWhere('modelo', 'like', "%{$buscar}%")
+                  ->orWhere('estado_operativo', 'like', "%{$buscar}%")
+                  ->orWhereHas('categoria', fn($c) => $c->where('nombre_categoria', 'like', "%{$buscar}%"))
+                  ->orWhereHas('ubicacion', fn($u) => $u->where('seccion', 'like', "%{$buscar}%")->orWhere('aula', 'like', "%{$buscar}%"));
+            });
+        }
+
+        $activos = $query->orderBy('fk_id_categoria')->orderBy('id_activo')->get();
+        $agrupados = $activos->groupBy(fn($a) => $a->categoria->nombre_categoria ?? 'Sin Categoría');
+
+        $categorias = [];
+        $listaActivos = [];
+        $contador = 1;
+
+        foreach ($activos as $activo) {
+            $ubicacion = '';
+            if ($activo->ubicacion) {
+                $ubicacion = $activo->ubicacion->seccion ?? '';
+                if (!empty($activo->ubicacion->aula)) {
+                    $ubicacion .= ' — ' . $activo->ubicacion->aula;
+                }
+            }
+
+            $listaActivos[] = [
+                'numero' => $contador++,
+                'codigo_patrimonial' => $activo->codigo_patrimonial,
+                'nombre_equipo' => $activo->nombre_equipo,
+                'categoria' => $activo->categoria->nombre_categoria ?? 'Sin Categoría',
+                'marca' => $activo->marca ?: '—',
+                'modelo' => $activo->modelo ?: '—',
+                'ubicacion' => $ubicacion ?: 'Sin Asignar',
+                'fecha_adquisicion' => $activo->fecha_adquisicion ? \Carbon\Carbon::parse($activo->fecha_adquisicion)->format('d/m/Y') : '—',
+                'estado_operativo' => $activo->estado_operativo ?? 'Operativo',
+                'etapa_ciclo_vida' => $activo->etapa_ciclo_vida ?? 'Operación',
+                'criticidad' => $activo->nivel_riesgo ?? $activo->criticidad_institucional ?? 'Bajo',
+            ];
+        }
+
+        foreach ($agrupados as $nombreCat => $items) {
+            $cat = ['nombre' => $nombreCat, 'activos' => []];
+            foreach ($items as $activo) {
+                $ubicacion = '';
+                if ($activo->ubicacion) {
+                    $ubicacion = $activo->ubicacion->seccion ?? '';
+                    if (!empty($activo->ubicacion->aula)) {
+                        $ubicacion .= ' — ' . $activo->ubicacion->aula;
+                    }
+                }
+                $cat['activos'][] = [
+                    'codigo_patrimonial' => $activo->codigo_patrimonial,
+                    'nombre_equipo' => $activo->nombre_equipo,
+                    'marca' => $activo->marca ?? '',
+                    'modelo' => $activo->modelo ?? '',
+                    'ubicacion' => $ubicacion,
+                    'fecha_adquisicion' => $activo->fecha_adquisicion ? \Carbon\Carbon::parse($activo->fecha_adquisicion)->format('d/m/Y') : '',
+                    'estado_operativo' => $activo->estado_operativo ?? '',
+                    'etapa_ciclo_vida' => $activo->etapa_ciclo_vida ?? '',
+                    'criticidad' => $activo->criticidad_institucional ?? '',
+                ];
+            }
+            $categorias[] = $cat;
+        }
+
+        $logoBase64 = null;
+        $logoPath = public_path('imagenes/logoFranco.jpg');
+        if (file_exists($logoPath)) {
+            $logoBase64 = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+
+        $siatecBase64 = null;
+        $siatecPath = public_path('imagenes/siatec.png');
+        if (file_exists($siatecPath)) {
+            $siatecBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($siatecPath));
+        }
+
+        $responsable = auth()->user()?->name ?? 'Responsable de Activos Tecnológicos';
+        $fechaGeneracion = now()->format('d/m/Y H:i');
+
+        $pdf = Pdf::loadView('informes.pdf.inventario-activos', [
+            'listaActivos' => $listaActivos,
+            'categorias' => $categorias,
+            'totalActivos' => $activos->count(),
+            'buscar' => $buscar,
+            'responsable' => $responsable,
+            'fechaGeneracion' => $fechaGeneracion,
+            'logoBase64' => $logoBase64,
+            'siatecBase64' => $siatecBase64,
+        ])
+        ->setPaper('letter', 'landscape')
+        ->setOption(['isPhpEnabled' => true, 'isRemoteEnabled' => true]);
+
+        return $pdf->download('Lista_Activos_Tecnologicos.pdf');
     }
 }

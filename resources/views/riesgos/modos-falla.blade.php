@@ -99,6 +99,11 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Justificación de MSR <span class="text-slate-400 font-normal">(Opcional)</span></label>
                     <textarea name="justificacion_msr" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Cite el informe de auditoría o entrevista que respalda esta elección...">{{ old('justificacion_msr') }}</textarea>
                 </div>
+                <div class="sm:col-span-4">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Indicador de Seguimiento <span class="text-slate-400 font-normal">(Opcional, Tabla 18)</span></label>
+                    <input name="indicador_seguimiento" value="{{ old('indicador_seguimiento') }}" maxlength="255" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Ej: Tasa de disponibilidad mensual, N.º de eventos de sobrecalentamiento por mes" />
+                    <p class="text-[11px] text-slate-500 mt-1">Se copia automáticamente al tratamiento cuando este modo de falla genere una evaluación Alto/Crítico; no se pide de nuevo al usuario.</p>
+                </div>
             </div>
             <div class="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
                 <button type="button" onclick="toggleRegistroForm()" class="btn btn-secondary">
@@ -164,6 +169,7 @@
                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Modo de Falla</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Severidad</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">MSR</th>
+                    <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Indicador de Seguimiento</th>
                     <th class="w-36 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
                 </tr>
             </thead>
@@ -189,9 +195,12 @@
                     <td class="px-6 py-4 text-center text-sm font-bold text-blue-700">
                         {{ $labelMsr ?? '-' }} <span class="font-mono text-slate-400 font-normal">({{ $modo->valor_msr_base ?? '-' }})</span>
                     </td>
+                    <td class="px-6 py-4 text-left text-xs text-slate-600">
+                        {{ $modo->indicador_seguimiento ?? '-' }}
+                    </td>
                     <td class="w-36 px-6 py-4 text-center text-sm">
                         <button type="button"
-                                onclick="openEditModal({{ $modo->id_modo_falla }}, '{{ $modo->fk_id_categoria }}', '{{ addslashes($modo->nombre_modo_falla) }}', '{{ $modo->nivel_severidad }}', '{{ $modo->nivel_msr }}', '{{ addslashes($modo->justificacion_severidad ?? '') }}', '{{ addslashes($modo->justificacion_msr ?? '') }}')"
+                                onclick="openEditModal({{ $modo->id_modo_falla }}, '{{ $modo->fk_id_categoria }}', '{{ addslashes($modo->nombre_modo_falla) }}', '{{ $modo->nivel_severidad }}', '{{ $modo->nivel_msr }}', '{{ addslashes($modo->justificacion_severidad ?? '') }}', '{{ addslashes($modo->justificacion_msr ?? '') }}', '{{ addslashes($modo->indicador_seguimiento ?? '') }}')"
                                 class="btn btn-sm btn-warning">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -202,7 +211,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                    <td colspan="7" class="px-6 py-12 text-center text-slate-500">
                         @if(request('buscar'))
                             No se encontraron modos de falla que coincidan con la búsqueda.
                         @else
@@ -268,6 +277,10 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Justificación de MSR <span class="text-slate-400 font-normal">(Opcional)</span></label>
                     <textarea id="edit_justificacion_msr" name="justificacion_msr" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Indicador de Seguimiento <span class="text-slate-400 font-normal">(Opcional, Tabla 18)</span></label>
+                    <input id="edit_indicador_seguimiento" name="indicador_seguimiento" maxlength="255" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Ej: Tasa de disponibilidad mensual" />
+                </div>
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
@@ -295,7 +308,7 @@
         }
     }
 
-    function openEditModal(id, idCategoria, nombreModo, nivelSeveridad, nivelMsr, justificacionSeveridad, justificacionMsr) {
+    function openEditModal(id, idCategoria, nombreModo, nivelSeveridad, nivelMsr, justificacionSeveridad, justificacionMsr, indicadorSeguimiento) {
         var form = document.getElementById('editForm');
         form.action = '/admin/riesgos/modos-falla/' + id;
 
@@ -305,6 +318,7 @@
         document.getElementById('edit_nivel_msr').value = nivelMsr || '';
         document.getElementById('edit_justificacion_severidad').value = justificacionSeveridad || '';
         document.getElementById('edit_justificacion_msr').value = justificacionMsr || '';
+        document.getElementById('edit_indicador_seguimiento').value = indicadorSeguimiento || '';
 
         var modal = document.getElementById('editModal');
         var card = document.getElementById('editModalCard');

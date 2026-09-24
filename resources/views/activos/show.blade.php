@@ -33,9 +33,48 @@
         'bajo'               => 'bg-emerald-400/20 text-emerald-200 border-emerald-400/30',
         default              => 'bg-white/10 text-white/70 border-white/20',
     };
+
+    $mantenimientosCount = $activo->mantenimientos->count();
+    $incidentesCount = $activo->incidentes->count();
+    $evaluacionesCount = $activo->evaluaciones->count();
+    $logsCount = $logs->count();
 @endphp
 
 <div class="max-w-7xl mx-auto space-y-6">
+
+    {{-- Alertas de éxito y advertencia --}}
+    @if(session('success'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
+            <div class="flex items-center gap-3">
+                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">✓</span>
+                <span class="text-sm font-medium">{{ session('success') }}</span>
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" class="text-emerald-500 hover:text-emerald-700 text-sm font-bold ml-4">✕</button>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="bg-amber-50 border border-amber-200 text-amber-800 px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
+            <div class="flex items-center gap-3">
+                <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">⚠</span>
+                <span class="text-sm font-medium">{{ session('warning') }}</span>
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" class="text-amber-500 hover:text-amber-700 text-sm font-bold ml-4">✕</button>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 px-5 py-3.5 rounded-2xl shadow-sm animate-fade-in">
+            <div class="flex items-center gap-2 mb-1.5 font-bold text-sm">
+                <span>✕</span> Ocurrieron errores en el formulario:
+            </div>
+            <ul class="list-disc list-inside text-xs space-y-1">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     {{-- Encabezado con Botón de Regreso y Acciones --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -55,15 +94,12 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-2.5">
+        <div class="flex flex-wrap items-center gap-2.5">
             <a href="{{ route('admin.activos.edit', $activo->id_activo) }}" class="btn btn-warning">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 Editar Activo
-            </a>
-            <a href="{{ route('admin.activos.inventario') }}" class="btn btn-secondary">
-                Volver al Inventario
             </a>
         </div>
     </div>
@@ -80,7 +116,7 @@
             {{-- Title row --}}
             <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
                 <div class="space-y-2">
-                    <p class="text-xs uppercase tracking-[0.25em] text-white/50 font-semibold">Ficha Técnica</p>
+                    <p class="text-xs uppercase tracking-[0.25em] text-white/50 font-semibold">Ficha Técnica Integral</p>
                     <h1 class="text-2xl lg:text-3xl font-bold leading-tight">
                         <span class="font-mono text-blue-300/90">{{ $activo->codigo_patrimonial }}</span>
                         <span class="mx-2 text-white/30">—</span>
@@ -120,13 +156,13 @@
                     <p class="text-[10px] uppercase tracking-wider text-white/40 mb-0.5">Adquisición</p>
                     <p class="text-sm font-semibold text-white/90 font-mono">{{ $activo->fecha_adquisicion ? \Carbon\Carbon::parse($activo->fecha_adquisicion)->format('d/m/Y') : '—' }}</p>
                 </div>
-                <div class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5">
+                <div class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 cursor-pointer hover:bg-white/10 transition" onclick="activateTab('incidentes')">
                     <p class="text-[10px] uppercase tracking-wider text-white/40 mb-0.5">Incidentes</p>
-                    <p class="text-sm font-semibold text-white/90">{{ $activo->incidentes->count() }}</p>
+                    <p class="text-sm font-semibold text-white/90">{{ $incidentesCount }}</p>
                 </div>
-                <div class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5">
+                <div class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 cursor-pointer hover:bg-white/10 transition" onclick="activateTab('mantenimiento')">
                     <p class="text-[10px] uppercase tracking-wider text-white/40 mb-0.5">Mantenimientos</p>
-                    <p class="text-sm font-semibold text-white/90">{{ $activo->mantenimientos->count() }}</p>
+                    <p class="text-sm font-semibold text-white/90">{{ $mantenimientosCount }}</p>
                 </div>
             </div>
         </div>
@@ -136,24 +172,36 @@
          TABS — Navigation
     ═══════════════════════════════════════════════ --}}
     <div>
-        <nav class="flex gap-1 overflow-x-auto border-b border-slate-200 pb-px" id="ficha-tabs-nav" role="tablist">
-            @foreach(['general' => 'General', 'historial' => 'Historial', 'mantenimiento' => 'Mantenimiento', 'incidentes' => 'Incidentes', 'riesgo' => 'Riesgo'] as $key => $label)
+        <nav class="flex gap-2 overflow-x-auto border-b border-slate-200 pb-px" id="ficha-tabs-nav" role="tablist">
+            @php
+                $tabConfig = [
+                    'general'       => ['label' => 'General', 'count' => null],
+                    'historial'     => ['label' => 'Historial', 'count' => $logsCount],
+                    'mantenimiento' => ['label' => 'Mantenimiento', 'count' => $mantenimientosCount],
+                    'incidentes'    => ['label' => 'Incidentes', 'count' => $incidentesCount],
+                    'riesgo'        => ['label' => 'Riesgos', 'count' => $evaluacionesCount],
+                ];
+            @endphp
+
+            @foreach($tabConfig as $key => $item)
                 <button
                     type="button"
                     role="tab"
+                    id="tab-btn-{{ $key }}"
                     aria-selected="{{ $key === 'general' ? 'true' : 'false' }}"
                     aria-controls="tab-panel-{{ $key }}"
                     data-tab="{{ $key }}"
-                    class="ficha-tab relative px-4 py-2.5 text-sm font-medium rounded-t-lg transition whitespace-nowrap
-                           {{ $key === 'general' ? 'text-[#1D3557] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#1D3557] after:rounded-full' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50' }}"
+                    onclick="activateTab('{{ $key }}')"
+                    class="ficha-tab relative px-5 py-3 text-sm font-semibold rounded-t-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-2
+                           {{ $key === 'general' 
+                              ? 'text-[#1D3557] bg-white border-t-2 border-x border-[#1D3557]/20 border-b-transparent shadow-xs' 
+                              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/70 border-b-2 border-transparent' }}"
                 >
-                    {{ $label }}
-                    @if($key === 'incidentes' && $activo->incidentes->count())
-                        <span class="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">{{ $activo->incidentes->count() }}</span>
-                    @elseif($key === 'mantenimiento' && $activo->mantenimientos->count())
-                        <span class="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">{{ $activo->mantenimientos->count() }}</span>
-                    @elseif($key === 'riesgo' && $activo->evaluaciones->count())
-                        <span class="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">{{ $activo->evaluaciones->count() }}</span>
+                    <span>{{ $item['label'] }}</span>
+                    @if($item['count'] !== null && $item['count'] > 0)
+                        <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold {{ $key === 'general' ? 'bg-[#1D3557]/10 text-[#1D3557]' : 'bg-slate-200 text-slate-700' }}">
+                            {{ $item['count'] }}
+                        </span>
                     @endif
                 </button>
             @endforeach
@@ -163,10 +211,18 @@
              TAB PANELS
         ═══════════════════════════════════════════════ --}}
 
-        {{-- ── TAB: General ── --}}
+        {{-- ── TAB 1: General ── --}}
         <div id="tab-panel-general" role="tabpanel" class="ficha-tab-panel pt-5" data-tab-panel="general">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 space-y-6">
-                <h3 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">Información General</h3>
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Información General</h3>
+                        <p class="text-xs text-slate-500">Datos identificativos y características físicas del activo</p>
+                    </div>
+                    <a href="{{ route('admin.activos.edit', $activo->id_activo) }}" class="btn btn-outline btn-sm">
+                        Editar Información
+                    </a>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div>
@@ -199,7 +255,7 @@
                     </div>
                     <div>
                         <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Año de Adquisición</span>
-                        <span class="text-sm text-slate-700">{{ $activo->fecha_adquisicion ?? '-' }}</span>
+                        <span class="text-sm text-slate-700 font-mono">{{ $activo->fecha_adquisicion ?? '-' }}</span>
                     </div>
                     <div>
                         <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Estado Operativo</span>
@@ -217,12 +273,13 @@
                     </div>
                     <div>
                         <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Etapa Ciclo de Vida</span>
-                        <span class="text-sm text-slate-700">{{ $activo->etapa_ciclo_vida }}</span>
+                        <span class="text-sm text-slate-700 font-medium">{{ $activo->etapa_ciclo_vida }}</span>
                     </div>
                     <div>
-                        <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Criticidad Institucional</span>
+                        <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider">Nivel de Riesgo</span>
                         @php
-                            $critStr = strtolower(trim($activo->criticidad_institucional ?? ''));
+                            $riesgoVal = $activo->nivel_riesgo ?? $activo->criticidad_institucional ?? null;
+                            $critStr = strtolower(trim($riesgoVal ?? ''));
                             $critColor = match(true) {
                                 str_contains($critStr, 'alta') || str_contains($critStr, 'alto') || str_contains($critStr, 'crítico') || str_contains($critStr, 'critico') => 'bg-rose-100 text-rose-800 border-rose-200',
                                 str_contains($critStr, 'media') || str_contains($critStr, 'medio') => 'bg-amber-100 text-amber-800 border-amber-200',
@@ -231,7 +288,7 @@
                             };
                         @endphp
                         <span class="inline-flex items-center px-2.5 py-1 mt-1 rounded-full text-xs font-semibold border {{ $critColor }}">
-                            {{ $activo->criticidad_institucional ?? '-' }}
+                            {{ $riesgoVal ?? 'Sin evaluar' }}
                         </span>
                     </div>
                 </div>
@@ -239,7 +296,9 @@
                 {{-- Detalles de Computadora --}}
                 @if($activo->detalleComputadora)
                     <div class="pt-4 border-t border-slate-100">
-                        <h4 class="text-sm font-bold text-blue-700 uppercase tracking-wider mb-3">Especificaciones de Computadora / PC</h4>
+                        <h4 class="text-sm font-bold text-blue-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span>💻</span> Especificaciones de Computadora / PC
+                        </h4>
                         <div class="space-y-4 bg-slate-50 border border-blue-100 rounded-xl p-4">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
@@ -251,11 +310,11 @@
                                     <span class="text-sm font-semibold text-slate-800">{{ $activo->detalleComputadora->ram_gb ? $activo->detalleComputadora->ram_gb . ' GB' : '-' }}</span>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-medium text-slate-400 uppercase">Disco Sólido SSD</span>
+                                    <span class="block text-xs font-medium text-slate-400 uppercase">Almacenamiento SSD</span>
                                     <span class="text-sm font-semibold text-slate-800">{{ $activo->detalleComputadora->disco_solido_gb ? $activo->detalleComputadora->disco_solido_gb . ' GB' : '-' }}</span>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-medium text-slate-400 uppercase">Disco Rígido HDD</span>
+                                    <span class="block text-xs font-medium text-slate-400 uppercase">Almacenamiento HDD</span>
                                     <span class="text-sm font-semibold text-slate-800">{{ $activo->detalleComputadora->disco_rigido_gb ? $activo->detalleComputadora->disco_rigido_gb . ' GB' : '-' }}</span>
                                 </div>
                                 <div>
@@ -263,43 +322,34 @@
                                     <span class="text-sm font-semibold text-slate-800">{{ $activo->detalleComputadora->sistema_operativo ?? '-' }}</span>
                                 </div>
                             </div>
-
-                            <div class="pt-3 border-t border-blue-100/60">
-                                <span class="block text-xs font-medium text-slate-400 uppercase mb-2">Componentes y Periféricos Incluidos</span>
+                            <div class="pt-2 border-t border-blue-100/50">
+                                <span class="block text-xs font-medium text-slate-400 uppercase mb-2">Periféricos y Accesorios</span>
                                 <div class="flex flex-wrap gap-2">
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ $activo->detalleComputadora->monitor ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200' }}">
-                                        Monitor: {{ $activo->detalleComputadora->monitor ? 'Sí' : 'No' }}
-                                    </span>
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ $activo->detalleComputadora->teclado_mouse ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200' }}">
-                                        Teclado / Mouse: {{ $activo->detalleComputadora->teclado_mouse ? 'Sí' : 'No' }}
-                                    </span>
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ $activo->detalleComputadora->camara_web ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200' }}">
-                                        Cámara Web: {{ $activo->detalleComputadora->camara_web ? 'Sí' : 'No' }}
-                                    </span>
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ $activo->detalleComputadora->parlantes ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200' }}">
-                                        Parlantes: {{ $activo->detalleComputadora->parlantes ? 'Sí' : 'No' }}
-                                    </span>
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ $activo->detalleComputadora->lector ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200' }}">
-                                        Lector: {{ $activo->detalleComputadora->lector ? 'Sí' : 'No' }}
-                                    </span>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-medium {{ $activo->detalleComputadora->monitor ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-200 text-slate-500' }}">Monitor: {{ $activo->detalleComputadora->monitor ? 'Sí' : 'No' }}</span>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-medium {{ $activo->detalleComputadora->teclado_mouse ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-200 text-slate-500' }}">Teclado/Mouse: {{ $activo->detalleComputadora->teclado_mouse ? 'Sí' : 'No' }}</span>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-medium {{ $activo->detalleComputadora->parlantes ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-200 text-slate-500' }}">Parlantes: {{ $activo->detalleComputadora->parlantes ? 'Sí' : 'No' }}</span>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-medium {{ $activo->detalleComputadora->camara_web ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-200 text-slate-500' }}">Cámara Web: {{ $activo->detalleComputadora->camara_web ? 'Sí' : 'No' }}</span>
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-medium {{ $activo->detalleComputadora->lector ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-slate-200 text-slate-500' }}">Lector: {{ $activo->detalleComputadora->lector ? 'Sí' : 'No' }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 @endif
 
-                {{-- Detalles de Equipo de Red --}}
+                {{-- Detalles de Red --}}
                 @if($activo->detalleEquipoRed)
                     <div class="pt-4 border-t border-slate-100">
-                        <h4 class="text-sm font-bold text-emerald-700 uppercase tracking-wider mb-3">Especificaciones de Equipo de Red / Servidor / Impresora</h4>
+                        <h4 class="text-sm font-bold text-emerald-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span>🌐</span> Especificaciones de Equipo de Red
+                        </h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-emerald-100 rounded-xl p-4">
                             <div>
                                 <span class="block text-xs font-medium text-slate-400 uppercase">Dirección IP</span>
                                 <span class="text-sm font-mono font-semibold text-slate-800">{{ $activo->detalleEquipoRed->direccion_ip ?? '-' }}</span>
                             </div>
                             <div>
-                                <span class="block text-xs font-medium text-slate-400 uppercase">Firmware</span>
-                                <span class="text-sm font-semibold text-slate-800">{{ $activo->detalleEquipoRed->version_firmware ?? '-' }}</span>
+                                <span class="block text-xs font-medium text-slate-400 uppercase">Versión Firmware</span>
+                                <span class="text-sm font-mono font-semibold text-slate-800">{{ $activo->detalleEquipoRed->version_firmware ?? '-' }}</span>
                             </div>
                         </div>
                     </div>
@@ -308,7 +358,9 @@
                 {{-- Detalles de Proyector --}}
                 @if($activo->detalleProyector)
                     <div class="pt-4 border-t border-slate-100">
-                        <h4 class="text-sm font-bold text-amber-700 uppercase tracking-wider mb-3">Especificaciones de Proyector Multimedia</h4>
+                        <h4 class="text-sm font-bold text-amber-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span>📽️</span> Especificaciones de Proyector Multimedia
+                        </h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-amber-100 rounded-xl p-4">
                             <div>
                                 <span class="block text-xs font-medium text-slate-400 uppercase">Conectividad / Cable</span>
@@ -324,8 +376,8 @@
 
                 @if(!empty($activo->observaciones))
                     <div class="pt-4 border-t border-slate-100">
-                        <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Observaciones</span>
-                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700">
+                        <span class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Observaciones Generales</span>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 whitespace-pre-line">
                             {{ $activo->observaciones }}
                         </div>
                     </div>
@@ -333,12 +385,20 @@
             </div>
         </div>
 
-        {{-- ── TAB: Historial ── --}}
+        {{-- ── TAB 2: Historial ── --}}
         <div id="tab-panel-historial" role="tabpanel" class="ficha-tab-panel pt-5 hidden" data-tab-panel="historial">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-100">
-                    <h3 class="text-lg font-bold text-slate-900">Historial de Cambios</h3>
-                    <p class="text-sm text-slate-500 mt-0.5">Registro de auditoría de modificaciones realizadas sobre este activo</p>
+                <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Historial y Bitácora del Activo</h3>
+                        <p class="text-sm text-slate-500 mt-0.5">Auditoría cronológica de cambios, revisiones y anotaciones técnicas</p>
+                    </div>
+                    <button type="button" onclick="openModal('modalNuevaAnotacion')" class="btn btn-primary btn-sm flex items-center gap-1.5 self-start sm:self-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Nueva Anotación
+                    </button>
                 </div>
 
                 @if($logs->count())
@@ -346,30 +406,42 @@
                         <table class="w-full divide-y divide-gray-200">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha / Hora</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Usuario</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Acción</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Valor Anterior</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Valor Nuevo</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">N°</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha / Hora</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Usuario</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Acción / Tipo</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Detalle / Valor Anterior</th>
+                                    <th class="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Valor Nuevo / Registro</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($logs as $log)
-                                    <tr class="hover:bg-slate-50/50 transition">
-                                        <td class="px-4 py-3 text-sm text-slate-700 whitespace-nowrap font-mono">
+                                    <tr class="hover:bg-slate-50/70 transition">
+                                        <td class="px-3 py-3.5 text-center text-sm font-semibold text-slate-500 font-mono">{{ $loop->iteration }}</td>
+                                        <td class="px-5 py-3.5 text-sm text-slate-700 whitespace-nowrap font-mono">
                                             {{ \Carbon\Carbon::parse($log->fecha_hora)->format('d/m/Y H:i') }}
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">
-                                            {{ $log->usuario ? $log->usuario->nombre . ' ' . ($log->usuario->apellido ?? '') : 'Sistema' }}
+                                        <td class="px-5 py-3.5 text-sm whitespace-nowrap">
+                                            <span class="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                                                <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 text-xs flex items-center justify-center font-bold">
+                                                    {{ substr($log->usuario->nombre ?? 'S', 0, 1) }}
+                                                </span>
+                                                {{ $log->usuario ? $log->usuario->nombre . ' ' . ($log->usuario->apellido ?? '') : 'Sistema' }}
+                                            </span>
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-slate-700">
-                                            {{ $log->accion_realizada }}
+                                        <td class="px-5 py-3.5 text-sm font-medium text-slate-900 whitespace-nowrap">
+                                            @php
+                                                $esAnotacion = str_contains($log->accion_realizada, '[') || str_contains($log->accion_realizada, 'Bitácora');
+                                            @endphp
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $esAnotacion ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-700 border border-slate-200' }}">
+                                                {{ $log->accion_realizada }}
+                                            </span>
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-slate-500 max-w-xs truncate" title="{{ $log->valor_anterior }}">
-                                            {{ Str::limit($log->valor_anterior, 80) ?: '—' }}
+                                        <td class="px-5 py-3.5 text-sm text-slate-500 max-w-xs truncate" title="{{ $log->valor_anterior }}">
+                                            {{ $log->valor_anterior ?: '—' }}
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-slate-500 max-w-xs truncate" title="{{ $log->valor_nuevo }}">
-                                            {{ Str::limit($log->valor_nuevo, 80) ?: '—' }}
+                                        <td class="px-5 py-3.5 text-sm text-slate-800 max-w-sm" title="{{ $log->valor_nuevo }}">
+                                            <div class="line-clamp-2">{{ $log->valor_nuevo ?: '—' }}</div>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -377,33 +449,56 @@
                         </table>
                     </div>
                 @else
-                    <div class="p-10 text-center">
-                        <div class="mx-auto w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div class="p-12 text-center">
+                        <div class="mx-auto w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
                         </div>
-                        <p class="text-sm font-medium text-slate-500">No hay registros de cambios para este activo.</p>
-                        <p class="text-xs text-slate-400 mt-1">El historial se actualiza automáticamente con cada modificación.</p>
+                        <h4 class="text-base font-semibold text-slate-800">No hay registros en el historial todavía</h4>
+                        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                            Las modificaciones sobre el activo se registrarán automáticamente. También puedes agregar una primera nota técnica o inspección física.
+                        </p>
+                        <div class="mt-4">
+                            <button type="button" onclick="openModal('modalNuevaAnotacion')" class="btn btn-primary btn-sm">
+                                + Registrar Primera Anotación
+                            </button>
+                        </div>
                     </div>
                 @endif
             </div>
         </div>
 
-        {{-- ── TAB: Mantenimiento ── --}}
+        {{-- ── TAB 3: Mantenimiento ── --}}
         <div id="tab-panel-mantenimiento" role="tabpanel" class="ficha-tab-panel pt-5 hidden" data-tab-panel="mantenimiento">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <h3 class="text-lg font-bold text-slate-900">Mantenimientos</h3>
-                        <p class="text-sm text-slate-500 mt-0.5">Todos los mantenimientos programados y ejecutados para este activo</p>
+                        <div class="flex items-center gap-2.5">
+                            <h3 class="text-lg font-bold text-slate-900">Mantenimientos</h3>
+                            @php
+                                $mPendientes = $activo->mantenimientos->whereIn('estado_mantenimiento', ['Pendiente', 'Programado', 'En ejecución'])->count();
+                            @endphp
+                            @if($mPendientes > 0)
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                    {{ $mPendientes }} pendiente{{ $mPendientes > 1 ? 's' : '' }}
+                                </span>
+                            @endif
+                        </div>
+                        <p class="text-sm text-slate-500 mt-0.5">Mantenimientos preventivos y correctivos programados para este activo</p>
                     </div>
-                    @php
-                        $mPendientes = $activo->mantenimientos->whereIn('estado_mantenimiento', ['Pendiente', 'Programado', 'En ejecución'])->count();
-                    @endphp
-                    @if($mPendientes > 0)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                            {{ $mPendientes }} pendiente{{ $mPendientes > 1 ? 's' : '' }}
-                        </span>
-                    @endif
+
+                    <div class="flex items-center gap-2 self-start sm:self-auto">
+                        <button type="button" onclick="openModal('modalProgramarMantenimiento')" class="btn btn-primary btn-sm flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Programar Mantenimiento
+                        </button>
+                        <a href="{{ route('admin.mantenimiento.cronograma') }}" class="btn btn-outline btn-sm">
+                            Cronograma
+                        </a>
+                    </div>
                 </div>
 
                 @if($activo->mantenimientos->count())
@@ -411,7 +506,7 @@
                         <table class="w-full divide-y divide-gray-200">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">N°</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Tipo</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha Prog.</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha Ejec.</th>
@@ -440,7 +535,7 @@
                                         };
                                     @endphp
                                     <tr class="hover:bg-slate-50/50 transition">
-                                        <td class="px-4 py-3 text-center text-sm text-slate-700 font-mono">{{ $mant->id_mantenimiento }}</td>
+                                        <td class="px-3 py-3 text-center text-sm font-semibold text-slate-500 font-mono">{{ $loop->iteration }}</td>
                                         <td class="px-4 py-3 text-sm whitespace-nowrap">
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $mTipoBadge }}">
                                                 {{ $mant->tipo_mantenimiento }}
@@ -454,7 +549,7 @@
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border {{ $mBadge }}">{{ $mant->estado_mantenimiento }}</span>
                                         </td>
                                         <td class="px-4 py-3 text-center whitespace-nowrap">
-                                            <a href="{{ route('admin.mantenimiento.show', $mant->id_mantenimiento) }}" class="btn btn-xs btn-primary" title="Ver detalles">
+                                            <a href="{{ route('admin.mantenimiento.show', $mant->id_mantenimiento) }}" class="btn btn-xs btn-primary" title="Ver detalles completos">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                                 Ver
                                             </a>
@@ -465,33 +560,56 @@
                         </table>
                     </div>
                 @else
-                    <div class="p-10 text-center">
-                        <div class="mx-auto w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <div class="p-12 text-center">
+                        <div class="mx-auto w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
                         </div>
-                        <p class="text-sm font-medium text-slate-500">No se han registrado mantenimientos para este activo.</p>
-                        <p class="text-xs text-slate-400 mt-1">Los mantenimientos programados y ejecutados aparecerán aquí.</p>
+                        <h4 class="text-base font-semibold text-slate-800">No hay mantenimientos registrados</h4>
+                        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                            Puedes programar un mantenimiento preventivo o correctivo directamente para este activo.
+                        </p>
+                        <div class="mt-4">
+                            <button type="button" onclick="openModal('modalProgramarMantenimiento')" class="btn btn-primary btn-sm">
+                                + Programar Primer Mantenimiento
+                            </button>
+                        </div>
                     </div>
                 @endif
             </div>
         </div>
 
-        {{-- ── TAB: Incidentes ── --}}
+        {{-- ── TAB 4: Incidentes ── --}}
         <div id="tab-panel-incidentes" role="tabpanel" class="ficha-tab-panel pt-5 hidden" data-tab-panel="incidentes">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <h3 class="text-lg font-bold text-slate-900">Incidentes Reportados</h3>
-                        <p class="text-sm text-slate-500 mt-0.5">Todos los incidentes registrados que afectan a este activo</p>
+                        <div class="flex items-center gap-2.5">
+                            <h3 class="text-lg font-bold text-slate-900">Incidentes Reportados</h3>
+                            @php
+                                $iAbiertos = $activo->incidentes->filter(fn($i) => !in_array($i->estado_incidente, ['Resuelto', 'Cerrado', 'resuelto', 'cerrado']))->count();
+                            @endphp
+                            @if($iAbiertos > 0)
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                    {{ $iAbiertos }} abierto{{ $iAbiertos > 1 ? 's' : '' }}
+                                </span>
+                            @endif
+                        </div>
+                        <p class="text-sm text-slate-500 mt-0.5">Historial y seguimiento de averías o fallas registradas sobre este activo</p>
                     </div>
-                    @php
-                        $iAbiertos = $activo->incidentes->filter(fn($i) => !in_array($i->estado_incidente, ['Resuelto', 'Cerrado']))->count();
-                    @endphp
-                    @if($iAbiertos > 0)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                            {{ $iAbiertos }} abierto{{ $iAbiertos > 1 ? 's' : '' }}
-                        </span>
-                    @endif
+
+                    <div class="flex items-center gap-2 self-start sm:self-auto">
+                        <button type="button" onclick="openModal('modalReportarIncidente')" class="btn btn-primary btn-sm flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Reportar Incidente
+                        </button>
+                        <a href="{{ route('admin.incidentes.seguimiento') }}" class="btn btn-outline btn-sm">
+                            Seguimiento
+                        </a>
+                    </div>
                 </div>
 
                 @if($activo->incidentes->count())
@@ -499,10 +617,11 @@
                         <table class="w-full divide-y divide-gray-200">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">N°</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Descripción Falla</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Modo de Falla</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Prioridad</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Reportado Por</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
@@ -519,18 +638,29 @@
                                             str_contains($iSt, 'espera') => 'bg-amber-100 text-amber-800 border-amber-200',
                                             default => 'bg-slate-100 text-slate-700 border-slate-200',
                                         };
+
+                                        $prioBadge = match(strtolower(trim($inc->prioridad ?? 'media'))) {
+                                            'alta' => 'bg-rose-100 text-rose-700 border-rose-200',
+                                            'baja' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                                            default => 'bg-amber-100 text-amber-700 border-amber-200',
+                                        };
                                     @endphp
                                     <tr class="hover:bg-slate-50/50 transition">
-                                        <td class="px-4 py-3 text-center text-sm text-slate-700 font-mono">{{ $inc->id_incidente }}</td>
+                                        <td class="px-3 py-3 text-center text-sm font-semibold text-slate-500 font-mono">{{ $loop->iteration }}</td>
                                         <td class="px-4 py-3 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $inc->fecha_incidente ? \Carbon\Carbon::parse($inc->fecha_incidente)->format('d/m/Y') : '—' }}</td>
                                         <td class="px-4 py-3 text-sm text-slate-700 max-w-xs truncate" title="{{ $inc->descripcion_falla }}">{{ Str::limit($inc->descripcion_falla, 60) ?: '—' }}</td>
                                         <td class="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">{{ $inc->modoFalla->nombre_modo_falla ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border {{ $prioBadge }}">
+                                                {{ $inc->prioridad ?? 'Media' }}
+                                            </span>
+                                        </td>
                                         <td class="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">{{ $inc->usuarioReporta ? $inc->usuarioReporta->nombre . ' ' . ($inc->usuarioReporta->apellido ?? '') : '—' }}</td>
                                         <td class="px-4 py-3 text-center whitespace-nowrap">
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border {{ $iBadge }}">{{ $inc->estado_incidente }}</span>
                                         </td>
                                         <td class="px-4 py-3 text-center whitespace-nowrap">
-                                            <a href="{{ route('admin.incidentes.show', $inc->id_incidente) }}" class="btn btn-xs btn-primary" title="Ver detalles">
+                                            <a href="{{ route('admin.incidentes.show', $inc->id_incidente) }}" class="btn btn-xs btn-primary" title="Ver detalles del incidente">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                                 Ver
                                             </a>
@@ -541,34 +671,92 @@
                         </table>
                     </div>
                 @else
-                    <div class="p-10 text-center">
-                        <div class="mx-auto w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                    <div class="p-12 text-center">
+                        <div class="mx-auto w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                            </svg>
                         </div>
-                        <p class="text-sm font-medium text-slate-500">No se han reportado incidentes para este activo.</p>
-                        <p class="text-xs text-slate-400 mt-1">Los incidentes registrados aparecerán aquí.</p>
+                        <h4 class="text-base font-semibold text-slate-800">No hay incidentes reportados</h4>
+                        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                            Este activo no tiene averías o fallas registradas actualmente.
+                        </p>
+                        <div class="mt-4">
+                            <button type="button" onclick="openModal('modalReportarIncidente')" class="btn btn-primary btn-sm">
+                                + Reportar un Incidente
+                            </button>
+                        </div>
                     </div>
                 @endif
             </div>
         </div>
 
-        {{-- ── TAB: Riesgo ── --}}
+        {{-- ── TAB 5: Riesgos (FMEA - ISO 31000) ── --}}
         <div id="tab-panel-riesgo" role="tabpanel" class="ficha-tab-panel pt-5 hidden" data-tab-panel="riesgo">
-            {{-- Evaluaciones FMEA --}}
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-5">
-                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-bold text-slate-900">Evaluaciones FMEA</h3>
-                        <p class="text-sm text-slate-500 mt-0.5">Análisis de modos de falla, efectos y criticidad registrados para este activo</p>
+            {{-- Quick Risk Summary Cards --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Nivel de Riesgo Global</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">{{ $riesgoEmoji }}</span>
+                        <span class="text-lg font-bold text-slate-900">{{ $nivelRiesgo ?? 'Sin evaluar' }}</span>
                     </div>
+                    <span class="text-[11px] text-slate-400 block mt-1">Según última evaluación vigente</span>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Score FMEA Máximo</span>
+                    <div class="text-2xl font-black text-slate-900 font-mono">
+                        {{ $evalVigente ? number_format($evalVigente->score_calculado, 2) : '0.00' }}
+                    </div>
+                    <span class="text-[11px] text-slate-400 block mt-1">Cálculo de Criticidad Global</span>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Evaluaciones Vigentes</span>
+                    <div class="text-2xl font-black text-indigo-700 font-mono">
+                        {{ $activo->evaluaciones->where('vigente', true)->count() }}
+                    </div>
+                    <span class="text-[11px] text-slate-400 block mt-1">Total de evaluaciones activas</span>
+                </div>
+
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Planes de Tratamiento</span>
                     @php
-                        $evalVigentes = $activo->evaluaciones->where('vigente', true)->count();
+                        $totalPlanes = $activo->evaluaciones->flatMap(fn($e) => $e->planesTratamiento)->count();
                     @endphp
-                    @if($evalVigentes > 0)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
-                            {{ $evalVigentes }} vigente{{ $evalVigentes > 1 ? 's' : '' }}
-                        </span>
-                    @endif
+                    <div class="text-2xl font-black text-slate-900 font-mono">
+                        {{ $totalPlanes }}
+                    </div>
+                    <span class="text-[11px] text-slate-400 block mt-1">Acciones mitigadoras registradas</span>
+                </div>
+            </div>
+
+            {{-- Evaluaciones FMEA Table --}}
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">Evaluaciones FMEA (ISO 31000)</h3>
+                        <p class="text-sm text-slate-500 mt-0.5">Análisis de Modos de Falla, Criticidad y Niveles de Riesgo</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                        {{-- Formulario para evaluación automática con 1 clic --}}
+                        <form method="POST" action="{{ route('admin.riesgos.evaluar.activo') }}" class="inline-block">
+                            @csrf
+                            <input type="hidden" name="fk_id_activo" value="{{ $activo->id_activo }}">
+                            <input type="hidden" name="modo_evaluacion" value="todos">
+                            <input type="hidden" name="retorno" value="ficha">
+                            <input type="hidden" name="from_ficha" value="1">
+                            <button type="submit" class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm">
+                                <span>⚡</span> Evaluar Activo Automático
+                            </button>
+                        </form>
+
+                        <button type="button" onclick="openModal('modalEvaluacionManual')" class="btn btn-outline btn-sm flex items-center gap-1">
+                            <span>+</span> Evaluar Modo Manual
+                        </button>
+                    </div>
                 </div>
 
                 @if($activo->evaluaciones->count())
@@ -576,15 +764,12 @@
                         <table class="w-full divide-y divide-gray-200">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
-                                    <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Modo de Falla</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">S</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">F</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">MSR</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Score</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Nivel Riesgo</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Vigente</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">N°</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Modo de Falla</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Score FMEA</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Nivel Riesgo</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Vigente</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -599,36 +784,52 @@
                                             default => 'bg-slate-100 text-slate-700 border-slate-200',
                                         };
                                     @endphp
-                                    <tr class="hover:bg-slate-50/50 transition {{ $eval->vigente ? '' : 'opacity-60' }}">
-                                        <td class="px-3 py-3 text-center text-sm text-slate-700 font-mono">{{ $eval->id_evaluacion }}</td>
-                                        <td class="px-3 py-3 text-sm text-slate-700">{{ $eval->modoFalla->nombre_modo_falla ?? '—' }}</td>
-                                        <td class="px-3 py-3 text-center text-sm font-semibold text-slate-800">{{ $eval->valor_severidad }}</td>
-                                        <td class="px-3 py-3 text-center text-sm font-semibold text-slate-800">{{ $eval->valor_frecuencia }}</td>
-                                        <td class="px-3 py-3 text-center text-sm font-semibold text-slate-800">{{ $eval->valor_msr }}</td>
-                                        <td class="px-3 py-3 text-center text-sm font-bold text-slate-900">{{ number_format($eval->score_calculado, 2) }}</td>
-                                        <td class="px-3 py-3 text-center whitespace-nowrap">
+                                    <tr class="hover:bg-slate-50/50 transition {{ $eval->vigente ? '' : 'opacity-60 bg-slate-50/30' }}">
+                                        <td class="px-3 py-3.5 text-center text-sm font-semibold text-slate-500 font-mono">{{ $loop->iteration }}</td>
+                                        <td class="px-6 py-3.5 text-sm font-medium text-slate-800">{{ $eval->modoFalla->nombre_modo_falla ?? '—' }}</td>
+                                        <td class="px-4 py-3.5 text-center text-sm font-bold text-slate-900 font-mono">{{ number_format($eval->score_calculado, 2) }}</td>
+                                        <td class="px-4 py-3.5 text-center whitespace-nowrap">
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border {{ $nrBadge }}">{{ $eval->nivel_riesgo }}</span>
                                         </td>
-                                        <td class="px-3 py-3 text-center whitespace-nowrap">
+                                        <td class="px-4 py-3.5 text-center whitespace-nowrap">
                                             @if($eval->vigente)
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">Vigente</span>
                                             @else
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">No vigente</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">Histórico</span>
                                             @endif
                                         </td>
-                                        <td class="px-3 py-3 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $eval->fecha_evaluacion ? \Carbon\Carbon::parse($eval->fecha_evaluacion)->format('d/m/Y') : '—' }}</td>
+                                        <td class="px-4 py-3.5 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $eval->fecha_evaluacion ? \Carbon\Carbon::parse($eval->fecha_evaluacion)->format('d/m/Y') : '—' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
                 @else
-                    <div class="p-10 text-center">
-                        <div class="mx-auto w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    <div class="p-12 text-center">
+                        <div class="mx-auto w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
                         </div>
-                        <p class="text-sm font-medium text-slate-500">No se han realizado evaluaciones FMEA para este activo.</p>
-                        <p class="text-xs text-slate-400 mt-1">Las evaluaciones de riesgo aparecerán aquí.</p>
+                        <h4 class="text-base font-semibold text-slate-800">No se han realizado evaluaciones FMEA para este activo</h4>
+                        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                            Puedes disparar la evaluación automatizada según los modos de falla de su categoría ({{ $activo->categoria->nombre_categoria ?? 'general' }}), calculando severidad y desgaste.
+                        </p>
+                        <div class="mt-5 flex items-center justify-center gap-3">
+                            <form method="POST" action="{{ route('admin.riesgos.evaluar.activo') }}">
+                                @csrf
+                                <input type="hidden" name="fk_id_activo" value="{{ $activo->id_activo }}">
+                                <input type="hidden" name="modo_evaluacion" value="todos">
+                                <input type="hidden" name="retorno" value="ficha">
+                                <input type="hidden" name="from_ficha" value="1">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    ⚡ Evaluar Activo Automáticamente
+                                </button>
+                            </form>
+                            <button type="button" onclick="openModal('modalEvaluacionManual')" class="btn btn-outline btn-sm">
+                                + Evaluación Manual
+                            </button>
+                        </div>
                     </div>
                 @endif
             </div>
@@ -642,18 +843,23 @@
             @endphp
             @if($planes->count())
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-100">
-                        <h3 class="text-lg font-bold text-slate-900">Planes de Tratamiento de Riesgo</h3>
-                        <p class="text-sm text-slate-500 mt-0.5">Acciones preventivas y correctivas derivadas de las evaluaciones</p>
+                    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">Planes de Tratamiento de Riesgo</h3>
+                            <p class="text-sm text-slate-500 mt-0.5">Acciones mitigadoras y preventivas derivadas de las evaluaciones</p>
+                        </div>
+                        <a href="{{ route('admin.riesgos.tratamiento') }}" class="btn btn-outline btn-sm">
+                            Gestionar Tratamientos
+                        </a>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full divide-y divide-gray-200">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Evaluación</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">N°</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Evaluación / Modo</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Estrategia</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Acción Preventiva</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Acción a Realizar</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha Compromiso</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
                                 </tr>
@@ -670,13 +876,13 @@
                                         };
                                     @endphp
                                     <tr class="hover:bg-slate-50/50 transition">
-                                        <td class="px-4 py-3 text-center text-sm text-slate-700 font-mono">{{ $plan->id_tratamiento }}</td>
+                                        <td class="px-3 py-3 text-center text-sm font-semibold text-slate-500 font-mono">{{ $loop->iteration }}</td>
                                         <td class="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">
                                             #{{ $plan->_eval->id_evaluacion ?? '—' }}
                                             <span class="text-slate-400">—</span>
                                             {{ $plan->_eval->modoFalla->nombre_modo_falla ?? '' }}
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-slate-700">{{ $plan->estrategia ?? '—' }}</td>
+                                        <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $plan->estrategia ?? '—' }}</td>
                                         <td class="px-4 py-3 text-sm text-slate-700 max-w-xs truncate" title="{{ $plan->accion_preventiva }}">{{ Str::limit($plan->accion_preventiva, 60) ?: '—' }}</td>
                                         <td class="px-4 py-3 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $plan->fecha_compromiso ? \Carbon\Carbon::parse($plan->fecha_compromiso)->format('d/m/Y') : '—' }}</td>
                                         <td class="px-4 py-3 text-center whitespace-nowrap">
@@ -692,48 +898,403 @@
         </div>
 
     </div> {{-- end tabs wrapper --}}
+
 </div>
-@endsection
 
-@push('scripts')
+{{-- ═══════════════════════════════════════════════════════════════════
+     MODALES INTERACTIVOS (Historial, Mantenimiento, Incidentes, Riesgo)
+═══════════════════════════════════════════════════════════════════════ --}}
+
+{{-- 1. Modal: Nueva Anotación en Bitácora / Historial --}}
+<div id="modalNuevaAnotacion" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 border border-slate-100 transform transition-transform" id="modalNuevaAnotacionCard">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span>📝</span> Registrar Anotación en Bitácora
+            </h3>
+            <button type="button" onclick="closeModal('modalNuevaAnotacion')" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">✕</button>
+        </div>
+
+        <form method="POST" action="{{ route('admin.activos.historial.store', $activo->id_activo) }}">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Tipo de Evento</label>
+                    <select name="tipo_evento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                        <option value="Inspección Física">Inspección Física / Revisión de Rutina</option>
+                        <option value="Revisión Técnica">Revisión Técnica de Hardware</option>
+                        <option value="Actualización Software">Actualización de Software / SO</option>
+                        <option value="Traslado de Ubicación">Traslado / Reubicación de Equipo</option>
+                        <option value="Cambio de Responsable">Cambio de Usuario Responsable</option>
+                        <option value="Observación General">Observación General / Nota Técnica</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Título / Concepto de la Acción <span class="text-rose-500">*</span></label>
+                    <input type="text" name="accion_realizada" required placeholder="Ej: Limpieza de componentes internos y verificación térmica" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Detalles / Observaciones</label>
+                    <textarea name="observaciones" rows="4" placeholder="Describe los hallazgos técnicos o motivos..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
+                <button type="button" onclick="closeModal('modalNuevaAnotacion')" class="btn btn-secondary">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Guardar en Historial
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- 2. Modal: Programar Mantenimiento para este Activo --}}
+<div id="modalProgramarMantenimiento" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-100 max-h-[90vh] overflow-y-auto" id="modalProgramarMantenimientoCard">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span>🛠️</span> Programar Mantenimiento
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Activo: <strong class="text-slate-800">{{ $activo->codigo_patrimonial }}</strong> — {{ $activo->nombre_equipo }}</p>
+            </div>
+            <button type="button" onclick="closeModal('modalProgramarMantenimiento')" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">✕</button>
+        </div>
+
+        <form method="POST" action="{{ route('admin.mantenimiento.programar.store') }}">
+            @csrf
+            <input type="hidden" name="fk_id_activo" value="{{ $activo->id_activo }}">
+            <input type="hidden" name="retorno" value="ficha">
+            <input type="hidden" name="from_ficha" value="1">
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Tipo de Mantenimiento <span class="text-rose-500">*</span></label>
+                        <select name="tipo_mantenimiento" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                            <option value="Preventivo">Preventivo (Programado / Rutina)</option>
+                            <option value="Correctivo">Correctivo (Reparación / Falla)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Técnico Asignado <span class="text-rose-500">*</span></label>
+                        <select name="fk_id_usuario_asignado" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                            @foreach($usuarios as $usr)
+                                <option value="{{ $usr->id_usuario }}" {{ (auth()->id() == $usr->id_usuario) ? 'selected' : '' }}>
+                                    {{ $usr->nombre }} {{ $usr->apellido ?? '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Fecha Programada <span class="text-rose-500">*</span></label>
+                        <input type="date" name="fecha_programada" required value="{{ date('Y-m-d') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado Inicial <span class="text-rose-500">*</span></label>
+                        <select name="estado_mantenimiento" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                            <option value="Programado">Programado</option>
+                            <option value="En ejecución">En ejecución</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Completado">Completado / Finalizado</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if($activo->incidentes->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado'])->count())
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Vincular con Incidente Abierto (Opcional)</label>
+                        <select name="fk_id_incidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                            <option value="">Ninguno — Mantenimiento Preventivo Regular</option>
+                            @foreach($activo->incidentes->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado']) as $incAbierto)
+                                <option value="{{ $incAbierto->id_incidente }}">
+                                    #{{ $incAbierto->id_incidente }} — {{ Str::limit($incAbierto->descripcion_falla, 50) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Descripción de los Trabajos a Realizar</label>
+                    <textarea name="descripcion_trabajo" rows="3" placeholder="Detalla el alcance del mantenimiento, piezas a reemplazar, limpieza, etc..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
+                <button type="button" onclick="closeModal('modalProgramarMantenimiento')" class="btn btn-secondary">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Programar Mantenimiento
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- 3. Modal: Reportar Incidente para este Activo --}}
+<div id="modalReportarIncidente" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-100 max-h-[90vh] overflow-y-auto" id="modalReportarIncidenteCard">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span>⚠️</span> Reportar Incidente / Avería
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Activo: <strong class="text-slate-800">{{ $activo->codigo_patrimonial }}</strong> — {{ $activo->nombre_equipo }}</p>
+            </div>
+            <button type="button" onclick="closeModal('modalReportarIncidente')" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">✕</button>
+        </div>
+
+        <form method="POST" action="{{ route('admin.incidentes.registrar.store') }}">
+            @csrf
+            <input type="hidden" name="fk_id_activo" value="{{ $activo->id_activo }}">
+            <input type="hidden" name="fk_id_usuario_reporta" value="{{ auth()->id() ?? ($usuarios->first()->id_usuario ?? 1) }}">
+            <input type="hidden" name="retorno" value="ficha">
+            <input type="hidden" name="from_ficha" value="1">
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Fecha del Incidente <span class="text-rose-500">*</span></label>
+                        <input type="date" name="fecha_incidente" required value="{{ date('Y-m-d') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Prioridad de Atención <span class="text-rose-500">*</span></label>
+                        @php
+                            $riesgoActual = strtolower(trim($activo->nivel_riesgo ?? $activo->criticidad_institucional ?? ''));
+                            $sugerida = match(true) {
+                                str_contains($riesgoActual, 'crític') || str_contains($riesgoActual, 'critic') || str_contains($riesgoActual, 'alt') => 'Alta',
+                                str_contains($riesgoActual, 'med') => 'Media',
+                                default => 'Baja',
+                            };
+                        @endphp
+                        <select name="prioridad" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                            <option value="Alta" {{ $sugerida === 'Alta' ? 'selected' : '' }}>Alta (Urgente / Interrupción crítica)</option>
+                            <option value="Media" {{ $sugerida === 'Media' ? 'selected' : '' }}>Media (Impacto funcional moderado)</option>
+                            <option value="Baja" {{ $sugerida === 'Baja' ? 'selected' : '' }}>Baja (Inconveniente menor)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Modo de Falla (Catálogo FMEA)</label>
+                    <select name="fk_id_modo_falla" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                        <option value="">-- No determinado / Fallo genérico --</option>
+                        @foreach($modosFalla as $modo)
+                            <option value="{{ $modo->id_modo_falla }}">{{ $modo->nombre_modo_falla }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Descripción Detallada de la Falla <span class="text-rose-500">*</span></label>
+                    <textarea name="descripcion_falla" required rows="3" placeholder="Indica los síntomas observados, mensajes de error o comportamiento anómalo..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado Inicial</label>
+                    <select name="estado_incidente" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                        <option value="Reportado" selected>Reportado</option>
+                        <option value="En proceso">En proceso de atención</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
+                <button type="button" onclick="closeModal('modalReportarIncidente')" class="btn btn-secondary">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Reportar Incidente
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- 4. Modal: Evaluación FMEA Manual para este Activo --}}
+<div id="modalEvaluacionManual" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 border border-slate-100 max-h-[90vh] overflow-y-auto" id="modalEvaluacionManualCard">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <span>⚡</span> Evaluación FMEA Manual
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">{{ $activo->nombre_equipo }} ({{ $activo->codigo_patrimonial }})</p>
+            </div>
+            <button type="button" onclick="closeModal('modalEvaluacionManual')" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">✕</button>
+        </div>
+
+        <form method="POST" action="{{ route('admin.riesgos.evaluacion.store') }}">
+            @csrf
+            <input type="hidden" name="fk_id_activo" value="{{ $activo->id_activo }}">
+            <input type="hidden" name="retorno" value="ficha">
+            <input type="hidden" name="from_ficha" value="1">
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Modo de Falla a Evaluar <span class="text-rose-500">*</span></label>
+                    <select name="fk_id_modo_falla" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                        @foreach($modosFalla as $modo)
+                            <option value="{{ $modo->id_modo_falla }}">{{ $modo->nombre_modo_falla }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" title="Severidad de impacto">Severidad (S) <span class="text-rose-500">*</span></label>
+                        <select name="valor_severidad" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 font-mono">
+                            @for($i=1; $i<=10; $i++)
+                                <option value="{{ $i }}" {{ $i === 5 ? 'selected' : '' }}>{{ $i }}</option>
+                            @endfor
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" title="Frecuencia / Ocurrencia">Frecuencia (F) <span class="text-rose-500">*</span></label>
+                        <select name="valor_frecuencia" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 font-mono">
+                            @for($i=1; $i<=10; $i++)
+                                <option value="{{ $i }}" {{ $i === 5 ? 'selected' : '' }}>{{ $i }}</option>
+                            @endfor
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" title="Medidas de Reducción / Detección">MSR <span class="text-rose-500">*</span></label>
+                        <select name="valor_msr" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 font-mono">
+                            @for($i=1; $i<=10; $i++)
+                                <option value="{{ $i }}" {{ $i === 5 ? 'selected' : '' }}>{{ $i }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Fecha de Evaluación <span class="text-rose-500">*</span></label>
+                    <input type="date" name="fecha_evaluacion" required value="{{ date('Y-m-d') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-mono">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-100">
+                <button type="button" onclick="closeModal('modalEvaluacionManual')" class="btn btn-secondary">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Calcular Score y Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ═══════════════════════════════════════════════════════════════════
+     SCRIPTS EMBEBIDOS EN EL CONTENIDO (Compatible con Turbo SPA y Standalone)
+═══════════════════════════════════════════════════════════════════════ --}}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const tabs = document.querySelectorAll('.ficha-tab');
-    const panels = document.querySelectorAll('.ficha-tab-panel');
+(function () {
+    // ── Función Global para Activación de Pestañas ──
+    window.activateTab = function (key) {
+        var tabs = document.querySelectorAll('.ficha-tab');
+        var panels = document.querySelectorAll('.ficha-tab-panel');
 
-    function activateTab(key) {
-        tabs.forEach(t => {
-            const isActive = t.dataset.tab === key;
+        if (!tabs.length || !panels.length) return;
+
+        tabs.forEach(function (t) {
+            var isActive = (t.getAttribute('data-tab') === key);
             t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-            t.classList.toggle('text-[#1D3557]', isActive);
-            t.classList.toggle('text-slate-500', !isActive);
-            t.classList.toggle('hover:text-slate-700', !isActive);
-            t.classList.toggle('hover:bg-slate-50', !isActive);
-            // Underline indicator
+
             if (isActive) {
-                t.classList.add('after:absolute', 'after:bottom-0', 'after:left-0', 'after:right-0', 'after:h-0.5', 'after:bg-[#1D3557]', 'after:rounded-full');
+                t.className = 'ficha-tab relative px-5 py-3 text-sm font-semibold rounded-t-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 text-[#1D3557] bg-white border-t-2 border-x border-[#1D3557]/20 border-b-transparent shadow-xs';
             } else {
-                t.classList.remove('after:absolute', 'after:bottom-0', 'after:left-0', 'after:right-0', 'after:h-0.5', 'after:bg-[#1D3557]', 'after:rounded-full');
+                t.className = 'ficha-tab relative px-5 py-3 text-sm font-semibold rounded-t-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100/70 border-b-2 border-transparent';
             }
         });
-        panels.forEach(p => {
-            p.classList.toggle('hidden', p.dataset.tabPanel !== key);
-        });
-    }
 
-    tabs.forEach(t => {
-        t.addEventListener('click', () => {
-            const key = t.dataset.tab;
-            activateTab(key);
-            history.replaceState(null, '', '#' + key);
+        panels.forEach(function (p) {
+            var isPanel = (p.getAttribute('data-tab-panel') === key);
+            p.classList.toggle('hidden', !isPanel);
         });
+
+        // Actualizar URL hash sin salto de scroll
+        if (history.replaceState) {
+            history.replaceState(null, '', '#' + key);
+        }
+    };
+
+    // ── Funciones Globales para Control de Modales ──
+    window.openModal = function (modalId) {
+        var modal = document.getElementById(modalId);
+        if (!modal) return;
+        var card = document.getElementById(modalId + 'Card');
+        modal.classList.remove('hidden');
+        if (card) {
+            card.classList.remove('scale-95', 'opacity-0');
+            card.classList.add('scale-100', 'opacity-100');
+        }
+    };
+
+    window.closeModal = function (modalId) {
+        var modal = document.getElementById(modalId);
+        if (!modal) return;
+        var card = document.getElementById(modalId + 'Card');
+        if (card) {
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+        }
+        setTimeout(function () {
+            modal.classList.add('hidden');
+        }, 150);
+    };
+
+    // Cerrar modales con tecla Escape
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            ['modalNuevaAnotacion', 'modalProgramarMantenimiento', 'modalReportarIncidente', 'modalEvaluacionManual'].forEach(function (id) {
+                window.closeModal(id);
+            });
+        }
     });
 
-    // Restore from URL hash
-    const hash = window.location.hash.replace('#', '');
-    if (hash && document.querySelector(`[data-tab-panel="${hash}"]`)) {
-        activateTab(hash);
-    }
-});
+    // Cerrar al hacer clic en el fondo del modal
+    ['modalNuevaAnotacion', 'modalProgramarMantenimiento', 'modalReportarIncidente', 'modalEvaluacionManual'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', function (e) {
+                if (e.target === el) {
+                    window.closeModal(id);
+                }
+            });
+        }
+    });
+
+    // ── Inicialización de Pestañas según Hash o General ──
+    window.initFichaTabs = function () {
+        var hash = (window.location.hash || '').replace('#', '').trim();
+        var validTabs = ['general', 'historial', 'mantenimiento', 'incidentes', 'riesgo'];
+        if (hash && validTabs.indexOf(hash) !== -1) {
+            window.activateTab(hash);
+        } else {
+            window.activateTab('general');
+        }
+    };
+
+    // Ejecución inmediata y escucha de eventos
+    window.initFichaTabs();
+    window.addEventListener('hashchange', window.initFichaTabs);
+    document.addEventListener('turbo:load', window.initFichaTabs);
+})();
 </script>
-@endpush
+@endsection

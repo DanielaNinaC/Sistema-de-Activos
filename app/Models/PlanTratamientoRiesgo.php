@@ -15,8 +15,12 @@ class PlanTratamientoRiesgo extends Model
     protected $fillable = [
         'fk_id_evaluacion',
         'estrategia',
+        'estrategia_sugerida',
         'accion_preventiva',
+        'accion_sugerida',
+        'indicador_seguimiento',
         'estado_tratamiento',
+        'observacion_cierre',
         'fecha_compromiso',
         'origen',
     ];

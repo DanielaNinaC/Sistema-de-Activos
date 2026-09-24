@@ -427,7 +427,19 @@ class MotorFmeaService
                     $tratamientoSugerido = PlanTratamientoRiesgo::create([
                         'fk_id_evaluacion' => $evaluacion->id_evaluacion,
                         'estrategia' => $sugerencia['estrategia'],
+                        // Congeladas en el momento de creación: registran qué
+                        // sugirió el sistema, sin importar que el usuario
+                        // cambie después 'estrategia'/'accion_preventiva'
+                        // (la versión "aplicada"). Ningún endpoint de
+                        // actualización debe escribir estos dos campos.
+                        'estrategia_sugerida' => $sugerencia['estrategia'],
                         'accion_preventiva' => $sugerencia['accion_preventiva'],
+                        'accion_sugerida' => $sugerencia['accion_preventiva'],
+                        // Del catálogo por modo de falla (Tabla 18), no del
+                        // formulario: se copia una sola vez aquí, para uso en
+                        // reportes (ej. Historial de Tratamiento). Si el modo
+                        // no lo tiene definido, queda null sin más trámite.
+                        'indicador_seguimiento' => $modo->indicador_seguimiento,
                         'estado_tratamiento' => 'Pendiente',
                         'origen' => 'automatico',
                         'fecha_compromiso' => now()->addDays($sugerencia['dias_plazo'])->toDateString(),
@@ -457,11 +469,9 @@ class MotorFmeaService
         $maxScore = $maxScoreVigente !== null ? (float) $maxScoreVigente : 1.0;
         $infoGlobal = $this->obtenerNivelYAlerta($maxScore);
 
-        // Cache de solo lectura para las vistas de inventario que aún
-        // muestran este campo (ver comentario en el modelo ActivoTecnologico).
-        $activo->update([
-            'criticidad_institucional' => $infoGlobal['criticidad'],
-        ]);
+        // Actualizar nivel_riesgo del activo según la regla de evaluaciones vigentes:
+        // si tiene 4 o más riesgos vigentes se promedia, sino el último nivel de riesgo.
+        $nivelFinal = $this->actualizarNivelRiesgoActivo($activo);
 
         return [
             'activo' => $activo,
@@ -470,7 +480,8 @@ class MotorFmeaService
             'porcentaje_desgaste' => $porcentajeDesgaste,
             'total_incidentes' => $activo->incidentes->count(),
             'max_score' => $maxScore,
-            'criticidad_global' => $infoGlobal['criticidad'],
+            'criticidad_global' => $nivelFinal ?? $infoGlobal['criticidad'],
+            'nivel_riesgo' => $nivelFinal,
             'alerta_global' => $infoGlobal['tipo_alerta'],
             'evaluaciones' => $evaluacionesRealizadas,
             'sin_modos_falla' => false,
@@ -537,5 +548,40 @@ class MotorFmeaService
             'tratamientos_generados' => $tratamientosGenerados,
             'detalle' => $detalle,
         ];
+    }
+
+    /**
+     * Actualiza el campo nivel_riesgo del activo según sus evaluaciones FMEA vigentes.
+     * Si tiene 4 o más riesgos vigentes, se promedia su score y se asigna el nivel resultante.
+     * Si tiene menos de 4 (pero al menos 1), toma el nivel de riesgo de la última evaluación vigente.
+     * Si no tiene evaluaciones vigentes, queda en null.
+     */
+    public function actualizarNivelRiesgoActivo(ActivoTecnologico|int $activo): ?string
+    {
+        if (is_int($activo)) {
+            $activo = ActivoTecnologico::findOrFail($activo);
+        }
+
+        $evaluacionesVigentes = EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)
+            ->where('vigente', true)
+            ->orderByDesc('fecha_evaluacion')
+            ->orderByDesc('id_evaluacion')
+            ->get();
+
+        $conteo = $evaluacionesVigentes->count();
+
+        if ($conteo >= 4) {
+            $scorePromedio = (float) $evaluacionesVigentes->avg('score_calculado');
+            $infoPromedio = $this->obtenerNivelYAlerta($scorePromedio);
+            $nivelFinal = $infoPromedio['nivel'];
+        } elseif ($conteo > 0) {
+            $nivelFinal = $evaluacionesVigentes->first()->nivel_riesgo;
+        } else {
+            $nivelFinal = null;
+        }
+
+        $activo->update(['nivel_riesgo' => $nivelFinal]);
+
+        return $nivelFinal;
     }
 }

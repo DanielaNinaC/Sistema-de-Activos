@@ -157,6 +157,10 @@ import { enhanceSearchableSelects } from './searchable-select.js';
                     });
 
                     enhanceSearchableSelects(currentContent);
+
+                    // Dispatch lifecycle events for components on the newly swapped page
+                    document.dispatchEvent(new CustomEvent('turbo:load', { detail: { url } }));
+                    document.dispatchEvent(new CustomEvent('page:load', { detail: { url } }));
                 }, 80);
 
                 // Update the page title
@@ -234,11 +238,14 @@ import { enhanceSearchableSelects } from './searchable-select.js';
     function shouldIntercept(link) {
         // Only intercept same-origin, non-special links
         if (link.origin !== window.location.origin) return false;
-        if (link.hasAttribute('data-turbo-disabled')) return false;
+        if (link.hasAttribute('data-turbo-disabled') || link.hasAttribute('download')) return false;
         if (link.target === '_blank') return false;
         if (link.pathname === '/login' || link.pathname === '/') return false;
         // Don't intercept links that are just anchors
         if (link.pathname === window.location.pathname && link.hash) return false;
+        // Do NOT intercept PDF, Excel or file exports/downloads
+        if (/\/pdf(\/|$|\?)/i.test(link.href) || /\/excel(\/|$|\?)/i.test(link.href)) return false;
+        if (/\.(pdf|xlsx|xls|csv|zip|rar)$/i.test(link.pathname)) return false;
         return true;
     }
 

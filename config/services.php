@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'teams' => [
+        'webhook_url' => env('TEAMS_ALERTAS_WEBHOOK_URL'),
+    ],
+
 ];

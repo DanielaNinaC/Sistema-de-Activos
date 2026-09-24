@@ -77,51 +77,108 @@
         </div>
     @endif
 
-    {{-- Formulario para Registrar Tratamiento (Oculto inicialmente) --}}
+    {{-- Formulario para Registrar/Revisar Tratamiento (Oculto inicialmente) --}}
+    @php
+        $modoRevision = isset($tratamientoParaRevisar) && $tratamientoParaRevisar !== null;
+    @endphp
     <div class="hidden bg-white rounded-2xl p-6 shadow-sm border border-slate-200 max-w-6xl mx-auto transition-all duration-300" id="formTratamientoCard">
-        <h3 class="text-base font-bold text-slate-900 mb-4">Registrar Plan de Tratamiento</h3>
-        <form method="POST" action="{{ route('admin.riesgos.tratamiento.store') }}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h3 class="text-base font-bold text-slate-900 mb-1">
+            {{ $modoRevision ? 'Revisar Sugerencia de Tratamiento' : 'Registrar Plan de Tratamiento' }}
+        </h3>
+
+        @if($modoRevision)
+            <div class="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl p-3 my-3 text-xs text-blue-800">
+                <span>⚙</span>
+                <span>
+                    Este es un borrador generado automáticamente por el motor de riesgos. "Pendiente" significa <strong>sugerido, todavía sin revisar</strong> —
+                    no es un tratamiento decidido. Confirma o ajusta la estrategia y la acción, y guarda para dejarlo revisado; no se crea un registro nuevo.
+                </span>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('admin.riesgos.tratamiento.store') }}" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             @csrf
             <div class="md:col-span-2">
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Evaluación de Riesgo <span class="text-rose-500">*</span></label>
-                <select name="fk_id_evaluacion" id="selectEvaluacionTratamiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" data-searchable data-search-placeholder="Buscar evaluación..." required>
-                    <option value="">Seleccione una evaluación</option>
-                    @foreach($evaluaciones as $evaluacion)
-                        <option value="{{ $evaluacion->id_evaluacion }}">#{{ $evaluacion->id_evaluacion }} - {{ $evaluacion->activo->nombre_equipo ?? 'Activo' }} - {{ $evaluacion->nivel_riesgo }}</option>
-                    @endforeach
-                </select>
+
+                @if($modoRevision)
+                    <input type="hidden" name="fk_id_evaluacion" value="{{ $tratamientoParaRevisar->fk_id_evaluacion }}">
+                    <div class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-700">
+                        #{{ $tratamientoParaRevisar->fk_id_evaluacion }} - {{ $tratamientoParaRevisar->evaluacion->activo->nombre_equipo ?? 'Activo' }} - {{ $tratamientoParaRevisar->evaluacion->nivel_riesgo ?? '' }}
+                    </div>
+                @else
+                    <select name="fk_id_evaluacion" id="selectEvaluacionTratamiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" data-searchable data-search-placeholder="Buscar evaluación..." required>
+                        <option value="">Seleccione una evaluación</option>
+                        @foreach($evaluaciones as $evaluacion)
+                            <option value="{{ $evaluacion->id_evaluacion }}" data-nivel="{{ $evaluacion->nivel_riesgo }}" {{ (string) old('fk_id_evaluacion') === (string) $evaluacion->id_evaluacion ? 'selected' : '' }}>#{{ $evaluacion->id_evaluacion }} - {{ $evaluacion->activo->nombre_equipo ?? 'Activo' }} - {{ $evaluacion->nivel_riesgo }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
+                {{-- FASE 1: la sugerencia vive en una tarjeta propia, no una línea suelta --}}
+                <div class="hidden mt-2 flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800" id="cajaSugerencia">
+                    <span>💡</span>
+                    <span>Sugerencia del sistema para este nivel de riesgo: <strong id="sugerenciaTexto"></strong> — puedes aceptarla o cambiarla; quedará registrada como "lo sugerido" para el historial.</span>
+                </div>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Estrategia (ISO 31000) <span class="text-rose-500">*</span></label>
-                <select name="estrategia" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" required>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider">Estrategia (ISO 31000) <span class="text-rose-500">*</span></label>
+                    <span class="hidden text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5" id="labelEstrategiaModificada">
+                        modificado respecto a la sugerencia
+                    </span>
+                </div>
+                <select name="estrategia" id="selectEstrategiaTratamiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" required>
                     <option value="">-- Seleccionar estrategia --</option>
                     @foreach($estrategias as $estrategia)
-                        <option value="{{ $estrategia }}" {{ old('estrategia') == $estrategia ? 'selected' : '' }}>{{ $estrategia }}</option>
+                        <option value="{{ $estrategia }}" {{ old('estrategia', $tratamientoParaRevisar->estrategia ?? '') == $estrategia ? 'selected' : '' }}>{{ $estrategia }}</option>
                     @endforeach
                 </select>
+                {{-- FASE 2: aviso en vivo de la acción automática al guardar --}}
+                <p class="text-[11px] text-slate-500 mt-1.5" id="avisoAccionAutomatica"></p>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Estado del Tratamiento <span class="text-rose-500">*</span></label>
-                <select name="estado_tratamiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" required>
+                <select name="estado_tratamiento" id="selectEstadoTratamientoForm" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" required>
                     @foreach($estados as $estado)
-                        <option value="{{ $estado }}" {{ old('estado_tratamiento', 'Pendiente') == $estado ? 'selected' : '' }}>{{ $estado }}</option>
+                        <option value="{{ $estado }}" {{ old('estado_tratamiento', $tratamientoParaRevisar->estado_tratamiento ?? 'Pendiente') == $estado ? 'selected' : '' }}>{{ $estado }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="md:col-span-2">
-                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Acción Preventiva / Mitigante <span class="text-rose-500">*</span></label>
-                <textarea name="accion_preventiva" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" required>{{ old('accion_preventiva') }}</textarea>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider">Acción a Realizar <span class="text-rose-500">*</span></label>
+                    <button type="button" class="hidden text-[11px] font-semibold text-blue-700 hover:text-blue-900 underline" id="linkRestablecerSugerencia">
+                        Restablecer sugerencia
+                    </button>
+                </div>
+                <textarea name="accion_preventiva" id="textareaAccionPreventiva" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" required>{{ old('accion_preventiva', $tratamientoParaRevisar->accion_preventiva ?? '') }}</textarea>
+            </div>
+            <div class="md:col-span-2 hidden" id="campoObservacionCierreForm">
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">¿Qué se hizo realmente? <span class="text-rose-500">*</span></label>
+                <textarea name="observacion_cierre" id="observacionCierreFormInput" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition">{{ old('observacion_cierre', $tratamientoParaRevisar->observacion_cierre ?? '') }}</textarea>
+                <p class="text-[11px] text-slate-500 mt-1.5">Esta estrategia no genera un Mantenimiento, así que esta es la única constancia de qué se hizo realmente.</p>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Fecha de Compromiso</label>
-                <input name="fecha_compromiso" type="date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" value="{{ old('fecha_compromiso') }}" />
+                <input name="fecha_compromiso" type="date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" value="{{ old('fecha_compromiso', $tratamientoParaRevisar->fecha_compromiso ?? '') }}" />
+                {{-- FASE 5 --}}
+                <p class="text-[11px] text-slate-500 mt-1.5">Si se deja vacío, el mantenimiento (si aplica) se programará automáticamente 7 días después de guardar.</p>
+            </div>
+            <div>
+                {{-- FASE 3: solo lectura, informativo --}}
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Responsable</label>
+                <div class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-700">
+                    {{ trim((auth()->user()->nombre ?? '') . ' ' . (auth()->user()->apellido ?? '')) ?: 'Usuario actual' }}
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1.5">Reasignable después desde el módulo de Mantenimiento.</p>
             </div>
             <div class="md:col-span-2 flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button type="button" onclick="toggleFormTratamiento()" class="btn btn-secondary">
                     Cancelar
                 </button>
                 <button type="submit" class="btn btn-primary">
-                    Guardar Tratamiento
+                    {{ $modoRevision ? 'Confirmar Tratamiento' : 'Guardar Tratamiento' }}
                 </button>
             </div>
         </form>
@@ -148,8 +205,16 @@
                             <td class="px-6 py-4 text-sm text-gray-700">{{ $tratamiento->evaluacion->activo->nombre_equipo ?? '-' }}</td>
                             <td class="px-6 py-4 text-sm text-gray-700">{{ $tratamiento->estrategia }}</td>
                             <td class="px-6 py-4 text-sm text-gray-700">
+                                @php
+                                    // Sin columna nueva: si nunca se guardó desde el
+                                    // formulario de revisión, updated_at == created_at
+                                    // (ver ProcesoRiesgoController::tratamientoStore()).
+                                    $esSugeridoSinRevisar = $tratamiento->origen === 'automatico'
+                                        && $tratamiento->estado_tratamiento === 'Pendiente'
+                                        && $tratamiento->created_at->eq($tratamiento->updated_at);
+                                @endphp
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold {{ $tratamiento->estado_tratamiento === 'Completado' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : ($tratamiento->estado_tratamiento === 'En Proceso' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200') }}">
-                                    {{ $tratamiento->estado_tratamiento }}
+                                    {{ $esSugeridoSinRevisar ? 'Sugerido — sin revisar' : $tratamiento->estado_tratamiento }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-700">
@@ -162,11 +227,18 @@
                             <td class="px-6 py-4 text-sm text-gray-700">{{ $tratamiento->fecha_compromiso ? \Carbon\Carbon::parse($tratamiento->fecha_compromiso)->format('d/m/Y') : '-' }}</td>
                             <td class="px-6 py-4 text-sm text-center">
                                 @if($tratamiento->estado_tratamiento !== 'Completado')
-                                    <button type="button"
-                                            onclick="openEstadoModal({{ $tratamiento->id_tratamiento }}, '{{ $tratamiento->estado_tratamiento }}')"
-                                            class="btn btn-xs btn-dark">
-                                        Actualizar estado
-                                    </button>
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        @if($esSugeridoSinRevisar)
+                                            <a href="{{ route('admin.riesgos.tratamiento') }}?crear={{ $tratamiento->fk_id_evaluacion }}#formTratamientoCard" class="btn btn-xs btn-danger">
+                                                Revisar sugerencia
+                                            </a>
+                                        @endif
+                                        <button type="button"
+                                                onclick="openEstadoModal({{ $tratamiento->id_tratamiento }}, '{{ $tratamiento->estado_tratamiento }}', '{{ $tratamiento->estrategia }}')"
+                                                class="btn btn-xs btn-dark">
+                                            Actualizar estado
+                                        </button>
+                                    </div>
                                 @else
                                     <span class="text-xs text-slate-400">—</span>
                                 @endif
@@ -204,6 +276,14 @@
                     </select>
                     <p class="text-[11px] text-amber-700 mt-1.5 hidden" id="avisoCompletado">
                         Al marcar "Completado" se ejecutará automáticamente una nueva evaluación de riesgo del activo asociado.
+                    </p>
+                </div>
+
+                <div class="hidden" id="campoObservacionCierre">
+                    <label class="block text-sm font-medium text-slate-700 mb-1.5">¿Qué se hizo realmente? <span class="text-rose-500">*</span></label>
+                    <textarea name="observacion_cierre" id="observacion_cierre_input" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" placeholder="Ej. Se transfirió el riesgo mediante póliza de seguro contratada el 10/09..."></textarea>
+                    <p class="text-[11px] text-slate-500 mt-1.5">
+                        Esta estrategia no genera un Mantenimiento, así que esta es la única constancia de qué se hizo realmente.
                     </p>
                 </div>
             </div>
@@ -275,21 +355,26 @@
         }
     })();
 
-    @if($errors->any() || old('fk_id_evaluacion'))
+    @if($errors->any() || old('fk_id_evaluacion') || $modoRevision)
         (function autoAbrirFormulario() {
             var card = document.getElementById('formTratamientoCard');
             if (card && card.classList.contains('hidden')) {
                 toggleFormTratamiento();
             }
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         })();
     @endif
 
-    function openEstadoModal(id, estadoActual) {
+    var ESTRATEGIAS_SIN_MANTENIMIENTO = ['Transferir', 'Evitar', 'Aceptar'];
+
+    function openEstadoModal(id, estadoActual, estrategia) {
         var form = document.getElementById('estadoForm');
         form.action = '/admin/riesgos/plan-tratamiento/' + id;
+        form.dataset.estrategia = estrategia;
 
         var select = document.getElementById('estado_tratamiento_input');
         select.value = estadoActual;
+        document.getElementById('observacion_cierre_input').value = '';
         toggleAvisoCompletado();
 
         var modal = document.getElementById('estadoModal');
@@ -314,7 +399,17 @@
     function toggleAvisoCompletado() {
         var select = document.getElementById('estado_tratamiento_input');
         var aviso = document.getElementById('avisoCompletado');
-        aviso.classList.toggle('hidden', select.value !== 'Completado');
+        var form = document.getElementById('estadoForm');
+        var campoObs = document.getElementById('campoObservacionCierre');
+        var inputObs = document.getElementById('observacion_cierre_input');
+
+        var esCompletado = select.value === 'Completado';
+        var estrategia = form.dataset.estrategia || '';
+        var requiereObservacion = esCompletado && ESTRATEGIAS_SIN_MANTENIMIENTO.indexOf(estrategia) !== -1;
+
+        aviso.classList.toggle('hidden', !esCompletado);
+        campoObs.classList.toggle('hidden', !requiereObservacion);
+        inputObs.required = requiereObservacion;
     }
 
     (function initPlanTratamiento() {
@@ -322,6 +417,194 @@
         if (!select) return;
         select.removeEventListener('change', toggleAvisoCompletado);
         select.addEventListener('change', toggleAvisoCompletado);
+    })();
+
+    // ===== Mismo toggle de "¿Qué se hizo realmente?" pero en el formulario
+    // grande de Registrar/Revisar (aquí la estrategia SÍ es editable) =====
+    (function () {
+        function toggleObservacionCierreForm() {
+            var estadoSel = document.getElementById('selectEstadoTratamientoForm');
+            var estrategiaSel = document.getElementById('selectEstrategiaTratamiento');
+            var campo = document.getElementById('campoObservacionCierreForm');
+            var input = document.getElementById('observacionCierreFormInput');
+            if (!estadoSel || !estrategiaSel || !campo || !input) return;
+
+            var requiere = estadoSel.value === 'Completado' && ESTRATEGIAS_SIN_MANTENIMIENTO.indexOf(estrategiaSel.value) !== -1;
+            campo.classList.toggle('hidden', !requiere);
+            input.required = requiere;
+        }
+
+        function init() {
+            var estadoSel = document.getElementById('selectEstadoTratamientoForm');
+            var estrategiaSel = document.getElementById('selectEstrategiaTratamiento');
+            if (!estadoSel || !estrategiaSel) return;
+
+            estadoSel.removeEventListener('change', toggleObservacionCierreForm);
+            estadoSel.addEventListener('change', toggleObservacionCierreForm);
+            estrategiaSel.removeEventListener('change', toggleObservacionCierreForm);
+            estrategiaSel.addEventListener('change', toggleObservacionCierreForm);
+
+            toggleObservacionCierreForm();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        document.addEventListener('turbo:load', init);
+    })();
+
+    // ===== Sugerencia: mostrarla/autocompletar, detectar diferencias y avisar
+    // qué se disparará al guardar (Fases 1 y 2) =====
+    (function () {
+        var MAPA_SUGERIDO = @json($mapaSugerido);
+        // En modo revisión la sugerencia ya quedó congelada en el registro
+        // (no depende de ningún select); en modo creación se recalcula cada
+        // vez que cambia la evaluación elegida.
+        var sugerenciaActual = @if($modoRevision && $tratamientoParaRevisar->estrategia_sugerida) @json(['estrategia' => $tratamientoParaRevisar->estrategia_sugerida, 'accion_preventiva' => $tratamientoParaRevisar->accion_sugerida]) @else null @endif;
+
+        var TEXTO_MITIGAR = 'Al guardar, se generará automáticamente una orden de mantenimiento programada vinculada a esta evaluación.';
+        var TEXTO_SIN_MANTENIMIENTO = 'Esta estrategia no genera una orden de mantenimiento; el cierre del tratamiento se registrará manualmente.';
+
+        function actualizarCajaSugerencia() {
+            var select = document.getElementById('selectEvaluacionTratamiento');
+            var caja = document.getElementById('cajaSugerencia');
+            var texto = document.getElementById('sugerenciaTexto');
+            if (!select || !caja) return;
+
+            var opcion = select.options[select.selectedIndex];
+            var nivel = opcion ? opcion.getAttribute('data-nivel') : null;
+            var sugerencia = nivel ? MAPA_SUGERIDO[nivel] : null;
+
+            sugerenciaActual = sugerencia || null;
+
+            if (!sugerencia) {
+                caja.classList.add('hidden');
+                actualizarIndicadoresDiferencia();
+                return;
+            }
+
+            caja.classList.remove('hidden');
+            texto.textContent = sugerencia.estrategia + ' — ' + sugerencia.accion_preventiva;
+
+            var selectEstrategia = document.getElementById('selectEstrategiaTratamiento');
+            var textareaAccion = document.getElementById('textareaAccionPreventiva');
+
+            // Se autocompleta salvo que el usuario ya haya editado el campo a
+            // mano (marcado por 'autofilled' !== 'true'): así, cambiar de
+            // evaluación reemplaza la sugerencia anterior, pero nunca pisa
+            // algo que el usuario escribió él mismo.
+            if (!selectEstrategia.value || selectEstrategia.dataset.autofilled === 'true') {
+                selectEstrategia.value = sugerencia.estrategia;
+                selectEstrategia.dataset.autofilled = 'true';
+            }
+            if (!textareaAccion.value || textareaAccion.dataset.autofilled === 'true') {
+                textareaAccion.value = sugerencia.accion_preventiva;
+                textareaAccion.dataset.autofilled = 'true';
+            }
+
+            actualizarIndicadoresDiferencia();
+            actualizarAvisoAccionAutomatica();
+        }
+
+        // FASE 1: "Restablecer sugerencia" (acción) y "modificado respecto a
+        // la sugerencia" (estrategia) — puramente informativos/de UI, no
+        // envían nada al servidor por sí solos.
+        function actualizarIndicadoresDiferencia() {
+            var linkRestablecer = document.getElementById('linkRestablecerSugerencia');
+            var labelModificado = document.getElementById('labelEstrategiaModificada');
+            var textareaAccion = document.getElementById('textareaAccionPreventiva');
+            var selectEstrategia = document.getElementById('selectEstrategiaTratamiento');
+            if (!linkRestablecer || !labelModificado || !textareaAccion || !selectEstrategia) return;
+
+            if (!sugerenciaActual) {
+                linkRestablecer.classList.add('hidden');
+                labelModificado.classList.add('hidden');
+                return;
+            }
+
+            var accionDifiere = textareaAccion.value.trim() !== (sugerenciaActual.accion_preventiva || '').trim();
+            linkRestablecer.classList.toggle('hidden', !accionDifiere);
+
+            var estrategiaDifiere = selectEstrategia.value !== sugerenciaActual.estrategia;
+            labelModificado.classList.toggle('hidden', !estrategiaDifiere);
+        }
+
+        // FASE 2: qué va a pasar al guardar, según la estrategia elegida.
+        function actualizarAvisoAccionAutomatica() {
+            var selectEstrategia = document.getElementById('selectEstrategiaTratamiento');
+            var aviso = document.getElementById('avisoAccionAutomatica');
+            if (!selectEstrategia || !aviso) return;
+
+            if (selectEstrategia.value === 'Mitigar') {
+                aviso.textContent = TEXTO_MITIGAR;
+            } else if (selectEstrategia.value) {
+                aviso.textContent = TEXTO_SIN_MANTENIMIENTO;
+            } else {
+                aviso.textContent = '';
+            }
+        }
+
+        function restablecerSugerencia() {
+            if (!sugerenciaActual) return;
+            var textareaAccion = document.getElementById('textareaAccionPreventiva');
+            textareaAccion.value = sugerenciaActual.accion_preventiva;
+            textareaAccion.dataset.autofilled = 'true';
+            actualizarIndicadoresDiferencia();
+        }
+
+        function marcarComoEditadoManualmente(e) {
+            e.target.dataset.autofilled = 'false';
+            actualizarIndicadoresDiferencia();
+        }
+
+        function init() {
+            var select = document.getElementById('selectEvaluacionTratamiento');
+            var selectEstrategia = document.getElementById('selectEstrategiaTratamiento');
+            var textareaAccion = document.getElementById('textareaAccionPreventiva');
+            var linkRestablecer = document.getElementById('linkRestablecerSugerencia');
+
+            if (select) {
+                select.removeEventListener('change', actualizarCajaSugerencia);
+                select.addEventListener('change', actualizarCajaSugerencia);
+            }
+
+            [selectEstrategia, textareaAccion].forEach(function (campo) {
+                if (!campo) return;
+                campo.removeEventListener('input', marcarComoEditadoManualmente);
+                campo.addEventListener('input', marcarComoEditadoManualmente);
+            });
+
+            if (selectEstrategia) {
+                // El <select> de Estrategia se cambia con el mouse (evento
+                // 'change'), no escribiendo texto ('input'): se necesitan
+                // ambos listeners para que la etiqueta "modificado respecto a
+                // la sugerencia" y el aviso de Fase 2 reaccionen siempre.
+                selectEstrategia.removeEventListener('change', marcarComoEditadoManualmente);
+                selectEstrategia.addEventListener('change', marcarComoEditadoManualmente);
+                selectEstrategia.removeEventListener('change', actualizarAvisoAccionAutomatica);
+                selectEstrategia.addEventListener('change', actualizarAvisoAccionAutomatica);
+            }
+            if (linkRestablecer) {
+                linkRestablecer.removeEventListener('click', restablecerSugerencia);
+                linkRestablecer.addEventListener('click', restablecerSugerencia);
+            }
+
+            if (select) {
+                actualizarCajaSugerencia();
+            } else {
+                actualizarIndicadoresDiferencia();
+            }
+            actualizarAvisoAccionAutomatica();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        document.addEventListener('turbo:load', init);
     })();
 </script>
 @endsection

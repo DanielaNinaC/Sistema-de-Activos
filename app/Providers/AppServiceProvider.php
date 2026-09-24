@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Alerta;
+use App\Observers\AlertaObserver;
 use App\Services\NotificacionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
@@ -22,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Alerta::observe(AlertaObserver::class);
+
         View::composer('layouts.principal', function ($view) {
             if (Auth::check()) {
                 $service = app(NotificacionService::class);

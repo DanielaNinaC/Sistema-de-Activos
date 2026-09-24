@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
             Route::middleware('modulo:activos')->group(function () {
                 Route::get('/activos/inventario', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'index'])->name('activos.inventario');
                 Route::get('/activos/detalles/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'show'])->name('activos.show');
+                Route::post('/activos/{id}/historial', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'storeHistorial'])->name('activos.historial.store');
                 Route::get('/activos/editar/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'edit'])->name('activos.edit');
                 Route::put('/activos/actualizar/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'update'])->name('activos.update');
                 Route::get('/activos/registrar-activo', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'create'])->name('activos.registrar');
@@ -54,6 +55,8 @@ Route::middleware('auth')->group(function () {
                 Route::get('/activos/ubicaciones/{id}/equipos', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'activosPorUbicacion'])->name('activos.ubicaciones.equipos');
                 Route::post('/activos/ubicaciones', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'storeUbicacion'])->name('activos.ubicaciones.store');
                 Route::put('/activos/ubicaciones/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'updateUbicacion'])->name('activos.ubicaciones.update');
+                Route::get('/activos/inventario/excel', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'exportExcel'])->name('activos.inventario.excel');
+                Route::get('/activos/inventario/pdf', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'exportPdf'])->name('activos.inventario.pdf');
             });
 
             // ── Incidentes ──
@@ -129,6 +132,16 @@ Route::middleware('auth')->group(function () {
 
                 Route::get('/auditoria-consolidado', [App\Http\Controllers\Admin\InformesController::class, 'auditoriaConsolidado'])->name('auditoria');
                 Route::get('/auditoria-consolidado/pdf', [App\Http\Controllers\Admin\InformesController::class, 'auditoriaConsolidadoPdf'])->name('auditoria.pdf');
+
+                Route::get('/estado-activos', [App\Http\Controllers\Admin\InformesController::class, 'estadoActivos'])->name('estado-activos');
+                Route::get('/estado-activos/pdf', [App\Http\Controllers\Admin\InformesController::class, 'estadoActivosPdf'])->name('estado-activos.pdf');
+                Route::get('/estado-activos/excel', [App\Http\Controllers\Admin\InformesController::class, 'estadoActivosExcel'])->name('estado-activos.excel');
+
+                Route::get('/activos-baja', [App\Http\Controllers\Admin\InformesController::class, 'activosDeBaja'])->name('activos-baja');
+                Route::get('/activos-baja/pdf', [App\Http\Controllers\Admin\InformesController::class, 'activosDeBajaPdf'])->name('activos-baja.pdf');
+                Route::get('/activos-baja/excel', [App\Http\Controllers\Admin\InformesController::class, 'activosDeBajaExcel'])->name('activos-baja.excel');
+
+                Route::get('/historial-tratamiento', [App\Http\Controllers\Admin\InformesController::class, 'historialTratamiento'])->name('historial-tratamiento');
             });
         });
 });

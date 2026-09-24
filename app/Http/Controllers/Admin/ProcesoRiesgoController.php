@@ -8,12 +8,14 @@ use App\Models\ActivoTecnologico;
 use App\Models\Alerta;
 use App\Models\Categoria;
 use App\Models\EvaluacionRiesgo;
+use App\Models\Mantenimiento;
 use App\Models\ModoFalla;
 use App\Models\PesoAhp;
 use App\Models\PlanTratamientoRiesgo;
 use App\Services\MotorFmeaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class ProcesoRiesgoController extends Controller
 {
@@ -82,6 +84,7 @@ class ProcesoRiesgoController extends Controller
             'nivel_msr' => 'required|in:muy_baja,baja,moderada,alta,muy_alta',
             'justificacion_severidad' => 'nullable|string',
             'justificacion_msr' => 'nullable|string',
+            'indicador_seguimiento' => 'nullable|string|max:255',
         ]);
 
         $data['valor_severidad_base'] = MotorFmeaService::MAPA_SEVERIDAD[$data['nivel_severidad']];
@@ -103,6 +106,7 @@ class ProcesoRiesgoController extends Controller
             'nivel_msr' => 'required|in:muy_baja,baja,moderada,alta,muy_alta',
             'justificacion_severidad' => 'nullable|string',
             'justificacion_msr' => 'nullable|string',
+            'indicador_seguimiento' => 'nullable|string|max:255',
         ]);
 
         $data['valor_severidad_base'] = MotorFmeaService::MAPA_SEVERIDAD[$data['nivel_severidad']];
@@ -143,6 +147,12 @@ class ProcesoRiesgoController extends Controller
         );
 
         if ($resultado['sin_modos_falla']) {
+            if ($request->input('retorno') === 'ficha' || $request->has('from_ficha')) {
+                return redirect()->to(route('admin.activos.show', $resultado['activo']->id_activo) . '#riesgo')
+                    ->with('warning', "El activo '{$resultado['activo']->nombre_equipo}' no tiene modos de falla definidos para su categoría. No se generaron evaluaciones ni alertas.")
+                    ->with('resultadoMotor', $resultado);
+            }
+
             return redirect()->route('admin.riesgos.evaluacion')
                 ->with('warning', "El activo '{$resultado['activo']->nombre_equipo}' no tiene modos de falla definidos para su categoría. No se generaron evaluaciones ni alertas.")
                 ->with('resultadoMotor', $resultado);
@@ -162,6 +172,12 @@ class ProcesoRiesgoController extends Controller
                 : "los {$restantes} restantes conservan su última evaluación vigente";
 
             $mensaje .= " {$verbo} {$evaluados} de {$resultado['modos_categoria']} modos de falla; {$frase}.";
+        }
+
+        if ($request->input('retorno') === 'ficha' || $request->has('from_ficha')) {
+            return redirect()->to(route('admin.activos.show', $resultado['activo']->id_activo) . '#riesgo')
+                ->with('success', $mensaje)
+                ->with('resultadoMotor', $resultado);
         }
 
         return redirect()->route('admin.riesgos.evaluacion')
@@ -215,12 +231,9 @@ class ProcesoRiesgoController extends Controller
 
         $evaluacion = EvaluacionRiesgo::create($data);
 
-        // Actualizar criticidad del activo según las evaluaciones vigentes
-        $maxScoreVigente = EvaluacionRiesgo::where('fk_id_activo', $data['fk_id_activo'])
-            ->where('vigente', true)
-            ->max('score_calculado');
-        $infoGlobal = $service->obtenerNivelYAlerta((float) $maxScoreVigente);
-        $activo->update(['criticidad_institucional' => $infoGlobal['criticidad']]);
+        // Actualizar nivel_riesgo del activo según la regla de evaluaciones vigentes:
+        // si tiene 4 o más vigentes se promedian; de lo contrario, el último nivel registrado.
+        $service->actualizarNivelRiesgoActivo($activo);
 
         Alerta::create([
             'fk_id_evaluacion' => $evaluacion->id_evaluacion,
@@ -228,6 +241,11 @@ class ProcesoRiesgoController extends Controller
             'fecha_generacion' => now(),
             'notificacion_enviada' => true,
         ]);
+
+        if ($request->input('retorno') === 'ficha' || $request->has('from_ficha')) {
+            return redirect()->to(route('admin.activos.show', $data['fk_id_activo']) . '#riesgo')
+                ->with('success', 'Evaluación de riesgo FMEA registrada con éxito para este activo.');
+        }
 
         return redirect()->route('admin.riesgos.evaluacion')->with('success', 'Evaluación manual registrada con éxito');
     }
@@ -324,7 +342,16 @@ class ProcesoRiesgoController extends Controller
      */
     private const ESTADOS_TRATAMIENTO = ['Pendiente', 'En Proceso', 'Completado'];
 
-    public function tratamientoIndex()
+    /**
+     * Estrategias que nunca generan un Mantenimiento (ver
+     * MotorFmeaService::crearMantenimientoSiMitiga). Al completarlas, la
+     * única constancia de "qué se hizo" es 'observacion_cierre': por eso se
+     * exige no vacía en ese momento. Para 'Mitigar', "qué se hizo" ya vive en
+     * descripcion_trabajo del Mantenimiento vinculado.
+     */
+    private const ESTRATEGIAS_SIN_MANTENIMIENTO = ['Transferir', 'Evitar', 'Aceptar'];
+
+    public function tratamientoIndex(Request $request)
     {
         $tratamientos = PlanTratamientoRiesgo::with(['evaluacion.activo:id_activo,nombre_equipo'])->orderByDesc('id_tratamiento')->paginate(15);
         $evaluaciones = EvaluacionRiesgo::with('activo:id_activo,nombre_equipo')
@@ -335,8 +362,24 @@ class ProcesoRiesgoController extends Controller
         $evaluacionesSinTratamiento = $this->evaluacionesSinTratamiento();
         $estrategias = self::ESTRATEGIAS_TRATAMIENTO;
         $estados = self::ESTADOS_TRATAMIENTO;
+        // Misma fuente que usa el motor automático (MotorFmeaService), para
+        // que el formulario manual sugiera lo mismo que sugeriría el motor.
+        $mapaSugerido = MotorFmeaService::MAPA_TRATAMIENTO_SUGERIDO;
 
-        return view('riesgos.plan-tratamiento', compact('tratamientos', 'evaluaciones', 'evaluacionesSinTratamiento', 'estrategias', 'estados'));
+        // Antes de renderizar: si el formulario apunta a una evaluación
+        // específica (?crear=ID, desde "Crear tratamiento" o "Revisar
+        // sugerencia"), se busca si YA existe un PlanTratamientoRiesgo para
+        // ella. Si existe, se carga para revisión (nunca se duplica); si no,
+        // el formulario nace en blanco (p. ej. nivel Medio/Bajo sin borrador).
+        $idEvaluacionForm = $request->query('crear');
+        $tratamientoParaRevisar = $idEvaluacionForm
+            ? PlanTratamientoRiesgo::with('evaluacion.activo')->where('fk_id_evaluacion', $idEvaluacionForm)->first()
+            : null;
+
+        return view('riesgos.plan-tratamiento', compact(
+            'tratamientos', 'evaluaciones', 'evaluacionesSinTratamiento', 'estrategias', 'estados', 'mapaSugerido',
+            'tratamientoParaRevisar'
+        ));
     }
 
     public function tratamientoStore(Request $request, MotorFmeaService $service)
@@ -346,26 +389,122 @@ class ProcesoRiesgoController extends Controller
             'estrategia' => 'required|string|in:' . implode(',', self::ESTRATEGIAS_TRATAMIENTO),
             'accion_preventiva' => 'required|string',
             'estado_tratamiento' => 'required|string|in:' . implode(',', self::ESTADOS_TRATAMIENTO),
+            'observacion_cierre' => [
+                Rule::requiredIf(fn () => $request->input('estado_tratamiento') === 'Completado'
+                    && in_array($request->input('estrategia'), self::ESTRATEGIAS_SIN_MANTENIMIENTO, true)),
+                'nullable',
+                'string',
+            ],
             'fecha_compromiso' => 'nullable|date',
+            // 'indicador_seguimiento' NO es un campo de este formulario: vive
+            // en el catálogo de modos de falla y se copia solo (ver rama
+            // "sin borrador previo" abajo y MotorFmeaService::evaluarActivo()).
+            // Al no estar en esta lista, Laravel lo descarta si alguien lo
+            // envía igual (ej. payload manipulado).
+        ], [
+            'observacion_cierre.required' => 'Debes registrar qué se hizo realmente antes de cerrar un tratamiento sin mantenimiento asociado.',
         ]);
 
-        $data['origen'] = 'manual';
+        // Este formulario sirve tanto para crear un tratamiento nuevo como
+        // para revisar/confirmar el borrador que el motor ya generó para esta
+        // evaluación (ver tratamientoIndex): NUNCA se duplica. Se busca por
+        // fk_id_evaluacion, la misma clave que hace 1 evaluación = 1
+        // tratamiento (ver FASE 0 de la ronda anterior).
+        $tratamientoExistente = PlanTratamientoRiesgo::where('fk_id_evaluacion', $data['fk_id_evaluacion'])->first();
 
-        $tratamiento = PlanTratamientoRiesgo::create($data);
+        if ($tratamientoExistente) {
+            $estrategiaAnterior = $tratamientoExistente->estrategia;
 
-        // Cierre del ciclo: solo "Mitigar" implica intervención física sobre
-        // el activo, así que solo esa estrategia programa un Mantenimiento.
-        $service->crearMantenimientoSiMitiga($tratamiento);
+            $tratamientoExistente->update([
+                'estrategia' => $data['estrategia'],
+                'accion_preventiva' => $data['accion_preventiva'],
+                'estado_tratamiento' => $data['estado_tratamiento'],
+                'observacion_cierre' => $data['observacion_cierre'] ?? $tratamientoExistente->observacion_cierre,
+                'fecha_compromiso' => $data['fecha_compromiso'] ?? $tratamientoExistente->fecha_compromiso,
+            ]);
+            // Si el usuario confirma la sugerencia tal cual (sin cambiar
+            // ningún valor), Eloquent no detecta atributos "dirty" y no
+            // toca updated_at por sí solo. Se fuerza explícitamente: sin
+            // agregar ninguna columna, 'updated_at > created_at' es la señal
+            // de "ya fue revisado por un usuario" que usa la vista.
+            $tratamientoExistente->touch();
+            // 'estrategia_sugerida'/'accion_sugerida'/'indicador_seguimiento'
+            // y 'origen' no se tocan: siguen reflejando qué generó el motor
+            // originalmente, copiado del catálogo una sola vez al crearse.
+            $tratamiento = $tratamientoExistente->fresh();
 
-        return redirect()->route('admin.riesgos.tratamiento')->with('success', 'Plan de tratamiento creado con éxito');
+            $this->reconciliarMantenimientoPorCambioEstrategia($tratamiento, $estrategiaAnterior, $service);
+
+            $mensaje = 'Sugerencia de tratamiento confirmada con éxito';
+        } else {
+            // Sin borrador previo (p. ej. nivel Medio/Bajo que el usuario
+            // decide tratar igual): se congela la sugerencia si el nivel
+            // tuviera una definida, y se crea desde cero.
+            $evaluacion = EvaluacionRiesgo::with('modoFalla')->find($data['fk_id_evaluacion']);
+            $sugerencia = MotorFmeaService::MAPA_TRATAMIENTO_SUGERIDO[$evaluacion->nivel_riesgo] ?? null;
+            if ($sugerencia) {
+                $data['estrategia_sugerida'] = $sugerencia['estrategia'];
+                $data['accion_sugerida'] = $sugerencia['accion_preventiva'];
+                // Del catálogo por modo de falla, no del formulario (ver
+                // MotorFmeaService::evaluarActivo() para el mismo criterio).
+                $data['indicador_seguimiento'] = $evaluacion->modoFalla->indicador_seguimiento ?? null;
+            }
+
+            $data['origen'] = 'manual';
+            $tratamiento = PlanTratamientoRiesgo::create($data);
+
+            // Cierre del ciclo: solo "Mitigar" implica intervención física
+            // sobre el activo, así que solo esa estrategia programa un Mantenimiento.
+            $service->crearMantenimientoSiMitiga($tratamiento);
+
+            $mensaje = 'Plan de tratamiento creado con éxito';
+        }
+
+        return redirect()->route('admin.riesgos.tratamiento')->with('success', $mensaje);
+    }
+
+    /**
+     * Si al confirmar/ajustar un tratamiento existente la estrategia cambió
+     * de o hacia 'Mitigar', el Mantenimiento vinculado deja de corresponder:
+     * se programa uno nuevo si ahora es Mitigar, o se cancela el que había
+     * quedado agendado si dejó de serlo (nunca se borra el registro: queda
+     * como 'Cancelado' para trazabilidad).
+     */
+    private function reconciliarMantenimientoPorCambioEstrategia(PlanTratamientoRiesgo $tratamiento, ?string $estrategiaAnterior, MotorFmeaService $service): void
+    {
+        if ($estrategiaAnterior === $tratamiento->estrategia) {
+            return;
+        }
+
+        if ($tratamiento->estrategia === 'Mitigar') {
+            $service->crearMantenimientoSiMitiga($tratamiento);
+
+            return;
+        }
+
+        Mantenimiento::where('id_evaluacion_origen', $tratamiento->fk_id_evaluacion)
+            ->whereIn('estado_mantenimiento', ['Programado', 'Pendiente', 'En ejecución'])
+            ->update(['estado_mantenimiento' => 'Cancelado']);
     }
 
     public function tratamientoUpdate(Request $request, $id)
     {
         $tratamiento = PlanTratamientoRiesgo::findOrFail($id);
 
+        // 'estrategia_sugerida'/'accion_sugerida' son de solo lectura tras la
+        // creación: no forman parte de $data, así que ningún update puede
+        // tocarlas, sea cual sea el payload recibido. 'estrategia' tampoco es
+        // editable aquí por el mismo motivo (ver ronda anterior).
         $data = $request->validate([
             'estado_tratamiento' => 'required|string|in:' . implode(',', self::ESTADOS_TRATAMIENTO),
+            'observacion_cierre' => [
+                Rule::requiredIf(fn () => $request->input('estado_tratamiento') === 'Completado'
+                    && in_array($tratamiento->estrategia, self::ESTRATEGIAS_SIN_MANTENIMIENTO, true)),
+                'nullable',
+                'string',
+            ],
+        ], [
+            'observacion_cierre.required' => 'Debes registrar qué se hizo realmente antes de cerrar un tratamiento sin mantenimiento asociado.',
         ]);
 
         $tratamiento->update($data);

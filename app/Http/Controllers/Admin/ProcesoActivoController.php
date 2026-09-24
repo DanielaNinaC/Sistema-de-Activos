@@ -96,6 +96,11 @@ class ProcesoActivoController extends Controller
             'prioridad' => $data['prioridad'],
         ]);
 
+        if ($request->input('retorno') === 'ficha' || $request->has('from_ficha')) {
+            return redirect()->to(route('admin.activos.show', $data['fk_id_activo']) . '#incidentes')
+                ->with('success', 'Incidente reportado y registrado con éxito para este activo.');
+        }
+
         return redirect()->route('admin.incidentes.seguimiento')->with('success', 'Incidente registrado con éxito. Ahora puede realizar su seguimiento.');
     }
 
@@ -291,6 +296,11 @@ class ProcesoActivoController extends Controller
         }
 
         Mantenimiento::create($data);
+
+        if ($request->input('retorno') === 'ficha' || $request->has('from_ficha')) {
+            return redirect()->to(route('admin.activos.show', $data['fk_id_activo']) . '#mantenimiento')
+                ->with('success', 'Mantenimiento programado con éxito para este activo.');
+        }
 
         return redirect()->route('admin.mantenimiento.programar')->with('success', 'Mantenimiento registrado con éxito');
     }

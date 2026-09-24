@@ -168,10 +168,10 @@ class MotorFmeaServiceTest extends TestCase
         $this->assertEquals(100, $resultado['porcentaje_desgaste']);
         $this->assertFalse($resultado['sin_modos_falla']);
         $this->assertSame(8.91, $resultado['max_score']);
-        $this->assertSame('Crítica', $resultado['criticidad_global']);
+        $this->assertSame('Crítico', $resultado['criticidad_global']);
         $this->assertSame('Roja', $resultado['alerta_global']);
 
-        $this->assertSame('Crítica', $activo->fresh()->criticidad_institucional);
+        $this->assertSame('Crítico', $activo->fresh()->criticidad_institucional);
 
         $this->assertDatabaseHas('evaluacion_riesgo', [
             'fk_id_activo' => $activo->id_activo,

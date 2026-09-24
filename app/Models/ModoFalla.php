@@ -21,6 +21,7 @@ class ModoFalla extends Model
         'nivel_msr',
         'justificacion_severidad',
         'justificacion_msr',
+        'indicador_seguimiento',
     ];
 
     public function categoria()

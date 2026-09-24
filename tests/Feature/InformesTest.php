@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\ActivoTecnologico;
 use App\Models\Categoria;
 use App\Models\EvaluacionRiesgo;
+use App\Models\Incidente;
+use App\Models\Mantenimiento;
 use App\Models\ModoFalla;
 use App\Models\PesoAhp;
 use App\Models\PlanTratamientoRiesgo;
@@ -40,6 +42,21 @@ class InformesTest extends TestCase
         $this->actingAs($admin);
 
         return $admin;
+    }
+
+    /**
+     * generarIntroduccionAuditoria()/generarConclusionAuditoria() son
+     * privados a propósito (no son una API pública del controlador): se
+     * invocan por reflexión para poder afirmar el texto exacto que producen,
+     * ya que desde la Fase de corrección solo se usan en la ruta PDF, cuya
+     * respuesta es un binario que no expone viewData().
+     */
+    private function invocarMetodoPrivado(object $objeto, string $metodo, array $argumentos)
+    {
+        $reflexion = new \ReflectionMethod($objeto, $metodo);
+        $reflexion->setAccessible(true);
+
+        return $reflexion->invokeArgs($objeto, $argumentos);
     }
 
     private function crearPesosVigentes(): void
@@ -210,6 +227,150 @@ class InformesTest extends TestCase
         $this->assertSame(0.0, $resumen['promedio_vida_util_consumida']);
         $this->assertSame(0, $resumen['tratamientos_pendientes']);
         $this->assertSame(0, $resumen['tratamientos_vencidos']);
+    }
+
+    /**
+     * PLN (NLG por plantilla) — sin activos registrados, la introducción y la
+     * conclusión deben decirlo tal cual, sin inventar cifras ni asumir causas.
+     * Solo se generan para el PDF (ver auditoriaConsolidadoPdf()), así que se
+     * invocan por reflexión en vez de leerlas de la vista en pantalla.
+     */
+    public function test_introduccion_y_conclusion_del_informe_general_sin_datos(): void
+    {
+        $this->loginComoAdmin();
+        $controlador = app(\App\Http\Controllers\Admin\InformesController::class);
+
+        $resumen = $this->invocarMetodoPrivado($controlador, 'calcularResumenAuditoria', ['2000-01-01', '2000-01-31']);
+        $introduccion = $this->invocarMetodoPrivado($controlador, 'generarIntroduccionAuditoria', [$resumen]);
+        $conclusion = $this->invocarMetodoPrivado($controlador, 'generarConclusionAuditoria', [$resumen]);
+
+        $this->assertSame(0, $resumen['total_activos']);
+        $this->assertStringContainsString('un total de 0 activos tecnológicos', $introduccion);
+        $this->assertStringContainsString('01/01/2000', $introduccion);
+        $this->assertStringContainsString('31/01/2000', $introduccion);
+
+        $this->assertSame('No hay activos tecnológicos registrados en el sistema a la fecha de generación de este informe.', $conclusion);
+
+        // Y no deben aparecer en la vista de pantalla (solo van en el PDF).
+        $response = $this->get(route('admin.informes.auditoria', ['fecha_inicio' => '2000-01-01', 'fecha_fin' => '2000-01-31']));
+        $response->assertOk();
+        $response->assertDontSee('Introducción');
+        $response->assertDontSee('Conclusión');
+    }
+
+    /**
+     * PLN (NLG por plantilla) — con datos reales, la conclusión debe reflejar
+     * exactamente los mismos números que calcularResumenAuditoria(), sin
+     * modificarlos: activos sin evaluar, distribución de riesgo, tratamientos
+     * vencidos, incidentes y mantenimientos del período.
+     */
+    public function test_conclusion_del_informe_general_refleja_los_indicadores_reales(): void
+    {
+        $admin = $this->loginComoAdmin();
+        $this->crearPesosVigentes();
+
+        $categoria = Categoria::create([
+            'nombre_categoria' => 'Servidores PLN',
+            'vida_util_meses' => 60,
+            'nivel_dependencia' => 'Alta',
+        ]);
+        $modo = ModoFalla::create([
+            'fk_id_categoria' => $categoria->id_categoria,
+            'nombre_modo_falla' => 'Falla de prueba PLN',
+            'valor_severidad_base' => 9,
+            'valor_msr_base' => 8,
+        ]);
+        $ubicacion = Ubicacion::create(['seccion' => 'PLN', 'aula' => 'A']);
+
+        // Activo A: evaluado y en nivel Crítico.
+        $activoEvaluado = ActivoTecnologico::create([
+            'fk_id_categoria' => $categoria->id_categoria,
+            'fk_id_ubicacion' => $ubicacion->id_ubicacion,
+            'codigo_patrimonial' => 'PLN-001',
+            'nombre_equipo' => 'Servidor PLN Evaluado',
+            'fecha_adquisicion' => now()->subMonths(24)->format('Y-m-d'),
+        ]);
+        $evaluacion = EvaluacionRiesgo::create([
+            'fk_id_activo' => $activoEvaluado->id_activo,
+            'fk_id_modo_falla' => $modo->id_modo_falla,
+            'valor_severidad' => 9, 'valor_frecuencia' => 6, 'valor_msr' => 8,
+            'score_calculado' => 8.39, 'nivel_riesgo' => 'Crítico', 'vigente' => true, 'fecha_evaluacion' => now(),
+        ]);
+        PlanTratamientoRiesgo::create([
+            'fk_id_evaluacion' => $evaluacion->id_evaluacion,
+            'estrategia' => 'Mitigar',
+            'accion_preventiva' => 'Acción de prueba.',
+            'estado_tratamiento' => 'Pendiente',
+            'origen' => 'manual',
+            'fecha_compromiso' => now()->subDays(3)->toDateString(), // vencido
+        ]);
+
+        // Activo B: sin ninguna evaluación registrada.
+        $activoSinEvaluar = ActivoTecnologico::create([
+            'fk_id_categoria' => $categoria->id_categoria,
+            'fk_id_ubicacion' => $ubicacion->id_ubicacion,
+            'codigo_patrimonial' => 'PLN-002',
+            'nombre_equipo' => 'Servidor PLN Sin Evaluar',
+            'fecha_adquisicion' => now()->subMonths(6)->format('Y-m-d'),
+        ]);
+
+        $fechaInicio = now()->startOfMonth()->toDateString();
+        $fechaFin = now()->toDateString();
+
+        Incidente::create([
+            'fk_id_activo' => $activoEvaluado->id_activo,
+            'fk_id_usuario_reporta' => $admin->id_usuario,
+            'fecha_incidente' => now(),
+            'descripcion_falla' => 'Incidente de prueba PLN.',
+            'estado_incidente' => 'Reportado',
+        ]);
+
+        Mantenimiento::create([
+            'fk_id_activo' => $activoEvaluado->id_activo,
+            'fk_id_usuario_asignado' => $admin->id_usuario,
+            'fk_id_origen' => 1,
+            'tipo_mantenimiento' => 'Preventivo',
+            'fecha_programada' => now()->toDateString(),
+            'fecha_ejecucion' => now()->toDateString(),
+            'descripcion_trabajo' => 'Mantenimiento de prueba PLN.',
+            'estado_mantenimiento' => 'Finalizado',
+        ]);
+
+        $response = $this->get(route('admin.informes.auditoria', [
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
+        ]));
+        $response->assertOk();
+        // La Introducción/Conclusión no se muestran en pantalla, solo en el PDF.
+        $response->assertDontSee('Conclusión');
+
+        $resumen = $response->viewData('resumen');
+        $controlador = app(\App\Http\Controllers\Admin\InformesController::class);
+        $conclusion = $this->invocarMetodoPrivado($controlador, 'generarConclusionAuditoria', [$resumen]);
+
+        // La conclusión no debe fabricar números: debe citar los mismos que $resumen.
+        $this->assertStringContainsString(
+            "Del total de {$resumen['total_activos']} activos tecnológicos registrados, 1 (",
+            $conclusion
+        );
+        $this->assertStringContainsString('no cuentan con una evaluación de riesgo vigente.', $conclusion);
+        $this->assertStringContainsString(
+            "{$resumen['distribucion_riesgo']['Crítico']} se encuentran en nivel Crítico",
+            $conclusion
+        );
+        $this->assertStringContainsString('del cual 1 presenta la fecha de compromiso vencida', $conclusion);
+        $this->assertStringContainsString('se registró 1 incidente.', $conclusion);
+        $this->assertStringContainsString('Se ejecutó 1 mantenimiento en el período analizado (1 Preventivo).', $conclusion);
+        $this->assertStringContainsString(
+            'vida útil consumida del inventario es de ' . number_format($resumen['promedio_vida_util_consumida'], 1) . '%.',
+            $conclusion
+        );
+
+        // Nada de predicciones ni recomendaciones: solo el cierre descriptivo fijo.
+        $this->assertStringContainsString(
+            'Los resultados presentados corresponden a los datos registrados en el sistema para el período indicado.',
+            $conclusion
+        );
     }
 
     /** 7.5 */

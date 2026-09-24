@@ -1,6 +1,6 @@
 @extends('layouts.principal')
 
-@section('title', 'Auditoría Consolidada - Informes y Reportes')
+@section('title', 'Resumen General de Activos - Informes y Reportes')
 
 @section('content')
 <div class="max-w-6xl mx-auto space-y-6">
@@ -10,7 +10,7 @@
             <span aria-hidden="true">&#8592;</span>
         </a>
         <div>
-            <h2 class="text-2xl font-bold text-slate-900">Reportes</h2>
+            <h2 class="text-2xl font-bold text-slate-900">Resumen General de Activos</h2>
             <p class="text-xs text-slate-500">Resumen ejecutivo del sistema de gestión de activos y riesgos — documento formal para Dirección</p>
         </div>
     </div>
@@ -27,9 +27,12 @@
             </div>
             <div class="flex items-center gap-2">
                 <button type="submit" class="btn btn-dark">Generar Resumen</button>
-                <a href="{{ route('admin.informes.auditoria.pdf', ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin]) }}" class="btn btn-accent">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    Generar PDF
+                <a href="{{ route('admin.informes.auditoria.pdf', ['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin]) }}"
+                   class="btn btn-secondary flex items-center gap-1.5" target="_blank">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Exportar PDF
                 </a>
             </div>
         </form>

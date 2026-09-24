@@ -32,9 +32,30 @@ class ActivoTecnologico extends Model
         'fecha_adquisicion',
         'estado_operativo',
         'etapa_ciclo_vida',
-        'criticidad_institucional',
+        'nivel_riesgo',
         'observaciones',
+        'fecha_baja',
+        'motivo_baja',
+        'estado_previo_baja',
+        'fk_id_usuario_baja',
     ];
+
+    protected $casts = [
+        'fecha_baja' => 'date',
+    ];
+
+    /**
+     * Accesor y mutador de compatibilidad histórica para 'criticidad_institucional'.
+     */
+    public function getCriticidadInstitucionalAttribute(): ?string
+    {
+        return $this->attributes['nivel_riesgo'] ?? null;
+    }
+
+    public function setCriticidadInstitucionalAttribute(?string $value): void
+    {
+        $this->attributes['nivel_riesgo'] = $value;
+    }
 
     public function categoria()
     {
@@ -44,6 +65,11 @@ class ActivoTecnologico extends Model
     public function ubicacion()
     {
         return $this->belongsTo(Ubicacion::class, 'fk_id_ubicacion', 'id_ubicacion');
+    }
+
+    public function usuarioBaja()
+    {
+        return $this->belongsTo(Usuario::class, 'fk_id_usuario_baja', 'id_usuario');
     }
 
     public function detalleComputadora()

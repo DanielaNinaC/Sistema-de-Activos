@@ -67,19 +67,19 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="w-16 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="w-16 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">N°</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Código</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Equipo</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Categoría</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
-                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Criticidad</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Nivel de Riesgo</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($activos as $activo)
                         <tr class="hover:bg-slate-50/50 transition">
-                            <td class="w-16 px-3 py-4 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $activo->id_activo }}</td>
+                            <td class="w-16 px-3 py-4 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ method_exists($activos, 'firstItem') ? ($activos->firstItem() + $loop->index) : $loop->iteration }}</td>
                             <td class="px-6 py-4 text-center text-sm font-mono font-semibold text-slate-800 whitespace-nowrap">{{ $activo->codigo_patrimonial }}</td>
                             <td class="px-6 py-4 text-center text-sm font-semibold text-slate-900 whitespace-nowrap">
                                 <div>{{ $activo->nombre_equipo }}</div>
@@ -104,16 +104,17 @@
                             </td>
                             <td class="px-6 py-4 text-center text-sm whitespace-nowrap">
                                 @php
-                                    $critStr = strtolower(trim($activo->criticidad_institucional ?? ''));
+                                    $riesgoVal = $activo->nivel_riesgo ?? $activo->criticidad_institucional ?? null;
+                                    $critStr = strtolower(trim($riesgoVal ?? ''));
                                     $critColor = match(true) {
-                                        str_contains($critStr, 'alta') || str_contains($critStr, 'alto') => 'bg-rose-100 text-rose-800 border-rose-200',
+                                        str_contains($critStr, 'alta') || str_contains($critStr, 'alto') || str_contains($critStr, 'crítico') || str_contains($critStr, 'critico') => 'bg-rose-100 text-rose-800 border-rose-200',
                                         str_contains($critStr, 'media') || str_contains($critStr, 'medio') => 'bg-amber-100 text-amber-800 border-amber-200',
                                         str_contains($critStr, 'baja') || str_contains($critStr, 'bajo') => 'bg-emerald-100 text-emerald-800 border-emerald-200',
                                         default => 'bg-slate-100 text-slate-700 border-slate-200',
                                     };
                                 @endphp
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border {{ $critColor }}">
-                                    {{ $activo->criticidad_institucional ?? '-' }}
+                                    {{ $riesgoVal ?? 'Sin evaluar' }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-center text-sm whitespace-nowrap">

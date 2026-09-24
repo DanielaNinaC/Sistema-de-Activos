@@ -7,12 +7,6 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 class="text-2xl font-semibold text-slate-900">Lista de Usuarios</h2>
         <div class="flex flex-wrap items-center gap-2">
-            <button type="button" id="btnAuditarCorreos" onclick="auditarCorreosVisibles()" class="btn btn-secondary flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 0118 0z" />
-                </svg>
-                Auditar Correos (DNS/MX)
-            </button>
             <a href="{{ route('admin.usuarios.create') }}" class="btn btn-primary self-start sm:self-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -74,67 +68,64 @@
 
     {{-- Tabla de Usuarios --}}
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Nombre</th>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Correo</th>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Dominio DNS/MX</th>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Rol</th>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
-                    <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @forelse($usuarios as $u)
-                <tr class="hover:bg-slate-50/50 transition">
-                    <td class="px-6 py-4 text-center text-sm text-slate-700 font-mono">{{ $u->id_usuario }}</td>
-                    <td class="px-6 py-4 text-center text-sm text-slate-900 font-semibold">{{ $u->nombre }} {{ $u->apellido ?? '' }}</td>
-                    <td class="px-6 py-4 text-center text-sm text-slate-600 font-mono user-email-text" data-email="{{ $u->correo }}">{{ $u->correo }}</td>
-                    <td class="px-6 py-4 text-center text-sm">
-                        <span id="email-badge-{{ $u->id_usuario }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                            <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                            Sin auditar
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 text-center text-sm text-slate-700">
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-700">
-                            {{ $u->rol->nombre_rol ?? 'Sin rol' }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 text-center text-sm">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold {{ $u->estado ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200' }}">
-                            {{ $u->estado ? 'Activo' : 'Inactivo' }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 text-center text-sm space-x-1.5">
-                        <a href="{{ route('admin.usuarios.show', $u->id_usuario) }}" class="btn btn-sm btn-primary">
-                            Ver
-                        </a>
-                        <a href="{{ route('admin.usuarios.edit', $u->id_usuario) }}" class="btn btn-sm btn-warning">
-                            Editar
-                        </a>
-                        <form id="user-status-form-{{ $u->id_usuario }}" action="{{ route('admin.usuarios.destroy', $u->id_usuario) }}" method="POST" class="inline-block">
-                            @csrf
-                            @method('DELETE')
-                            <button type="button" 
-                                    onclick="openConfirmModal('user-status-form-{{ $u->id_usuario }}', {{ $u->estado ? 'true' : 'false' }}, '{{ addslashes($u->nombre . ' ' . ($u->apellido ?? '')) }}')"
-                                    class="btn btn-sm btn-dark">
-                                {{ $u->estado ? 'Desactivar cuenta' : 'Activar cuenta' }}
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="7" class="px-6 py-12 text-center text-slate-500">
-                        No se encontraron usuarios que coincidan con la búsqueda.
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="w-16 px-4 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nombre</th>
+                        <th class="px-5 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Correo</th>
+                        <th class="px-4 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Rol</th>
+                        <th class="px-4 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Estado</th>
+                        <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @forelse($usuarios as $u)
+                    <tr class="hover:bg-slate-50/50 transition">
+                        <td class="w-16 px-4 py-3.5 text-center text-sm text-slate-700 font-mono">{{ $u->id_usuario }}</td>
+                        <td class="px-5 py-3.5 text-left text-sm text-slate-900 font-semibold whitespace-nowrap">{{ $u->nombre }} {{ $u->apellido ?? '' }}</td>
+                        <td class="px-5 py-3.5 text-left text-sm text-slate-600 font-mono">{{ $u->correo }}</td>
+                        <td class="px-4 py-3.5 text-center text-sm whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-700">
+                                {{ $u->rol->nombre_rol ?? 'Sin rol' }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center text-sm whitespace-nowrap">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold {{ $u->estado ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200' }}">
+                                {{ $u->estado ? 'Activo' : 'Inactivo' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3.5 text-center text-sm whitespace-nowrap">
+                            <div class="inline-flex items-center justify-center gap-2">
+                                <a href="{{ route('admin.usuarios.show', $u->id_usuario) }}" class="btn btn-sm btn-primary">
+                                    Ver
+                                </a>
+                                <a href="{{ route('admin.usuarios.edit', $u->id_usuario) }}" class="btn btn-sm btn-warning">
+                                    Editar
+                                </a>
+                                <form id="user-status-form-{{ $u->id_usuario }}" action="{{ route('admin.usuarios.destroy', $u->id_usuario) }}" method="POST" class="inline-flex m-0 p-0">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="button" 
+                                            onclick="openConfirmModal('user-status-form-{{ $u->id_usuario }}', {{ $u->estado ? 'true' : 'false' }}, '{{ addslashes($u->nombre . ' ' . ($u->apellido ?? '')) }}')"
+                                            class="btn btn-sm btn-dark whitespace-nowrap">
+                                        {{ $u->estado ? 'Desactivar cuenta' : 'Activar cuenta' }}
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                            No se encontraron usuarios que coincidan con la búsqueda.
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div class="mt-4">
@@ -222,69 +213,15 @@
     function submitConfirmedForm() {
         if (pendingFormId) {
             var form = document.getElementById(pendingFormId);
-            if (form) form.submit();
-        }
-    }
-
-    // Auditoría de correos electrónicos mediante DNS/MX
-    async function auditarCorreosVisibles() {
-        const btn = document.getElementById('btnAuditarCorreos');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = `
-                <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Auditando DNS/MX...
-            `;
-        }
-
-        try {
-            const response = await fetch("{{ route('admin.usuarios.verificar-todos') }}");
-            const data = await response.json();
-
-            if (data.success && data.resultados) {
-                Object.keys(data.resultados).forEach(userId => {
-                    const res = data.resultados[userId];
-                    const badge = document.getElementById(`email-badge-${userId}`);
-                    if (badge) {
-                        if (res.valid) {
-                            badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200";
-                            badge.innerHTML = `
-                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                Dominio MX Válido
-                            `;
-                            badge.title = res.message;
-                        } else {
-                            badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200";
-                            badge.innerHTML = `
-                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                                Dominio Inexistente
-                            `;
-                            badge.title = res.message;
-                        }
-                    }
-                });
-            }
-        } catch (e) {
-            console.error("Error al auditar correos:", e);
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 0118 0z" />
-                    </svg>
-                    Re-auditar Correos (DNS/MX)
-                `;
+            if (form) {
+                var btn = document.getElementById('confirmSubmitBtn');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="inline-block animate-spin mr-1.5">&#9696;</span> Procesando...';
+                }
+                form.submit();
             }
         }
     }
-
-    // Auditar automáticamente al cargar la pantalla
-    document.addEventListener('DOMContentLoaded', () => {
-        auditarCorreosVisibles();
-    });
 </script>
 @endsection
