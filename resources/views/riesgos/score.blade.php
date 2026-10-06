@@ -25,28 +25,6 @@
         </button>
     </div>
 
-    {{-- Alerta de éxito --}}
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
-    {{-- Errores de validación --}}
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 shadow-sm text-xs space-y-1">
-            <div class="font-bold">Error al guardar los pesos:</div>
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     {{-- TARJETA PRINCIPAL: Visualización de Pesos Actuales (Último Cambio) --}}
     @php
         $actual = $pesos->firstWhere('vigente', true) ?? $pesos->first();

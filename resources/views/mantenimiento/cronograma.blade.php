@@ -32,14 +32,6 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl flex items-center justify-between text-sm shadow-sm">
-            <div class="flex items-center gap-2">
-                <span class="font-bold">✓</span> {{ session('success') }}
-            </div>
-        </div>
-    @endif
-
     {{-- SECCIÓN UNIFICADA: Calendario Compacto (Izquierda) + Alertas Próximas (Derecha) --}}
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
@@ -233,11 +225,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado del Mantenimiento <span class="text-rose-500">*</span></label>
                     <select id="update_estado_mantenimiento" name="estado_mantenimiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Programado">Programado</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En ejecución">En ejecución</option>
-                        <option value="Finalizado">Finalizado</option>
-                        <option value="Cancelado">Cancelado</option>
+                        @foreach(\App\Support\Catalogo::nombres('estados_mantenimiento') as $estado)
+                            <option value="{{ $estado }}">{{ $estado }}</option>
+                        @endforeach
                     </select>
                     <p class="text-[11px] text-amber-700 mt-1.5 hidden" id="avisoFinalizado">
                         Al marcar "Finalizado" este mantenimiento podrá afectar la próxima evaluación de riesgo del activo (el desgaste se recalcula desde esta fecha).

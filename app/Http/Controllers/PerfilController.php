@@ -16,7 +16,9 @@ class PerfilController extends Controller
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
 
-        $data = $request->validate([
+        // Bolsa de errores propia: el modal de perfil vive en el layout y solo debe
+        // abrirse con errores de este formulario, no con los de cualquier otro.
+        $data = $request->validateWithBag('perfil', [
             'nombre' => 'required|string|max:255',
             'apellido' => 'nullable|string|max:255',
             'correo' => 'required|email|unique:usuarios,correo,' . $user->id_usuario . ',id_usuario',

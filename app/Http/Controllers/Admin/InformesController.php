@@ -14,6 +14,7 @@ use App\Models\Ubicacion;
 use App\Models\Usuario;
 use App\Services\ExportService;
 use App\Services\MotorFmeaService;
+use App\Support\Catalogo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -57,7 +58,8 @@ class InformesController extends Controller
             ->groupBy('fk_id_activo')
             ->pluck('max_score', 'fk_id_activo');
 
-        $conteo = ['Crítico' => 0, 'Alto' => 0, 'Medio' => 0, 'Bajo' => 0];
+        // Del nivel más alto al más bajo (el catálogo está en orden ascendente).
+        $conteo = array_fill_keys(array_reverse(Catalogo::nombres('niveles_riesgo')), 0);
 
         foreach ($maxScoresPorActivo as $maxScore) {
             $nivel = $this->motor->obtenerNivelYAlerta((float) $maxScore)['nivel'];
@@ -317,12 +319,15 @@ class InformesController extends Controller
 
     public function modosFallaFrecuentes()
     {
+        $graves = Catalogo::nivelesQueRequierenTratamiento();
+        $marcas = implode(', ', array_fill(0, count($graves), '?'));
+
         $porEvaluacion = EvaluacionRiesgo::query()
             ->join('modos_falla', 'modos_falla.id_modo_falla', '=', 'evaluacion_riesgo.fk_id_modo_falla')
             ->selectRaw("modos_falla.nombre_modo_falla as modo_falla,
                 COUNT(*) as total_evaluaciones,
                 ROUND(AVG(evaluacion_riesgo.score_calculado), 2) as promedio_score,
-                SUM(CASE WHEN evaluacion_riesgo.nivel_riesgo IN ('Alto', 'Crítico') THEN 1 ELSE 0 END) as veces_criticas")
+                SUM(CASE WHEN evaluacion_riesgo.nivel_riesgo IN ({$marcas}) THEN 1 ELSE 0 END) as veces_criticas", $graves)
             ->groupBy('modos_falla.id_modo_falla', 'modos_falla.nombre_modo_falla')
             ->orderByDesc('veces_criticas')
             ->get();
@@ -523,12 +528,12 @@ class InformesController extends Controller
             ->whereDate('fecha_ejecucion', '<=', $fechaFin)
             ->get();
 
-        $tratamientosVencidos = PlanTratamientoRiesgo::where('estado_tratamiento', '!=', 'Completado')
+        $tratamientosVencidos = PlanTratamientoRiesgo::whereIn('estado_tratamiento', Catalogo::estadosTratamientoAbiertos())
             ->whereNotNull('fecha_compromiso')
             ->whereDate('fecha_compromiso', '<', now()->toDateString())
             ->count();
 
-        $tratamientosPendientes = PlanTratamientoRiesgo::whereIn('estado_tratamiento', ['Pendiente', 'En Proceso'])->count();
+        $tratamientosPendientes = PlanTratamientoRiesgo::whereIn('estado_tratamiento', Catalogo::estadosTratamientoAbiertos())->count();
 
         $activos = ActivoTecnologico::with('categoria')->get();
         $promedioConsumido = $activos->isEmpty()
@@ -881,7 +886,7 @@ class InformesController extends Controller
             'activos' => $activos,
             'resumen' => $resumen,
             'categorias' => $categorias,
-            'motivos' => ActivoTecnologicoController::MOTIVOS_BAJA,
+            'motivos' => Catalogo::nombres('motivos_baja'),
         ]);
     }
 
@@ -1024,12 +1029,12 @@ class InformesController extends Controller
             return 'Sin tratamiento registrado';
         }
 
-        if ($tratamiento->estrategia === 'Mitigar') {
+        if (Catalogo::estrategiaGeneraMantenimiento($tratamiento->estrategia)) {
             $mantenimiento = Mantenimiento::where('id_evaluacion_origen', $tratamiento->fk_id_evaluacion)
                 ->orderByDesc('id_mantenimiento')
                 ->first();
 
-            if ($mantenimiento && in_array($mantenimiento->estado_mantenimiento, ['Finalizado', 'Completado'], true)) {
+            if ($mantenimiento && in_array($mantenimiento->estado_mantenimiento, Catalogo::estadosMantenimientoFinalizados(), true)) {
                 return $mantenimiento->descripcion_trabajo ?? 'Finalizado sin descripción registrada';
             }
 

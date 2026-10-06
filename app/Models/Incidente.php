@@ -20,6 +20,12 @@ class Incidente extends Model
         'fk_id_modo_falla',
         'estado_incidente',
         'prioridad',
+        'fecha_cierre',
+    ];
+
+    protected $casts = [
+        'fecha_incidente' => 'datetime',
+        'fecha_cierre' => 'datetime',
     ];
 
     public function activo()

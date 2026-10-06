@@ -142,6 +142,19 @@ class UsuarioController extends Controller
     {
         $usuario = Usuario::findOrFail($id);
         $nuevoEstado = !$usuario->estado;
+
+        // Evita dejar el sistema sin quien administre usuarios.
+        if (!$nuevoEstado) {
+            if ($usuario->id_usuario === auth()->id()) {
+                return back()->with('error', 'No puedes desactivar tu propia cuenta.');
+            }
+
+            $administradoresActivos = Usuario::where('fk_id_rol', config('roles.admin'))->where('estado', true)->count();
+            if ($usuario->isAdmin() && $administradoresActivos <= 1) {
+                return back()->with('error', 'No puedes desactivar al único administrador activo del sistema.');
+            }
+        }
+
         $usuario->estado = $nuevoEstado;
         $usuario->save();
 

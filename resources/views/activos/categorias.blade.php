@@ -14,30 +14,6 @@
         </button>
     </div>
 
-    {{-- Alerta de éxito --}}
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="text-sm font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
-    {{-- Errores de validación --}}
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 shadow-sm">
-            <ul class="text-sm space-y-1">
-                @foreach($errors->all() as $error)
-                    <li class="flex items-center gap-2">
-                        <span class="text-rose-500">•</span>
-                        {{ $error }}
-                    </li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     {{-- Formulario de Registro (colapsable) --}}
     <div id="registroForm" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300" style="display: none;">
         <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
@@ -65,9 +41,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Dependencia Institucional <span class="text-rose-500">*</span></label>
                     <select name="nivel_dependencia" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Alta" {{ old('nivel_dependencia') == 'Alta' ? 'selected' : '' }}>Alta</option>
-                        <option value="Media" {{ old('nivel_dependencia', 'Media') == 'Media' ? 'selected' : '' }}>Media</option>
-                        <option value="Baja" {{ old('nivel_dependencia') == 'Baja' ? 'selected' : '' }}>Baja</option>
+                        @foreach(\App\Support\Catalogo::nombres('niveles_dependencia') as $nivel)
+                            <option value="{{ $nivel }}" {{ old('nivel_dependencia', 'Media') == $nivel ? 'selected' : '' }}>{{ $nivel }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="sm:col-span-3">
@@ -240,9 +216,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Dependencia Institucional <span class="text-rose-500">*</span></label>
                     <select id="edit_nivel_dependencia" name="nivel_dependencia" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Alta">Alta</option>
-                        <option value="Media">Media</option>
-                        <option value="Baja">Baja</option>
+                        @foreach(\App\Support\Catalogo::nombres('niveles_dependencia') as $nivel)
+                            <option value="{{ $nivel }}">{{ $nivel }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>

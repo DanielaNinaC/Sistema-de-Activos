@@ -23,15 +23,6 @@
         </button>
     </div>
 
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
     {{-- Evaluaciones críticas sin tratamiento --}}
     @if($evaluacionesSinTratamiento->isNotEmpty())
         <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-900 shadow-sm space-y-3">
@@ -365,7 +356,7 @@
         })();
     @endif
 
-    var ESTRATEGIAS_SIN_MANTENIMIENTO = ['Transferir', 'Evitar', 'Aceptar'];
+    var ESTRATEGIAS_SIN_MANTENIMIENTO = @json(\App\Support\Catalogo::estrategiasSinMantenimiento());
 
     function openEstadoModal(id, estadoActual, estrategia) {
         var form = document.getElementById('estadoForm');

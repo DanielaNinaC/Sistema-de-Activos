@@ -12,51 +12,25 @@ use App\Models\OrigenMantenimiento;
 use App\Models\PlanTratamientoRiesgo;
 use App\Models\Usuario;
 use App\Services\MotorFmeaService;
+use App\Support\Catalogo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
+/**
+ * Los vocabularios de incidentes y mantenimientos (estados, prioridades, tipos)
+ * y la prioridad sugerida por nivel de riesgo viven en catálogos de la base de
+ * datos (ver App\Support\Catalogo); aquí solo se consultan y se validan.
+ */
 class ProcesoActivoController extends Controller
 {
-    /**
-     * Vocabulario canónico de priorización de incidentes. Validado por lista
-     * blanca (no hay ENUM en BD), igual que el resto de vocabularios del
-     * sistema.
-     */
-    public const PRIORIDADES_INCIDENTE = ['Alta', 'Media', 'Baja'];
-
-    /**
-     * Prioridad sugerida a partir de la criticidad institucional del activo,
-     * que el motor FMEA mantiene actualizada. La criticidad tiene cuatro
-     * niveles y la prioridad tres, por lo que 'Crítica' se absorbe en 'Alta'.
-     * Es solo una sugerencia: quien reporta puede cambiarla.
-     */
-    public const MAPA_PRIORIDAD_SUGERIDA = [
-        'Crítica' => 'Alta',
-        'Alta' => 'Alta',
-        'Media' => 'Media',
-        'Baja' => 'Baja',
-    ];
-
-    /**
-     * Orden de atención: primero lo más urgente. Se usa para ordenar el
-     * seguimiento sin depender del orden alfabético (que pondría Alta, Baja,
-     * Media) ni de valores numéricos en la base de datos.
-     */
-    private const PESO_PRIORIDAD = ['Alta' => 1, 'Media' => 2, 'Baja' => 3];
-
-    /**
-     * Estados que sacan a un incidente del seguimiento activo. Se comparan las
-     * variantes en minúscula porque el dato histórico no es homogéneo.
-     */
-    private const ESTADOS_INCIDENTE_CERRADOS = ['Resuelto', 'Cerrado', 'resuelto', 'cerrado'];
-
     public function incidentesIndex()
     {
         $activos = ActivoTecnologico::with(['categoria', 'ubicacion'])->orderBy('nombre_equipo')->get();
         $usuarios = Usuario::with('rol')->orderBy('nombre')->get();
         $modos = ModoFalla::orderBy('nombre_modo_falla')->get();
-        $prioridades = self::PRIORIDADES_INCIDENTE;
-        $prioridadPorCriticidad = self::MAPA_PRIORIDAD_SUGERIDA;
+        $prioridades = Catalogo::nombres('prioridades_incidente');
+        $prioridadPorCriticidad = Catalogo::prioridadSugeridaPorNivel();
 
         return view('incidentes.registrar', compact('activos', 'usuarios', 'modos', 'prioridades', 'prioridadPorCriticidad'));
     }
@@ -79,11 +53,23 @@ class ProcesoActivoController extends Controller
         $data = $request->validate([
             'fk_id_activo' => 'required|integer|exists:activos_tecnologicos,id_activo',
             'fk_id_usuario_reporta' => 'required|integer|exists:usuarios,id_usuario',
-            'fecha_incidente' => 'required|date',
+            'fecha_incidente' => [
+                'required',
+                'date',
+                'before_or_equal:now',
+                // Un incidente no puede ser anterior a la adquisición del activo.
+                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
+                    $adquisicion = ActivoTecnologico::where('id_activo', $request->input('fk_id_activo'))->value('fecha_adquisicion');
+
+                    if ($adquisicion && \Carbon\Carbon::parse($value)->startOfDay()->lt(\Carbon\Carbon::parse($adquisicion)->startOfDay())) {
+                        $fail('La fecha del incidente no puede ser anterior a la fecha de adquisición del activo (' . \Carbon\Carbon::parse($adquisicion)->format('d/m/Y') . ').');
+                    }
+                },
+            ],
             'descripcion_falla' => 'required|string',
             'fk_id_modo_falla' => 'nullable|integer|exists:modos_falla,id_modo_falla',
-            'estado_incidente' => 'required|string|max:255',
-            'prioridad' => 'required|string|in:' . implode(',', self::PRIORIDADES_INCIDENTE),
+            'estado_incidente' => ['required', 'string', Rule::in(Catalogo::nombres('estados_incidente'))],
+            'prioridad' => ['required', 'string', Rule::in(Catalogo::nombres('prioridades_incidente'))],
         ]);
 
         Incidente::create([
@@ -107,7 +93,7 @@ class ProcesoActivoController extends Controller
     public function incidentesSeguimiento(Request $request)
     {
         $query = Incidente::with(['activo.categoria', 'activo.ubicacion', 'usuarioReporta.rol'])
-            ->whereNotIn('estado_incidente', self::ESTADOS_INCIDENTE_CERRADOS);
+            ->whereNotIn('estado_incidente', Catalogo::estadosIncidenteCerrados());
 
         if ($buscar = $request->input('buscar')) {
             $query->where(function ($q) use ($buscar) {
@@ -125,7 +111,7 @@ class ProcesoActivoController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $prioridades = self::PRIORIDADES_INCIDENTE;
+        $prioridades = Catalogo::nombres('prioridades_incidente');
 
         return view('incidentes.seguimiento', compact('incidentes', 'prioridades'));
     }
@@ -143,7 +129,7 @@ class ProcesoActivoController extends Controller
             ->withCount([
                 'incidentes',
                 'incidentes as incidentes_abiertos_count' => function ($q) {
-                    $q->whereNotIn('estado_incidente', self::ESTADOS_INCIDENTE_CERRADOS);
+                    $q->whereNotIn('estado_incidente', Catalogo::estadosIncidenteCerrados());
                 },
             ])
             ->withMax('incidentes', 'fecha_incidente');
@@ -178,10 +164,10 @@ class ProcesoActivoController extends Controller
             ->paginate(15);
 
         $totalAbiertos = Incidente::where('fk_id_activo', $activo->id_activo)
-            ->whereNotIn('estado_incidente', self::ESTADOS_INCIDENTE_CERRADOS)
+            ->whereNotIn('estado_incidente', Catalogo::estadosIncidenteCerrados())
             ->count();
 
-        $prioridades = self::PRIORIDADES_INCIDENTE;
+        $prioridades = Catalogo::nombres('prioridades_incidente');
 
         return view('incidentes.historial-activo', compact('activo', 'incidentes', 'totalAbiertos', 'prioridades'));
     }
@@ -194,21 +180,23 @@ class ProcesoActivoController extends Controller
     }
 
     /**
-     * Ordena por prioridad de atención. Se construye un CASE a partir de
-     * self::PESO_PRIORIDAD en vez de ordenar por la columna directamente
-     * (alfabéticamente daría Alta, Baja, Media) y sin usar FIELD(), que es
-     * exclusivo de MySQL y rompería las pruebas en SQLite.
+     * Ordena por prioridad de atención. Se construye un CASE a partir del peso
+     * de cada prioridad (catálogo prioridades_incidente) en vez de ordenar por
+     * la columna directamente (alfabéticamente daría Alta, Baja, Media) y sin
+     * usar FIELD(), que es exclusivo de MySQL y rompería las pruebas en SQLite.
      */
     private function ordenarPorPrioridad($query)
     {
+        $pesos = Catalogo::pesoPrioridad();
+
         $casos = '';
-        foreach (self::PESO_PRIORIDAD as $prioridad => $peso) {
-            $casos .= " WHEN ? THEN {$peso}";
+        foreach ($pesos as $peso) {
+            $casos .= ' WHEN ? THEN ' . (int) $peso;
         }
 
         return $query->orderByRaw(
             "CASE prioridad{$casos} ELSE 99 END",
-            array_keys(self::PESO_PRIORIDAD)
+            array_keys($pesos)
         );
     }
 
@@ -217,15 +205,25 @@ class ProcesoActivoController extends Controller
         $incidente = Incidente::findOrFail($id);
 
         $data = $request->validate([
-            'estado_incidente' => 'required|string|max:255',
+            'estado_incidente' => ['required', 'string', Rule::in(Catalogo::nombres('estados_incidente'))],
             'descripcion_falla' => 'nullable|string',
-            'prioridad' => 'nullable|string|in:' . implode(',', self::PRIORIDADES_INCIDENTE),
+            'prioridad' => ['nullable', 'string', Rule::in(Catalogo::nombres('prioridades_incidente'))],
         ]);
 
         // Campo opcional: si el formulario no lo envía, se conserva la
         // prioridad actual en vez de sobrescribirla con null.
         if (empty($data['prioridad'])) {
             unset($data['prioridad']);
+        }
+
+        // fecha_cierre se deriva del estado, no se captura a mano: se fija la
+        // primera vez que el incidente entra a un estado cerrado y se limpia
+        // si se reabre (evita fechas de cierre "congeladas" al reabrir).
+        $seCierraAhora = in_array($data['estado_incidente'], Catalogo::estadosIncidenteCerrados(), true);
+        if ($seCierraAhora && !$incidente->fecha_cierre) {
+            $data['fecha_cierre'] = now();
+        } elseif (!$seCierraAhora) {
+            $data['fecha_cierre'] = null;
         }
 
         $incidente->update($data);
@@ -268,25 +266,36 @@ class ProcesoActivoController extends Controller
         $data = $request->validate([
             'fk_id_activo' => 'required|integer|exists:activos_tecnologicos,id_activo',
             'fk_id_usuario_asignado' => 'required|integer|exists:usuarios,id_usuario',
-            'id_evaluacion_origen' => 'nullable|integer|exists:evaluacion_riesgo,id_evaluacion',
-            'fk_id_incidente' => 'nullable|integer|exists:incidentes,id_incidente',
-            'tipo_mantenimiento' => 'required|string|max:255',
+            // El incidente o la evaluación que origina el mantenimiento deben ser del mismo activo.
+            'id_evaluacion_origen' => [
+                'nullable', 'integer',
+                Rule::exists('evaluacion_riesgo', 'id_evaluacion')->where('fk_id_activo', $request->input('fk_id_activo')),
+            ],
+            'fk_id_incidente' => [
+                'nullable', 'integer',
+                Rule::exists('incidentes', 'id_incidente')->where('fk_id_activo', $request->input('fk_id_activo')),
+            ],
+            'tipo_mantenimiento' => ['required', 'string', Rule::in(Catalogo::nombres('tipos_mantenimiento'))],
             'fecha_programada' => 'required|date',
-            'fecha_ejecucion' => 'nullable|date',
+            'fecha_ejecucion' => 'nullable|date|after_or_equal:fecha_programada',
             'descripcion_trabajo' => 'nullable|string',
-            'estado_mantenimiento' => 'required|string|max:255',
+            'estado_mantenimiento' => ['required', 'string', Rule::in(Catalogo::nombres('estados_mantenimiento'))],
             'evidencia_pdf' => 'nullable|file|mimes:pdf|max:5120',
+        ], [
+            'id_evaluacion_origen.exists' => 'La evaluación de riesgo seleccionada no corresponde al activo elegido.',
+            'fk_id_incidente.exists' => 'El incidente seleccionado no corresponde al activo elegido.',
+            'fecha_ejecucion.after_or_equal' => 'La fecha de ejecución no puede ser anterior a la fecha programada.',
         ]);
 
         // Determinar automáticamente el origen según la presencia de evaluación o incidente
         if (!empty($data['fk_id_incidente'])) {
-            $data['fk_id_origen'] = 3; // Incidente
+            $data['fk_id_origen'] = Catalogo::origenMantenimientoId('Incidente');
             $data['id_evaluacion_origen'] = null;
         } elseif (!empty($data['id_evaluacion_origen'])) {
-            $data['fk_id_origen'] = 2; // Evaluación de riesgos
+            $data['fk_id_origen'] = Catalogo::origenMantenimientoId('Evaluación de riesgos');
             $data['fk_id_incidente'] = null;
         } else {
-            $data['fk_id_origen'] = 1; // Preventivo
+            $data['fk_id_origen'] = Catalogo::origenMantenimientoId('Preventivo');
             $data['id_evaluacion_origen'] = null;
             $data['fk_id_incidente'] = null;
         }
@@ -310,7 +319,7 @@ class ProcesoActivoController extends Controller
         $tresDiasDespues = \Carbon\Carbon::now()->addDays(3)->endOfDay();
 
         $alertasProx3Dias = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'origenMantenimiento'])
-            ->whereNotIn('estado_mantenimiento', ['Finalizado', 'Cancelado', 'Completado'])
+            ->whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoAbiertos())
             ->where('fecha_programada', '<=', $tresDiasDespues)
             ->orderBy('fecha_programada')
             ->get();
@@ -338,11 +347,11 @@ class ProcesoActivoController extends Controller
         $mantenimiento = Mantenimiento::findOrFail($id);
 
         $data = $request->validate([
-            'estado_mantenimiento' => 'required|string|max:255',
+            'estado_mantenimiento' => ['required', 'string', Rule::in(Catalogo::nombres('estados_mantenimiento'))],
             'descripcion_trabajo' => 'nullable|string',
         ]);
 
-        $seFinalizo = in_array($data['estado_mantenimiento'], ['Finalizado', 'Completado']) && !$mantenimiento->fecha_ejecucion;
+        $seFinalizo = in_array($data['estado_mantenimiento'], Catalogo::estadosMantenimientoFinalizados(), true) && !$mantenimiento->fecha_ejecucion;
 
         if ($seFinalizo) {
             $data['fecha_ejecucion'] = date('Y-m-d');
@@ -358,7 +367,7 @@ class ProcesoActivoController extends Controller
         // originó y se dispara una nueva evaluación del activo.
         if ($seFinalizo && $mantenimiento->id_evaluacion_origen) {
             $actualizados = PlanTratamientoRiesgo::where('fk_id_evaluacion', $mantenimiento->id_evaluacion_origen)
-                ->where('estado_tratamiento', '!=', 'Completado')
+                ->whereIn('estado_tratamiento', Catalogo::estadosTratamientoAbiertos())
                 ->update(['estado_tratamiento' => 'Completado']);
 
             if ($actualizados > 0) {

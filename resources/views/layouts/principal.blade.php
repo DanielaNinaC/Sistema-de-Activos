@@ -190,16 +190,27 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="submenu-arrow h-5 w-5 transform transition-transform text-white/90" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 8l4 4 4-4" clip-rule="evenodd" /></svg>
                     </div>
                     <div class="submenu hidden mt-1 pl-3" data-submenu-panel="informes">
+                        <a href="{{ route('admin.informes.auditoria-ti.ra01') }}" class="block p-2 rounded hover:bg-white/5">Inventario General</a>
                         <a href="{{ route('admin.informes.estado-activos') }}" class="block p-2 rounded hover:bg-white/5">Estado de Activos</a>
+                        
                         <a href="{{ route('admin.informes.activos-baja') }}" class="block p-2 rounded hover:bg-white/5">Activos Dados de Baja</a>
-                        <a href="{{ route('admin.informes.historial-tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Historial de Tratamiento</a>
+                        
+                        <a href="{{ route('admin.informes.auditoria-ti.ra02') }}" class="block p-2 rounded hover:bg-white/5">Plan de Mantenimiento</a>
+                        <a href="{{ route('admin.informes.auditoria-ti.ra03') }}" class="block p-2 rounded hover:bg-white/5">Registro de Incidentes</a>
+                        <!-- <a href="{{ route('admin.informes.historial-tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Historial de Tratamiento</a> -->
                         <!-- <a href="{{ route('admin.informes.evolucion-score') }}" class="block p-2 rounded hover:bg-white/5">Evolución de Score</a> -->
                         <a href="{{ route('admin.informes.modos-falla') }}" class="block p-2 rounded hover:bg-white/5">Modos de Falla Frecuentes</a>
-                        <a href="{{ route('admin.informes.mantenimiento-tipo') }}" class="block p-2 rounded hover:bg-white/5">Preventivo vs. Correctivo</a>
+                        <!-- <a href="{{ route('admin.informes.mantenimiento-tipo') }}" class="block p-2 rounded hover:bg-white/5">Preventivo vs. Correctivo</a> -->
                         <a href="{{ route('admin.informes.sin-tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Sin Tratamiento</a>
                         <!-- <a href="{{ route('admin.informes.trazabilidad') }}" class="block p-2 rounded hover:bg-white/5">Trazabilidad de Usuarios</a> -->
                         <a href="{{ route('admin.informes.vida-util') }}" class="block p-2 rounded hover:bg-white/5">Vida Útil</a>
-                        <a href="{{ route('admin.informes.auditoria') }}" class="block p-2 rounded hover:bg-white/5">Informe General</a>
+                        
+                        <!-- <a href="{{ route('admin.informes.auditoria-ti.ra04') }}" class="block p-2 rounded hover:bg-white/5">RA-04 Clasificación por Criticidad</a> -->
+                        <!-- <a href="{{ route('admin.informes.auditoria-ti.ra05') }}" class="block p-2 rounded hover:bg-white/5">RA-05 Roles y Permisos</a> -->
+                        <!-- <a href="{{ route('admin.informes.auditoria-ti.ra06') }}" class="block p-2 rounded hover:bg-white/5">Verificación Física (CPD)</a> -->
+                        <!-- <a href="{{ route('admin.informes.auditoria-ti.ra07') }}" class="block p-2 rounded hover:bg-white/5">Activos de Red</a> -->
+                        <!-- <a href="{{ route('admin.informes.auditoria') }}" class="block p-2 rounded hover:bg-white/5">Informe General</a> -->
+                        <a href="{{ route('admin.auditoria-interna.index') }}" class="block p-2 rounded hover:bg-white/5">Auditoría Interna de TI</a>
                     </div>
                 </div>
             @endif
@@ -391,6 +402,13 @@
 
         {{-- Contenido dinámico — solo esta parte se actualiza en la navegación SPA --}}
         <main id="main-content" class="flex-1 p-8 overflow-y-auto">
+            {{-- Errores de validación por campo: los coloca junto a cada campo resources/js/errores-campos.js
+                 (los del perfil van en su propia bolsa 'perfil' y se muestran en su modal). --}}
+            {{-- Va en un atributo data- y no en un <script>: turbo-nav recrea los <script> copiando solo su texto. --}}
+            @if($errors->getBag('default')->any())
+                <div id="errores-validacion" class="hidden" data-errores="{{ json_encode($errors->getBag('default')->messages(), JSON_UNESCAPED_UNICODE) }}"></div>
+            @endif
+
             @if(session('success'))
                 <div class="mb-6 flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-sm shadow-xs animate-fade-in">
                     <div class="flex items-center gap-3">
@@ -447,9 +465,9 @@
             </button>
         </div>
 
-        @if($errors->any())
+        @if($errors->perfil->any())
             <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs space-y-1">
-                @foreach($errors->all() as $error)
+                @foreach($errors->perfil->all() as $error)
                     <div class="flex items-center gap-1.5">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -704,7 +722,7 @@
         }
     };
 
-    @if($errors->any())
+    @if($errors->perfil->any())
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof window.openProfileEditModal === 'function') {

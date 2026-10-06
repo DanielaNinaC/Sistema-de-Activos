@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Catalogo;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -104,14 +105,13 @@ class ActivoTecnologico extends Model
 
     /**
      * Fecha del mantenimiento más reciente ya ejecutado sobre este activo.
-     * 'Finalizado' es el valor real usado en estado_mantenimiento en todo
-     * el módulo de mantenimiento (ver resources/views/mantenimiento/*.blade.php);
-     * 'Completado' nunca se usa como valor persistido.
+     * "Ejecutado" lo define el catálogo estados_mantenimiento (bandera
+     * es_finalizado, hoy solo 'Finalizado').
      */
     public function fechaUltimoMantenimientoCompletado(): ?Carbon
     {
         $fecha = $this->mantenimientos()
-            ->where('estado_mantenimiento', 'Finalizado')
+            ->whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoFinalizados())
             ->whereNotNull('fecha_ejecucion')
             ->max('fecha_ejecucion');
 

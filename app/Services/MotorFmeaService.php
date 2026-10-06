@@ -11,103 +11,23 @@ use App\Models\ModoFalla;
 use App\Models\PesoAhp;
 use App\Models\PlanTratamientoRiesgo;
 use App\Models\Usuario;
+use App\Support\Catalogo;
 use Carbon\Carbon;
 
+/**
+ * Los parámetros del modelo (Tablas 8, 20, 21, 22 y 29 de la tesis: valores de
+ * severidad, MSR, dependencia, reglas de frecuencia, umbrales de nivel de
+ * riesgo y tratamiento sugerido) viven en la base de datos y se leen mediante
+ * App\Support\Catalogo; este servicio solo aplica las fórmulas.
+ */
 class MotorFmeaService
 {
-    /**
-     * Mapeo fijo de nivel de Severidad (Tabla 20 de la tesis) a valor numérico.
-     */
-    public const MAPA_SEVERIDAD = [
-        'muy_alta' => 10,
-        'alta' => 8,
-        'moderada' => 5,
-        'baja' => 3,
-        'insignificante' => 1,
-    ];
-
-    /**
-     * Mapeo fijo de nivel de Monitoreo/MSR (Tabla 22/29 de la tesis) a valor
-     * numérico. Incluye 'baja' => 7: nivel intermedio entre "no hay ninguna
-     * alerta" (muy_baja) y "hay logs pero requieren revisión manual"
-     * (moderada) — detección solo por inspección/reporte manual directo,
-     * sin registro ni alerta automática.
-     */
-    public const MAPA_MSR = [
-        'muy_baja' => 9,
-        'baja' => 7,
-        'moderada' => 6,
-        'alta' => 4,
-        'muy_alta' => 2,
-    ];
-
-    /**
-     * Escala de Dependencia Institucional (categorias.nivel_dependencia) a [1,10].
-     */
-    public const MAPA_DEPENDENCIA = [
-        'Alta' => 9,
-        'Media' => 5,
-        'Baja' => 2,
-    ];
-
-    /**
-     * Sugerencia de tratamiento por nivel de riesgo (columna "Acción del
-     * Sistema" de la Tabla 29 de la tesis). Solo Alto/Crítico generan
-     * borrador automático: la decisión de tratamiento (sobre todo
-     * "Aceptar") es institucional, no un cálculo técnico — el administrador
-     * confirma o ajusta lo que el sistema sugiere.
-     */
-    public const MAPA_TRATAMIENTO_SUGERIDO = [
-        'Crítico' => [
-            'estrategia' => 'Mitigar',
-            'accion_preventiva' => 'Priorizar atención inmediata; evaluar retiro temporal o intervención urgente del activo.',
-            'dias_plazo' => 3,
-        ],
-        'Alto' => [
-            'estrategia' => 'Mitigar',
-            'accion_preventiva' => 'Notificar al administrador, priorizar el mantenimiento e incluir el activo en el seguimiento de riesgos.',
-            'dias_plazo' => 15,
-        ],
-    ];
-
     /**
      * Nivel de riesgo según el Score calculado (Tabla 29 de la Tesis ISO 31000 / FMEA-MSR)
      */
     public function obtenerNivelYAlerta(float $score): array
     {
-        if ($score >= 8.00) {
-            return [
-                'nivel' => 'Crítico',
-                'tipo_alerta' => 'Roja',
-                'criticidad' => 'Crítica',
-                'color_hex' => '#ef4444',
-            ];
-        }
-
-        if ($score >= 6.00) {
-            return [
-                'nivel' => 'Alto',
-                'tipo_alerta' => 'Naranja',
-                'criticidad' => 'Alta',
-                'color_hex' => '#f97316',
-            ];
-        }
-
-        if ($score >= 3.00) {
-            return [
-                'nivel' => 'Medio',
-                'tipo_alerta' => 'Amarilla',
-                'criticidad' => 'Media',
-                'color_hex' => '#eab308',
-            ];
-        }
-
-        return [
-            'nivel' => 'Bajo',
-            'tipo_alerta' => 'Verde',
-            'criticidad' => 'Baja',
-            'color_hex' => '#22c55e',
-        ];
+        return Catalogo::nivelPorScore($score);
     }
 
     /**
@@ -231,12 +151,12 @@ class MotorFmeaService
      */
     public function crearMantenimientoSiMitiga(PlanTratamientoRiesgo $tratamiento): void
     {
-        if ($tratamiento->estrategia !== 'Mitigar' || !$tratamiento->evaluacion) {
+        if (!Catalogo::estrategiaGeneraMantenimiento($tratamiento->estrategia) || !$tratamiento->evaluacion) {
             return;
         }
 
         $yaExiste = Mantenimiento::where('id_evaluacion_origen', $tratamiento->fk_id_evaluacion)
-            ->whereIn('estado_mantenimiento', ['Programado', 'Pendiente', 'En ejecución'])
+            ->whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoAbiertos())
             ->exists();
 
         if ($yaExiste) {
@@ -253,13 +173,13 @@ class MotorFmeaService
         // Correctivo si la falla ya se manifestó (incidente real abierto);
         // Preventivo si el tratamiento se origina solo por desgaste/criticidad.
         $tieneIncidentesAbiertos = Incidente::where('fk_id_activo', $idActivo)
-            ->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado', 'resuelto', 'cerrado'])
+            ->whereNotIn('estado_incidente', Catalogo::estadosIncidenteCerrados())
             ->exists();
 
         Mantenimiento::create([
             'fk_id_activo' => $idActivo,
             'fk_id_usuario_asignado' => $idUsuario,
-            'fk_id_origen' => 2, // Evaluación de riesgos
+            'fk_id_origen' => Catalogo::origenMantenimientoId('Evaluación de riesgos'),
             'id_evaluacion_origen' => $tratamiento->fk_id_evaluacion,
             'tipo_mantenimiento' => $tieneIncidentesAbiertos ? 'Correctivo' : 'Preventivo',
             'fecha_programada' => $tratamiento->fecha_compromiso ?? now()->addDays(7)->toDateString(),
@@ -330,7 +250,7 @@ class MotorFmeaService
 
         // Dependencia institucional (Nivel 1) según la categoría del activo
         $nivelDependencia = $activo->categoria->nivel_dependencia ?? 'Media';
-        $D = self::MAPA_DEPENDENCIA[$nivelDependencia] ?? 5;
+        $D = Catalogo::valorDependencia($nivelDependencia) ?? Catalogo::valorDependencia('Media') ?? 5;
 
         // Cierre del ciclo: si ya hubo un mantenimiento ejecutado, solo
         // cuentan como "recurrencia" los incidentes posteriores a esa
@@ -358,14 +278,8 @@ class MotorFmeaService
             $S = $modo->valor_severidad_base ?? 5;
             $MSR = $modo->valor_msr_base ?? 4;
 
-            // Frecuencia (F) Dinámica - Tabla 21
-            if ($porcentajeDesgaste >= 80 && $incidentesHistoricos > 2) {
-                $F = 9; // Muy Alta
-            } elseif ($porcentajeDesgaste >= 40 || $incidentesHistoricos >= 1) {
-                $F = 6; // Moderada
-            } else {
-                $F = 2; // Baja
-            }
+            // Frecuencia (F) Dinámica - Tabla 21 (reglas en niveles_frecuencia)
+            $F = Catalogo::frecuencia($porcentajeDesgaste, $incidentesHistoricos);
 
             // FASE 3: Cálculo Jerárquico del Score (Nivel 2 + Nivel 1)
             $score = $this->calcularScore($S, $F, $MSR, $D);
@@ -414,8 +328,9 @@ class MotorFmeaService
             // Sugerencia de tratamiento (Alto/Crítico): borrador automático,
             // solo si no hay ya uno activo para este (activo, modo_falla) —
             // evita duplicar borradores en cada corrida de "Evaluar Todos".
-            if (isset(self::MAPA_TRATAMIENTO_SUGERIDO[$infoClasificacion['nivel']])) {
-                $tieneTratamientoActivo = PlanTratamientoRiesgo::whereIn('estado_tratamiento', ['Pendiente', 'En Proceso'])
+            $sugerencia = Catalogo::tratamientoSugerido($infoClasificacion['nivel']);
+            if ($sugerencia !== null) {
+                $tieneTratamientoActivo = PlanTratamientoRiesgo::whereIn('estado_tratamiento', Catalogo::estadosTratamientoAbiertos())
                     ->whereHas('evaluacion', function ($q) use ($activo, $modo) {
                         $q->where('fk_id_activo', $activo->id_activo)
                           ->where('fk_id_modo_falla', $modo->id_modo_falla);
@@ -423,7 +338,6 @@ class MotorFmeaService
                     ->exists();
 
                 if (!$tieneTratamientoActivo) {
-                    $sugerencia = self::MAPA_TRATAMIENTO_SUGERIDO[$infoClasificacion['nivel']];
                     $tratamientoSugerido = PlanTratamientoRiesgo::create([
                         'fk_id_evaluacion' => $evaluacion->id_evaluacion,
                         'estrategia' => $sugerencia['estrategia'],
@@ -503,7 +417,8 @@ class MotorFmeaService
         $activos = ActivoTecnologico::all();
 
         $detalle = [];
-        $conteoPorCriticidad = ['Crítica' => 0, 'Alta' => 0, 'Media' => 0, 'Baja' => 0];
+        // De la criticidad más alta a la más baja (el catálogo está en orden ascendente).
+        $conteoPorCriticidad = array_fill_keys(array_reverse(Catalogo::nombres('niveles_riesgo', 'criticidad')), 0);
         $sinModosFalla = 0;
         $alertasGeneradas = 0;
         $tratamientosGenerados = 0;

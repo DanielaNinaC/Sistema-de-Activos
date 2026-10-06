@@ -7,15 +7,16 @@ use App\Models\Alerta;
 use App\Models\EvaluacionRiesgo;
 use App\Models\Incidente;
 use App\Models\Mantenimiento;
+use App\Support\Catalogo;
 
 class DashboardController extends Controller
 {
     public function index()
     {
         $totalActivos = ActivoTecnologico::count();
-        $riesgosCriticos = EvaluacionRiesgo::whereIn('nivel_riesgo', ['Crítico', 'Alto'])->count();
-        $incidentesAbiertos = Incidente::whereNotIn('estado_incidente', ['Resuelto', 'Cerrado'])->count();
-        $mantenimientosPendientes = Mantenimiento::whereIn('estado_mantenimiento', ['Pendiente', 'Programado', 'En ejecución'])->count();
+        $riesgosCriticos = EvaluacionRiesgo::whereIn('nivel_riesgo', Catalogo::nivelesQueRequierenTratamiento())->count();
+        $incidentesAbiertos = Incidente::whereNotIn('estado_incidente', Catalogo::estadosIncidenteCerrados())->count();
+        $mantenimientosPendientes = Mantenimiento::whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoAbiertos())->count();
 
         $activosPorCategoria = ActivoTecnologico::query()
             ->selectRaw('categorias.nombre_categoria as nombre, COUNT(activos_tecnologicos.id_activo) as total')

@@ -30,16 +30,6 @@
         </div>
     </div>
 
-    {{-- Alertas de Éxito --}}
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="text-sm font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
     {{-- Barra de Búsqueda --}}
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
         <form method="GET" action="{{ route('admin.mantenimiento.historial') }}" class="flex flex-col sm:flex-row gap-3">
@@ -213,11 +203,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado del Mantenimiento <span class="text-rose-500">*</span></label>
                     <select id="update_estado_mantenimiento" name="estado_mantenimiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Programado">Programado</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En ejecución">En ejecución</option>
-                        <option value="Finalizado">Finalizado</option>
-                        <option value="Cancelado">Cancelado</option>
+                        @foreach(\App\Support\Catalogo::nombres('estados_mantenimiento') as $estado)
+                            <option value="{{ $estado }}">{{ $estado }}</option>
+                        @endforeach
                     </select>
                     <p class="text-[11px] text-amber-700 mt-1.5 hidden" id="avisoFinalizado">
                         Al marcar "Finalizado" este mantenimiento podrá afectar la próxima evaluación de riesgo del activo (el desgaste se recalcula desde esta fecha).

@@ -6,6 +6,7 @@ use App\Models\Alerta;
 use App\Models\Incidente;
 use App\Models\Mantenimiento;
 use App\Models\Usuario;
+use App\Support\Catalogo;
 use Carbon\Carbon;
 
 class NotificacionService
@@ -86,7 +87,7 @@ class NotificacionService
         if ($usuario->tieneAccesoModulo('incidentes')) {
             try {
                 $incidentes = Incidente::with(['activo', 'modoFalla'])
-                    ->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado', 'resuelto', 'cerrado'])
+                    ->whereNotIn('estado_incidente', Catalogo::estadosIncidenteCerrados())
                     ->orderByDesc('fecha_incidente')
                     ->limit(6)
                     ->get();
@@ -120,7 +121,7 @@ class NotificacionService
         if ($usuario->tieneAccesoModulo('mantenimiento')) {
             try {
                 $mantenimientos = Mantenimiento::with('activo')
-                    ->whereIn('estado_mantenimiento', ['Pendiente', 'Programado', 'En ejecución'])
+                    ->whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoAbiertos())
                     ->orderBy('fecha_programada', 'asc')
                     ->limit(6)
                     ->get();

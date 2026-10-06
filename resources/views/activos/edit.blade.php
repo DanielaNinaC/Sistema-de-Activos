@@ -14,17 +14,6 @@
         </div>
     </div>
 
-    @if ($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 space-y-1 shadow-sm">
-            <div class="font-semibold text-sm">Por favor corrige los siguientes errores:</div>
-            <ul class="list-disc list-inside text-xs space-y-0.5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
         <h3 class="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-3">Formulario de Edición</h3>
 
@@ -79,17 +68,16 @@
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Fecha de Adquisición</label>
-                <input type="date" name="fecha_adquisicion" value="{{ old('fecha_adquisicion', $activo->fecha_adquisicion) }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition cursor-pointer" />
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Fecha de Adquisición *</label>
+                <input type="date" name="fecha_adquisicion" required max="{{ date('Y-m-d') }}" value="{{ old('fecha_adquisicion', $activo->fecha_adquisicion) }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition cursor-pointer" />
             </div>
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Estado Operativo *</label>
                 <select name="estado_operativo" id="selectEstadoOperativo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                    <option value="Operativo" {{ old('estado_operativo', $activo->estado_operativo) == 'Operativo' ? 'selected' : '' }}>Operativo</option>
-                    <option value="En Mantenimiento" {{ old('estado_operativo', $activo->estado_operativo) == 'En Mantenimiento' ? 'selected' : '' }}>En Mantenimiento</option>
-                    <option value="Inoperativo" {{ old('estado_operativo', $activo->estado_operativo) == 'Inoperativo' ? 'selected' : '' }}>Inoperativo</option>
-                    <option value="De Baja" {{ old('estado_operativo', $activo->estado_operativo) == 'De Baja' ? 'selected' : '' }}>De Baja</option>
+                    @foreach(\App\Support\Catalogo::nombres('estados_operativos') as $estado)
+                        <option value="{{ $estado }}" {{ old('estado_operativo', $activo->estado_operativo) == $estado ? 'selected' : '' }}>{{ $estado }}</option>
+                    @endforeach
                 </select>
             </div>
 
@@ -97,7 +85,7 @@
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Motivo de Baja *</label>
                 <select name="motivo_baja" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
                     <option value="">Seleccione un motivo</option>
-                    @foreach(\App\Http\Controllers\Admin\ActivoTecnologicoController::MOTIVOS_BAJA as $motivo)
+                    @foreach(\App\Support\Catalogo::nombres('motivos_baja') as $motivo)
                         <option value="{{ $motivo }}" {{ old('motivo_baja', $activo->motivo_baja) == $motivo ? 'selected' : '' }}>{{ $motivo }}</option>
                     @endforeach
                 </select>
@@ -114,9 +102,9 @@
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Etapa Ciclo de Vida *</label>
                 <select name="etapa_ciclo_vida" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                    <option value="Operación" {{ old('etapa_ciclo_vida', $activo->etapa_ciclo_vida) == 'Operación' ? 'selected' : '' }}>Operación</option>
-                    <option value="Mantenimiento" {{ old('etapa_ciclo_vida', $activo->etapa_ciclo_vida) == 'Mantenimiento' ? 'selected' : '' }}>Mantenimiento</option>
-                    <option value="Renovación / Retiro" {{ old('etapa_ciclo_vida', $activo->etapa_ciclo_vida) == 'Renovación / Retiro' ? 'selected' : '' }}>Renovación / Retiro</option>
+                    @foreach(\App\Support\Catalogo::nombres('etapas_ciclo_vida') as $etapa)
+                        <option value="{{ $etapa }}" {{ old('etapa_ciclo_vida', $activo->etapa_ciclo_vida) == $etapa ? 'selected' : '' }}>{{ $etapa }}</option>
+                    @endforeach
                 </select>
             </div>
 
@@ -131,20 +119,20 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Procesador</label>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Procesador *</label>
                         <input type="text" name="procesador" value="{{ old('procesador', $activo->detalleComputadora->procesador ?? '') }}" placeholder="Ej: Intel Core i7 12700K" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Memoria RAM (GB)</label>
-                        <input type="number" name="ram_gb" value="{{ old('ram_gb', $activo->detalleComputadora->ram_gb ?? '') }}" placeholder="Ej: 16" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Memoria RAM (GB) *</label>
+                        <input type="number" min="0" step="1" name="ram_gb" value="{{ old('ram_gb', $activo->detalleComputadora->ram_gb ?? '') }}" placeholder="Ej: 16" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Disco Sólido SSD (GB)</label>
-                        <input type="number" name="disco_solido_gb" value="{{ old('disco_solido_gb', $activo->detalleComputadora->disco_solido_gb ?? '') }}" placeholder="Ej: 512" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                        <input type="number" min="0" step="1" name="disco_solido_gb" value="{{ old('disco_solido_gb', $activo->detalleComputadora->disco_solido_gb ?? '') }}" placeholder="Ej: 512" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Disco Rígido HDD (GB)</label>
-                        <input type="number" name="disco_rigido_gb" value="{{ old('disco_rigido_gb', $activo->detalleComputadora->disco_rigido_gb ?? '') }}" placeholder="Ej: 1000" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                        <input type="number" min="0" step="1" name="disco_rigido_gb" value="{{ old('disco_rigido_gb', $activo->detalleComputadora->disco_rigido_gb ?? '') }}" placeholder="Ej: 1000" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Sistema Operativo</label>
@@ -214,7 +202,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Calidad de Imagen / Lúmenes</label>
-                        <input type="number" name="calidad_imagen" value="{{ old('calidad_imagen', $activo->detalleProyector->calidad_imagen ?? '') }}" placeholder="Ej: 3600" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
+                        <input type="number" min="0" step="1" name="calidad_imagen" value="{{ old('calidad_imagen', $activo->detalleProyector->calidad_imagen ?? '') }}" placeholder="Ej: 3600" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
                     </div>
                 </div>
             </div>
@@ -278,6 +266,14 @@
                 } else if (nombreCat.includes('proyector')) {
                     if (secProy) secProy.classList.remove('hidden');
                 }
+
+                // Procesador y RAM son obligatorios solo para computadoras: un campo oculto
+                // con "required" impediría enviar el formulario en las demás categorías.
+                var esComputadora = secComp && !secComp.classList.contains('hidden');
+                ['procesador', 'ram_gb'].forEach(function (nombre) {
+                    var campo = secComp ? secComp.querySelector('[name="' + nombre + '"]') : null;
+                    if (campo) campo.required = !!esComputadora;
+                });
             }
 
             selectCategoria.removeEventListener('change', toggleDynamicSections);

@@ -54,17 +54,50 @@ Consecuencia directa: **las evaluaciones parciales son válidas por diseño**. S
 se evalúan 2 de 5 modos, los otros 3 conservan su fila vigente. No están
 "pendientes" ni "sin evaluar", y la interfaz debe decirlo así.
 
-### 1.4 Vocabularios canónicos (lista blanca en PHP, sin ENUM en BD)
+### 1.4 Vocabularios y parámetros: viven en catálogos de la BD (desde 2026-10-06)
 
-Se validan por `in:` en el controlador o Form Request. Se evita ENUM para no
-migrar cada vez que cambie el vocabulario.
+Ya **no** hay constantes ni listas literales en PHP/Blade para estos valores. Cada
+vocabulario es una tabla catálogo con su valor textual como **llave primaria
+(clave natural)**, y la columna que lo usa tiene una **FK** hacia ella
+(`ON UPDATE CASCADE`, `ON DELETE RESTRICT`). La columna sigue guardando el mismo
+texto (`'Resuelto'`, `'Alto'`…), así que consultas, vistas y exportaciones no
+cambian; lo nuevo es que MySQL rechaza valores fuera del catálogo.
 
-| Concepto | Valores | Definido en |
+El acceso es **solo** vía `App\Support\Catalogo` (cache por petición; hay que
+llamar `Catalogo::flush()` si se editan catálogos dentro de un proceso largo).
+Las validaciones usan `Rule::in(Catalogo::nombres('tabla'))`. Los catálogos se
+siembran dentro de la migración `2026_10_06_100000_create_catalogos_de_parametros`
+(no en seeders), porque las pruebas (SQLite) no corren seeders.
+
+| Catálogo (tabla) | Contiene | Banderas / valores que reemplazan reglas del código |
 |---|---|---|
-| Estrategia de tratamiento | `Mitigar` · `Transferir` · `Evitar` · `Aceptar` | `ProcesoRiesgoController::ESTRATEGIAS_TRATAMIENTO` |
-| Estado de tratamiento | `Pendiente` · `En Proceso` · `Completado` | `ProcesoRiesgoController::ESTADOS_TRATAMIENTO` |
-| Prioridad de incidente | `Alta` · `Media` · `Baja` | `ProcesoActivoController::PRIORIDADES_INCIDENTE` |
-| Estados que cierran un incidente | `Resuelto` · `Cerrado` (+ minúsculas) | `ProcesoActivoController::ESTADOS_INCIDENTE_CERRADOS` |
+| `niveles_dependencia` | Alta · Media · Baja | `valor` 9/5/2 (Tabla 8) |
+| `niveles_severidad` · `niveles_msr` | claves `muy_alta`…`insignificante` / `muy_baja`…`muy_alta` | `valor` (Tablas 20 y 22) y `descripcion` |
+| `niveles_frecuencia` | reglas de F evaluadas por `orden` | umbrales de desgaste e incidentes (Tabla 21) |
+| `niveles_riesgo` · `tipos_alerta` | Bajo/Medio/Alto/Crítico ↔ Verde/Amarilla/Naranja/Roja | `puntaje_minimo` 0/3/6/8 (Tabla 29), `prioridad_sugerida`, `requiere_tratamiento` (Alto/Crítico), `notifica_alerta` (Crítico) |
+| `tratamientos_sugeridos` | borrador automático por nivel | estrategia, acción y plazo (columna "Acción del Sistema") |
+| `estrategias_tratamiento` · `estados_tratamiento` · `origenes_tratamiento` | Mitigar/Transferir/Evitar/Aceptar · Pendiente/En Proceso/Completado · automatico/manual | `genera_mantenimiento` (solo Mitigar), `es_abierto` |
+| `estados_operativos` · `etapas_ciclo_vida` · `motivos_baja` | vocabulario del activo | — |
+| `estados_incidente` · `prioridades_incidente` | Reportado…Cerrado · Alta/Media/Baja | `cierra_incidente` (Resuelto, Cerrado), `peso` de prioridad |
+| `tipos_mantenimiento` · `estados_mantenimiento` | Preventivo/Correctivo/Programado/Inspección · Programado…Cancelado | `es_abierto`, `es_finalizado` (solo `Finalizado`) |
+
+Consecuencias que hay que recordar:
+
+- Agregar un valor = insertar una fila en el catálogo; ya no se toca código.
+- `'Completado'` **no** es un estado de mantenimiento válido (la BD lo rechaza):
+  es `Finalizado`.
+- `modos_falla.nivel_severidad/nivel_msr` guardan la **clave** en snake_case
+  (`muy_alta`); la etiqueta visible sale del catálogo.
+- Varias FKs hacia padres que arrastraban datos principales pasaron de `CASCADE`
+  a `RESTRICT` (rol→usuarios, categoría→activos, usuario→logs…): hay que
+  reasignar antes de borrar.
+- `categorias.nombre_categoria` y `(ubicaciones.seccion, ubicaciones.aula)` son
+  únicos también a nivel de BD.
+- **Pendiente de normalizar** (sigue en código): módulos y permisos por rol
+  (`Usuario::permisosDefaultPorRol`, las 7 columnas `permiso_*`), los
+  vocabularios del módulo de auditoría (`AuditoriaInterna::ESTADOS`,
+  `HallazgoAuditoria::CLASIFICACIONES`…) y la detección del tipo de detalle de
+  un activo por texto del nombre de la categoría.
 
 **Valores reales persistidos que suelen confundirse:**
 
@@ -232,6 +265,60 @@ incidentes a memoria). El detalle lista todos los incidentes de ese activo.
 - `EvaluacionRiesgo::scopeSinTratamiento()` es la fuente única compartida entre
   el módulo de Tratamiento y el de Informes.
 - Se eliminó el "Tablero de Control" por duplicar el Dashboard.
+
+### 4.6 Validaciones de formularios (2026-10-06)
+
+Mensajes en español: `APP_LOCALE=es` + `lang/es/validation.php` (con los nombres
+amigables de cada campo en `attributes`). También pasa a español `diffForHumans()`
+y `translatedFormat()`. Los vocabularios se validan contra los catálogos
+(`Rule::in(Catalogo::nombres(...))`), ver §1.4.
+
+Reglas de coherencia agregadas (pruebas en `ValidacionesFormulariosTest`):
+
+- **Evaluación manual de riesgo:** el modo de falla debe ser de la categoría del
+  activo (igual que el motor automático) y la fecha no puede ser futura.
+  `ActivoTecnologicoController::show()` ya no ofrece modos de otras categorías.
+- **Incidente:** fecha no futura y no anterior a la adquisición del activo.
+- **Mantenimiento:** `fecha_ejecucion >= fecha_programada`; el incidente y la
+  evaluación vinculados deben ser del mismo activo.
+- **Activo:** `fecha_adquisicion` no futura; `direccion_ip` es una IP válida;
+  RAM, discos y calidad de imagen `>= 0`.
+- **Usuarios:** no se puede desactivar la propia cuenta ni al último
+  administrador activo.
+- **`ActivoTecnologicoController::store()/update()`** validan activo + ficha
+  técnica **antes** de guardar y escriben en una transacción (antes el activo se
+  creaba y luego fallaba el detalle, dejándolo a medias). Si la categoría no tiene
+  ficha técnica específica y se llenaron datos técnicos, el mensaje de éxito avisa
+  que no se guardaron.
+- Pendiente (no se impuso, depende de convención institucional): longitud mínima
+  de `descripcion_falla`, unicidad de `nombre_modo_falla` por categoría,
+  confirmación de contraseña al crear usuarios desde el panel.
+
+**Errores junto a cada campo (todos los formularios).** Un solo mecanismo en vez
+de `@error` en cada input: el layout deja los errores de la bolsa `default` en
+`<div id="errores-validacion" data-errores="…">` (dentro de `#main-content`) y
+`resources/js/errores-campos.js` los coloca bajo cada campo, lo resalta con
+`aria-invalid="true"` (regla en `app.css`), reabre el modal si el campo está en
+uno (solo si su `<form>` tiene `action`) y muestra un aviso arriba únicamente
+cuando no encuentra el campo. Un campo oculto se asocia a uno visible con
+`data-error-de="nombre_del_campo_oculto"` (ver `incidentes/registrar`).
+
+Trampas que salieron al hacerlo:
+
+- **`turbo-nav` recrea los `<script>` copiando solo su texto** (se pierden `id` y
+  `type`): los datos no pueden viajar en un `<script type="application/json">`.
+- **Los envíos de formularios por `turbo-nav` no disparan `turbo:load`** (solo la
+  navegación por enlaces). Por eso `errores-campos.js` observa `#main-content`
+  con un `MutationObserver` en vez de depender de ese evento.
+- **El resaltado de borde no se puede hacer con clases de Tailwind**: la regla
+  global `#main-content input {border-color}` tiene especificidad de ID y gana.
+- **El modal "Editar Mi Perfil" (layout) se abría con CUALQUIER error de
+  validación**, porque el perfil usaba la bolsa por defecto. Ahora
+  `PerfilController` usa `validateWithBag('perfil', …)` y el layout lee
+  `$errors->perfil`.
+- Para verificar estilos en el panel del navegador: si `document.visibilityState`
+  es `hidden` las transiciones CSS no avanzan y `getComputedStyle` devuelve el
+  valor anterior (anular `transition` para medir).
 
 ---
 

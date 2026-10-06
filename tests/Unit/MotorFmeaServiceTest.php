@@ -15,6 +15,7 @@ use App\Models\Rol;
 use App\Models\Ubicacion;
 use App\Models\Usuario;
 use App\Services\MotorFmeaService;
+use App\Support\Catalogo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -350,7 +351,7 @@ class MotorFmeaServiceTest extends TestCase
         $this->assertSame(1, PlanTratamientoRiesgo::count());
 
         $plan = PlanTratamientoRiesgo::firstOrFail();
-        $sugerencia = MotorFmeaService::MAPA_TRATAMIENTO_SUGERIDO['Crítico'];
+        $sugerencia = Catalogo::tratamientoSugerido('Crítico');
 
         $this->assertSame($sugerencia['estrategia'], $plan->estrategia);
         $this->assertSame($sugerencia['accion_preventiva'], $plan->accion_preventiva);

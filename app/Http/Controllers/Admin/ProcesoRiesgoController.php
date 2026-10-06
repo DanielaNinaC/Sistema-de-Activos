@@ -13,6 +13,7 @@ use App\Models\ModoFalla;
 use App\Models\PesoAhp;
 use App\Models\PlanTratamientoRiesgo;
 use App\Services\MotorFmeaService;
+use App\Support\Catalogo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -20,26 +21,15 @@ use Illuminate\Validation\Rule;
 class ProcesoRiesgoController extends Controller
 {
     /**
-     * Texto descriptivo (Tabla 20 de la tesis) para cada nivel de Severidad.
+     * Opciones "Etiqueta (valor) — descripción" de una escala de la tesis
+     * (Tabla 20 de Severidad o Tabla 22 de MSR), leídas del catálogo.
      */
-    private const OPCIONES_SEVERIDAD = [
-        'muy_alta' => 'Muy Alta (10) — Pérdida total de datos académicos críticos / incumplimiento legal grave / interrupción total de actividades >24h',
-        'alta' => 'Alta (8) — Degradación severa de servicios / afectación a integridad de información de auditoría',
-        'moderada' => 'Moderada (5) — Activo funciona con limitaciones / impacto en productividad administrativa / interrupción parcial de una clase',
-        'baja' => 'Baja (3) — Inconveniente menor, proceso alterno manual',
-        'insignificante' => 'Insignificante (1) — No existe impacto perceptible',
-    ];
-
-    /**
-     * Texto descriptivo (Tabla 22 de la tesis) para cada nivel de MSR.
-     */
-    private const OPCIONES_MSR = [
-        'muy_baja' => 'Muy Baja (9) — No existen alertas, se detecta solo cuando el servicio colapsa totalmente',
-        'baja' => 'Baja (7) — Detección solo por inspección o reporte manual directo (rondas de soporte, reporte del usuario), sin logs ni alertas',
-        'moderada' => 'Moderada (6) — Registra logs pero requiere revisión manual',
-        'alta' => 'Alta (4) — Alertas automáticas antes del colapso',
-        'muy_alta' => 'Muy Alta (2) — Mitigación autónoma o aviso instantáneo',
-    ];
+    private function opcionesNivel(string $tabla): array
+    {
+        return Catalogo::filas($tabla)
+            ->mapWithKeys(fn ($n) => [$n->clave => "{$n->etiqueta} ({$n->valor}) — {$n->descripcion}"])
+            ->all();
+    }
 
     /**
      * Pantalla intermedia que agrupa los accesos de configuración del módulo
@@ -69,8 +59,8 @@ class ProcesoRiesgoController extends Controller
 
         $modos = $query->orderBy('id_modo_falla')->get();
         $categorias = Categoria::orderBy('nombre_categoria')->get();
-        $opcionesSeveridad = self::OPCIONES_SEVERIDAD;
-        $opcionesMsr = self::OPCIONES_MSR;
+        $opcionesSeveridad = $this->opcionesNivel('niveles_severidad');
+        $opcionesMsr = $this->opcionesNivel('niveles_msr');
 
         return view('riesgos.modos-falla', compact('modos', 'categorias', 'opcionesSeveridad', 'opcionesMsr'));
     }
@@ -80,15 +70,15 @@ class ProcesoRiesgoController extends Controller
         $data = $request->validate([
             'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
             'nombre_modo_falla' => 'required|string|max:255',
-            'nivel_severidad' => 'required|in:muy_alta,alta,moderada,baja,insignificante',
-            'nivel_msr' => 'required|in:muy_baja,baja,moderada,alta,muy_alta',
+            'nivel_severidad' => ['required', Rule::in(Catalogo::nombres('niveles_severidad', 'clave'))],
+            'nivel_msr' => ['required', Rule::in(Catalogo::nombres('niveles_msr', 'clave'))],
             'justificacion_severidad' => 'nullable|string',
             'justificacion_msr' => 'nullable|string',
             'indicador_seguimiento' => 'nullable|string|max:255',
         ]);
 
-        $data['valor_severidad_base'] = MotorFmeaService::MAPA_SEVERIDAD[$data['nivel_severidad']];
-        $data['valor_msr_base'] = MotorFmeaService::MAPA_MSR[$data['nivel_msr']];
+        $data['valor_severidad_base'] = Catalogo::valorSeveridad($data['nivel_severidad']);
+        $data['valor_msr_base'] = Catalogo::valorMsr($data['nivel_msr']);
 
         ModoFalla::create($data);
 
@@ -102,15 +92,15 @@ class ProcesoRiesgoController extends Controller
         $data = $request->validate([
             'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
             'nombre_modo_falla' => 'required|string|max:255',
-            'nivel_severidad' => 'required|in:muy_alta,alta,moderada,baja,insignificante',
-            'nivel_msr' => 'required|in:muy_baja,baja,moderada,alta,muy_alta',
+            'nivel_severidad' => ['required', Rule::in(Catalogo::nombres('niveles_severidad', 'clave'))],
+            'nivel_msr' => ['required', Rule::in(Catalogo::nombres('niveles_msr', 'clave'))],
             'justificacion_severidad' => 'nullable|string',
             'justificacion_msr' => 'nullable|string',
             'indicador_seguimiento' => 'nullable|string|max:255',
         ]);
 
-        $data['valor_severidad_base'] = MotorFmeaService::MAPA_SEVERIDAD[$data['nivel_severidad']];
-        $data['valor_msr_base'] = MotorFmeaService::MAPA_MSR[$data['nivel_msr']];
+        $data['valor_severidad_base'] = Catalogo::valorSeveridad($data['nivel_severidad']);
+        $data['valor_msr_base'] = Catalogo::valorMsr($data['nivel_msr']);
 
         $modo->update($data);
 
@@ -196,18 +186,28 @@ class ProcesoRiesgoController extends Controller
 
     public function evaluacionStore(Request $request, MotorFmeaService $service)
     {
+        // Igual que el motor automático (EvaluarActivoRequest): el modo de falla
+        // debe pertenecer a la categoría del activo evaluado.
+        $categoriaDelActivo = ActivoTecnologico::where('id_activo', $request->input('fk_id_activo'))->value('fk_id_categoria');
+
         $data = $request->validate([
             'fk_id_activo' => 'required|integer|exists:activos_tecnologicos,id_activo',
-            'fk_id_modo_falla' => 'required|integer|exists:modos_falla,id_modo_falla',
+            'fk_id_modo_falla' => [
+                'required',
+                'integer',
+                Rule::exists('modos_falla', 'id_modo_falla')->where('fk_id_categoria', $categoriaDelActivo),
+            ],
             'valor_severidad' => 'required|integer|min:1|max:10',
             'valor_frecuencia' => 'required|integer|min:1|max:10',
             'valor_msr' => 'required|integer|min:1|max:10',
-            'fecha_evaluacion' => 'required|date',
+            'fecha_evaluacion' => 'required|date|before_or_equal:now',
+        ], [
+            'fk_id_modo_falla.exists' => 'El modo de falla seleccionado no pertenece a la categoría de este activo.',
         ]);
 
         $activo = ActivoTecnologico::with('categoria')->findOrFail($data['fk_id_activo']);
         $nivelDependencia = $activo->categoria->nivel_dependencia ?? 'Media';
-        $D = MotorFmeaService::MAPA_DEPENDENCIA[$nivelDependencia] ?? 5;
+        $D = Catalogo::valorDependencia($nivelDependencia) ?? 5;
 
         $score = $service->calcularScore(
             $data['valor_severidad'],
@@ -330,26 +330,12 @@ class ProcesoRiesgoController extends Controller
         return redirect()->route('admin.riesgos.score')->with('success', 'Pesos AHP actualizados con éxito');
     }
 
-    /**
-     * Vocabulario canónico de estrategia de tratamiento (ISO 31000, marco
-     * teórico 2.7.3 de la tesis). No usar los términos de la Tabla 23 ni los
-     * del diccionario de datos como valores reales del sistema.
-     */
-    private const ESTRATEGIAS_TRATAMIENTO = ['Mitigar', 'Transferir', 'Evitar', 'Aceptar'];
-
-    /**
-     * Estados únicos de un plan de tratamiento.
-     */
-    private const ESTADOS_TRATAMIENTO = ['Pendiente', 'En Proceso', 'Completado'];
-
-    /**
-     * Estrategias que nunca generan un Mantenimiento (ver
-     * MotorFmeaService::crearMantenimientoSiMitiga). Al completarlas, la
-     * única constancia de "qué se hizo" es 'observacion_cierre': por eso se
-     * exige no vacía en ese momento. Para 'Mitigar', "qué se hizo" ya vive en
-     * descripcion_trabajo del Mantenimiento vinculado.
-     */
-    private const ESTRATEGIAS_SIN_MANTENIMIENTO = ['Transferir', 'Evitar', 'Aceptar'];
+    // Las estrategias de tratamiento (ISO 31000, marco teórico 2.7.3 de la
+    // tesis), sus estados y cuáles generan un Mantenimiento viven en los
+    // catálogos estrategias_tratamiento y estados_tratamiento. Las estrategias
+    // sin mantenimiento (Transferir/Evitar/Aceptar) exigen 'observacion_cierre'
+    // al completarse, porque es la única constancia de "qué se hizo"; para
+    // 'Mitigar' eso ya vive en descripcion_trabajo del Mantenimiento vinculado.
 
     public function tratamientoIndex(Request $request)
     {
@@ -360,11 +346,11 @@ class ProcesoRiesgoController extends Controller
             ->orderByDesc('fecha_evaluacion')
             ->get();
         $evaluacionesSinTratamiento = $this->evaluacionesSinTratamiento();
-        $estrategias = self::ESTRATEGIAS_TRATAMIENTO;
-        $estados = self::ESTADOS_TRATAMIENTO;
+        $estrategias = Catalogo::nombres('estrategias_tratamiento');
+        $estados = Catalogo::nombres('estados_tratamiento');
         // Misma fuente que usa el motor automático (MotorFmeaService), para
         // que el formulario manual sugiera lo mismo que sugeriría el motor.
-        $mapaSugerido = MotorFmeaService::MAPA_TRATAMIENTO_SUGERIDO;
+        $mapaSugerido = Catalogo::mapaTratamientoSugerido();
 
         // Antes de renderizar: si el formulario apunta a una evaluación
         // específica (?crear=ID, desde "Crear tratamiento" o "Revisar
@@ -386,12 +372,12 @@ class ProcesoRiesgoController extends Controller
     {
         $data = $request->validate([
             'fk_id_evaluacion' => 'required|integer|exists:evaluacion_riesgo,id_evaluacion',
-            'estrategia' => 'required|string|in:' . implode(',', self::ESTRATEGIAS_TRATAMIENTO),
+            'estrategia' => ['required', 'string', Rule::in(Catalogo::nombres('estrategias_tratamiento'))],
             'accion_preventiva' => 'required|string',
-            'estado_tratamiento' => 'required|string|in:' . implode(',', self::ESTADOS_TRATAMIENTO),
+            'estado_tratamiento' => ['required', 'string', Rule::in(Catalogo::nombres('estados_tratamiento'))],
             'observacion_cierre' => [
                 Rule::requiredIf(fn () => $request->input('estado_tratamiento') === 'Completado'
-                    && in_array($request->input('estrategia'), self::ESTRATEGIAS_SIN_MANTENIMIENTO, true)),
+                    && in_array($request->input('estrategia'), Catalogo::estrategiasSinMantenimiento(), true)),
                 'nullable',
                 'string',
             ],
@@ -441,7 +427,7 @@ class ProcesoRiesgoController extends Controller
             // decide tratar igual): se congela la sugerencia si el nivel
             // tuviera una definida, y se crea desde cero.
             $evaluacion = EvaluacionRiesgo::with('modoFalla')->find($data['fk_id_evaluacion']);
-            $sugerencia = MotorFmeaService::MAPA_TRATAMIENTO_SUGERIDO[$evaluacion->nivel_riesgo] ?? null;
+            $sugerencia = Catalogo::tratamientoSugerido($evaluacion->nivel_riesgo);
             if ($sugerencia) {
                 $data['estrategia_sugerida'] = $sugerencia['estrategia'];
                 $data['accion_sugerida'] = $sugerencia['accion_preventiva'];
@@ -476,14 +462,14 @@ class ProcesoRiesgoController extends Controller
             return;
         }
 
-        if ($tratamiento->estrategia === 'Mitigar') {
+        if (Catalogo::estrategiaGeneraMantenimiento($tratamiento->estrategia)) {
             $service->crearMantenimientoSiMitiga($tratamiento);
 
             return;
         }
 
         Mantenimiento::where('id_evaluacion_origen', $tratamiento->fk_id_evaluacion)
-            ->whereIn('estado_mantenimiento', ['Programado', 'Pendiente', 'En ejecución'])
+            ->whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoAbiertos())
             ->update(['estado_mantenimiento' => 'Cancelado']);
     }
 
@@ -496,10 +482,10 @@ class ProcesoRiesgoController extends Controller
         // tocarlas, sea cual sea el payload recibido. 'estrategia' tampoco es
         // editable aquí por el mismo motivo (ver ronda anterior).
         $data = $request->validate([
-            'estado_tratamiento' => 'required|string|in:' . implode(',', self::ESTADOS_TRATAMIENTO),
+            'estado_tratamiento' => ['required', 'string', Rule::in(Catalogo::nombres('estados_tratamiento'))],
             'observacion_cierre' => [
                 Rule::requiredIf(fn () => $request->input('estado_tratamiento') === 'Completado'
-                    && in_array($tratamiento->estrategia, self::ESTRATEGIAS_SIN_MANTENIMIENTO, true)),
+                    && in_array($tratamiento->estrategia, Catalogo::estrategiasSinMantenimiento(), true)),
                 'nullable',
                 'string',
             ],
@@ -556,7 +542,7 @@ class ProcesoRiesgoController extends Controller
     {
         $data = $request->validate([
             'fk_id_evaluacion' => 'required|integer|exists:evaluacion_riesgo,id_evaluacion',
-            'tipo_alerta' => 'required|string|max:255',
+            'tipo_alerta' => ['required', 'string', Rule::in(Catalogo::nombres('tipos_alerta'))],
             'fecha_generacion' => 'required|date',
             'notificacion_enviada' => 'nullable|boolean',
         ]);

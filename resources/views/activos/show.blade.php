@@ -42,17 +42,6 @@
 
 <div class="max-w-7xl mx-auto space-y-6">
 
-    {{-- Alertas de éxito y advertencia --}}
-    @if(session('success'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
-            <div class="flex items-center gap-3">
-                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">✓</span>
-                <span class="text-sm font-medium">{{ session('success') }}</span>
-            </div>
-            <button type="button" onclick="this.parentElement.remove()" class="text-emerald-500 hover:text-emerald-700 text-sm font-bold ml-4">✕</button>
-        </div>
-    @endif
-
     @if(session('warning'))
         <div class="bg-amber-50 border border-amber-200 text-amber-800 px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
             <div class="flex items-center gap-3">
@@ -60,19 +49,6 @@
                 <span class="text-sm font-medium">{{ session('warning') }}</span>
             </div>
             <button type="button" onclick="this.parentElement.remove()" class="text-amber-500 hover:text-amber-700 text-sm font-bold ml-4">✕</button>
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="bg-rose-50 border border-rose-200 text-rose-800 px-5 py-3.5 rounded-2xl shadow-sm animate-fade-in">
-            <div class="flex items-center gap-2 mb-1.5 font-bold text-sm">
-                <span>✕</span> Ocurrieron errores en el formulario:
-            </div>
-            <ul class="list-disc list-inside text-xs space-y-1">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
         </div>
     @endif
 
@@ -477,7 +453,7 @@
                         <div class="flex items-center gap-2.5">
                             <h3 class="text-lg font-bold text-slate-900">Mantenimientos</h3>
                             @php
-                                $mPendientes = $activo->mantenimientos->whereIn('estado_mantenimiento', ['Pendiente', 'Programado', 'En ejecución'])->count();
+                                $mPendientes = $activo->mantenimientos->whereIn('estado_mantenimiento', \App\Support\Catalogo::estadosMantenimientoAbiertos())->count();
                             @endphp
                             @if($mPendientes > 0)
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
@@ -588,7 +564,7 @@
                         <div class="flex items-center gap-2.5">
                             <h3 class="text-lg font-bold text-slate-900">Incidentes Reportados</h3>
                             @php
-                                $iAbiertos = $activo->incidentes->filter(fn($i) => !in_array($i->estado_incidente, ['Resuelto', 'Cerrado', 'resuelto', 'cerrado']))->count();
+                                $iAbiertos = $activo->incidentes->filter(fn($i) => !in_array($i->estado_incidente, \App\Support\Catalogo::estadosIncidenteCerrados()))->count();
                             @endphp
                             @if($iAbiertos > 0)
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
@@ -977,8 +953,9 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1.5">Tipo de Mantenimiento <span class="text-rose-500">*</span></label>
                         <select name="tipo_mantenimiento" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
-                            <option value="Preventivo">Preventivo (Programado / Rutina)</option>
-                            <option value="Correctivo">Correctivo (Reparación / Falla)</option>
+                            @foreach(\App\Support\Catalogo::filas('tipos_mantenimiento') as $tipo)
+                                <option value="{{ $tipo->nombre }}">{{ \App\Support\Catalogo::etiqueta($tipo) }}</option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -1003,20 +980,19 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado Inicial <span class="text-rose-500">*</span></label>
                         <select name="estado_mantenimiento" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
-                            <option value="Programado">Programado</option>
-                            <option value="En ejecución">En ejecución</option>
-                            <option value="Pendiente">Pendiente</option>
-                            <option value="Completado">Completado / Finalizado</option>
+                            @foreach(\App\Support\Catalogo::estadosMantenimientoParaRegistro() as $estado)
+                                <option value="{{ $estado->nombre }}">{{ $estado->nombre }}</option>
+                            @endforeach
                         </select>
                     </div>
                 </div>
 
-                @if($activo->incidentes->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado'])->count())
+                @if($activo->incidentes->whereNotIn('estado_incidente', \App\Support\Catalogo::estadosIncidenteCerrados())->count())
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1.5">Vincular con Incidente Abierto (Opcional)</label>
                         <select name="fk_id_incidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
                             <option value="">Ninguno — Mantenimiento Preventivo Regular</option>
-                            @foreach($activo->incidentes->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado']) as $incAbierto)
+                            @foreach($activo->incidentes->whereNotIn('estado_incidente', \App\Support\Catalogo::estadosIncidenteCerrados()) as $incAbierto)
                                 <option value="{{ $incAbierto->id_incidente }}">
                                     #{{ $incAbierto->id_incidente }} — {{ Str::limit($incAbierto->descripcion_falla, 50) }}
                                 </option>
@@ -1073,17 +1049,13 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1.5">Prioridad de Atención <span class="text-rose-500">*</span></label>
                         @php
-                            $riesgoActual = strtolower(trim($activo->nivel_riesgo ?? $activo->criticidad_institucional ?? ''));
-                            $sugerida = match(true) {
-                                str_contains($riesgoActual, 'crític') || str_contains($riesgoActual, 'critic') || str_contains($riesgoActual, 'alt') => 'Alta',
-                                str_contains($riesgoActual, 'med') => 'Media',
-                                default => 'Baja',
-                            };
+                            // Prioridad sugerida según el nivel de riesgo del activo (catálogo niveles_riesgo).
+                            $sugerida = \App\Support\Catalogo::prioridadSugeridaPorNivel()[$activo->nivel_riesgo ?? ''] ?? 'Baja';
                         @endphp
                         <select name="prioridad" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
-                            <option value="Alta" {{ $sugerida === 'Alta' ? 'selected' : '' }}>Alta (Urgente / Interrupción crítica)</option>
-                            <option value="Media" {{ $sugerida === 'Media' ? 'selected' : '' }}>Media (Impacto funcional moderado)</option>
-                            <option value="Baja" {{ $sugerida === 'Baja' ? 'selected' : '' }}>Baja (Inconveniente menor)</option>
+                            @foreach(\App\Support\Catalogo::filas('prioridades_incidente') as $prioridad)
+                                <option value="{{ $prioridad->nombre }}" {{ $sugerida === $prioridad->nombre ? 'selected' : '' }}>{{ \App\Support\Catalogo::etiqueta($prioridad) }}</option>
+                            @endforeach
                         </select>
                     </div>
                 </div>
@@ -1106,8 +1078,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado Inicial</label>
                     <select name="estado_incidente" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
-                        <option value="Reportado" selected>Reportado</option>
-                        <option value="En proceso">En proceso de atención</option>
+                        @foreach(\App\Support\Catalogo::estadosIncidenteAbiertos() as $estado)
+                            <option value="{{ $estado->nombre }}" {{ $loop->first ? 'selected' : '' }}>{{ \App\Support\Catalogo::etiqueta($estado) }}</option>
+                        @endforeach
                     </select>
                 </div>
             </div>

@@ -12,24 +12,16 @@ use App\Models\DetalleProyector;
 use App\Exports\InventarioActivosExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Support\Catalogo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ActivoTecnologicoController extends Controller
 {
-    /**
-     * Vocabulario canónico del motivo de baja (lista blanca en PHP, sin ENUM
-     * en BD, siguiendo el mismo criterio que ESTRATEGIAS_TRATAMIENTO en
-     * ProcesoRiesgoController). Usado por el formulario de edición y por
-     * InformesController::activosDeBaja().
-     */
-    public const MOTIVOS_BAJA = [
-        'Obsolescencia',
-        'Daño irreparable',
-        'Robo o extravío',
-        'Reemplazo tecnológico',
-        'Fin de vida útil',
-        'Otro',
-    ];
+    // Estados operativos, etapas del ciclo de vida y motivos de baja viven en
+    // los catálogos estados_operativos, etapas_ciclo_vida y motivos_baja.
 
     public function index(Request $request)
     {
@@ -60,66 +52,135 @@ class ActivoTecnologicoController extends Controller
         return view('activos.registrar-activo', compact('categorias', 'ubicaciones'));
     }
 
+    /**
+     * Tipo de ficha técnica que corresponde a una categoría. Se deduce del
+     * texto de su nombre (decisión de diseño existente); null si no coincide.
+     */
+    private function tipoDetalle(?Categoria $categoria): ?string
+    {
+        if (!$categoria) {
+            return null;
+        }
+
+        $nombre = strtolower(trim($categoria->nombre_categoria));
+
+        if (str_contains($nombre, 'computadora') || str_contains($nombre, 'pc') || str_contains($nombre, 'laptop')) {
+            return 'computadora';
+        }
+
+        if (str_contains($nombre, 'red') || str_contains($nombre, 'servidor') || str_contains($nombre, 'switch') || str_contains($nombre, 'router') || str_contains($nombre, 'impresora') || str_contains($nombre, 'printer')) {
+            return 'red';
+        }
+
+        if (str_contains($nombre, 'proyector')) {
+            return 'proyector';
+        }
+
+        return null;
+    }
+
+    /** Reglas de los campos de la ficha técnica, según el tipo de categoría. */
+    private function reglasDetalle(?string $tipo): array
+    {
+        return match ($tipo) {
+            'computadora' => [
+                'procesador' => 'required|string|max:255',
+                'ram_gb' => 'required|integer|min:1',
+                'disco_solido_gb' => 'nullable|integer|min:0',
+                'disco_rigido_gb' => 'nullable|integer|min:0',
+                'sistema_operativo' => 'nullable|string|max:255',
+                'lector' => 'nullable',
+                'parlantes' => 'nullable',
+                'teclado_mouse' => 'nullable',
+                'monitor' => 'nullable',
+                'camara_web' => 'nullable',
+            ],
+            'red' => [
+                'direccion_ip' => 'nullable|ip',
+                'version_firmware' => 'nullable|string|max:255',
+            ],
+            'proyector' => [
+                'tipo_cable' => 'nullable|string|max:255',
+                'calidad_imagen' => 'nullable|integer|min:0',
+            ],
+            default => [],
+        };
+    }
+
+    private const CAMPOS_DETALLE = [
+        'procesador', 'ram_gb', 'disco_solido_gb', 'disco_rigido_gb', 'sistema_operativo',
+        'lector', 'parlantes', 'teclado_mouse', 'monitor', 'camara_web',
+        'direccion_ip', 'version_firmware', 'tipo_cable', 'calidad_imagen',
+    ];
+
+    /** Guarda (crea o actualiza) la ficha técnica del activo según su tipo. */
+    private function guardarDetalle(?string $tipo, ActivoTecnologico $activo, array $detalle, Request $request): void
+    {
+        $clave = ['fk_id_activo' => $activo->id_activo];
+
+        match ($tipo) {
+            'computadora' => DetalleComputadora::updateOrCreate($clave, $detalle + [
+                'lector' => $request->boolean('lector'),
+                'parlantes' => $request->boolean('parlantes'),
+                'teclado_mouse' => $request->boolean('teclado_mouse'),
+                'monitor' => $request->boolean('monitor'),
+                'camara_web' => $request->boolean('camara_web'),
+            ]),
+            'red' => DetalleEquipoRed::updateOrCreate($clave, $detalle),
+            'proyector' => DetalleProyector::updateOrCreate($clave, $detalle),
+            default => null,
+        };
+    }
+
+    /**
+     * Si la categoría no tiene ficha técnica específica pero el usuario llenó
+     * campos técnicos, esos datos no se guardan: se le avisa en vez de
+     * descartarlos en silencio.
+     */
+    private function avisoDetalleNoGuardado(?string $tipo, Request $request): string
+    {
+        if ($tipo !== null) {
+            return '';
+        }
+
+        foreach (self::CAMPOS_DETALLE as $campo) {
+            if ($request->filled($campo)) {
+                return ' Aviso: los datos técnicos ingresados (RAM, IP, etc.) no se guardaron porque la categoría seleccionada no tiene ficha técnica específica.';
+            }
+        }
+
+        return '';
+    }
+
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $reglas = [
             'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
             'fk_id_ubicacion' => 'required|integer|exists:ubicaciones,id_ubicacion',
             'codigo_patrimonial' => 'required|string|max:255|unique:activos_tecnologicos,codigo_patrimonial',
             'nombre_equipo' => 'required|string|max:255',
             'marca' => 'nullable|string|max:255',
             'modelo' => 'nullable|string|max:255',
-            'fecha_adquisicion' => 'nullable|date',
-            'estado_operativo' => 'required|string|max:255',
-            'etapa_ciclo_vida' => 'required|string|max:255',
+            // Obligatoria: de ella depende la antigüedad y el desgaste del activo en el cálculo de riesgo.
+            'fecha_adquisicion' => 'required|date|before_or_equal:today',
+            'estado_operativo' => ['required', 'string', Rule::in(Catalogo::nombres('estados_operativos'))],
+            'etapa_ciclo_vida' => ['required', 'string', Rule::in(Catalogo::nombres('etapas_ciclo_vida'))],
             'observaciones' => 'nullable|string',
-        ]);
+        ];
 
-        $activo = ActivoTecnologico::create($data);
+        // Se valida todo (activo + ficha técnica) antes de guardar nada: si algún
+        // dato técnico es inválido, el activo no queda registrado a medias.
+        $tipo = $this->tipoDetalle(Categoria::find($request->input('fk_id_categoria')));
+        $reglasDetalle = $this->reglasDetalle($tipo);
+        $validado = $request->validate($reglas + $reglasDetalle);
 
-        // Guardar detalles específicos según la categoría seleccionada
-        $categoria = Categoria::find($request->fk_id_categoria);
-        if ($categoria) {
-            $catName = strtolower(trim($categoria->nombre_categoria));
+        DB::transaction(function () use ($validado, $reglas, $reglasDetalle, $tipo, $request) {
+            $activo = ActivoTecnologico::create(Arr::only($validado, array_keys($reglas)));
+            $this->guardarDetalle($tipo, $activo, Arr::only($validado, array_keys($reglasDetalle)), $request);
+        });
 
-            if (str_contains($catName, 'computadora') || str_contains($catName, 'pc') || str_contains($catName, 'laptop')) {
-                $compData = $request->validate([
-                    'procesador' => 'nullable|string|max:255',
-                    'ram_gb' => 'nullable|integer',
-                    'disco_solido_gb' => 'nullable|integer',
-                    'disco_rigido_gb' => 'nullable|integer',
-                    'sistema_operativo' => 'nullable|string|max:255',
-                    'lector' => 'nullable',
-                    'parlantes' => 'nullable',
-                    'teclado_mouse' => 'nullable',
-                    'monitor' => 'nullable',
-                    'camara_web' => 'nullable',
-                ]);
-                $compData['fk_id_activo'] = $activo->id_activo;
-                $compData['lector'] = $request->boolean('lector');
-                $compData['parlantes'] = $request->boolean('parlantes');
-                $compData['teclado_mouse'] = $request->boolean('teclado_mouse');
-                $compData['monitor'] = $request->boolean('monitor');
-                $compData['camara_web'] = $request->boolean('camara_web');
-                DetalleComputadora::create($compData);
-            } elseif (str_contains($catName, 'red') || str_contains($catName, 'servidor') || str_contains($catName, 'switch') || str_contains($catName, 'router') || str_contains($catName, 'impresora') || str_contains($catName, 'printer')) {
-                $redData = $request->validate([
-                    'direccion_ip' => 'nullable|string|max:255',
-                    'version_firmware' => 'nullable|string|max:255',
-                ]);
-                $redData['fk_id_activo'] = $activo->id_activo;
-                DetalleEquipoRed::create($redData);
-            } elseif (str_contains($catName, 'proyector')) {
-                $proyData = $request->validate([
-                    'tipo_cable' => 'nullable|string|max:255',
-                    'calidad_imagen' => 'nullable|integer',
-                ]);
-                $proyData['fk_id_activo'] = $activo->id_activo;
-                DetalleProyector::create($proyData);
-            }
-        }
-
-        return redirect()->route('admin.activos.inventario')->with('success', 'Activo tecnológico creado con éxito.');
+        return redirect()->route('admin.activos.inventario')
+            ->with('success', 'Activo tecnológico creado con éxito.' . $this->avisoDetalleNoGuardado($tipo, $request));
     }
 
     public function categorias(Request $request)
@@ -142,7 +203,7 @@ class ActivoTecnologicoController extends Controller
             'nombre_categoria' => 'required|string|max:255|unique:categorias,nombre_categoria',
             'vida_util_valor' => 'nullable|integer|min:1',
             'vida_util_unidad' => 'nullable|in:meses,anos',
-            'nivel_dependencia' => 'required|in:Alta,Media,Baja',
+            'nivel_dependencia' => ['required', Rule::in(Catalogo::nombres('niveles_dependencia'))],
             'justificacion_dependencia' => 'nullable|string',
         ]);
 
@@ -174,7 +235,7 @@ class ActivoTecnologicoController extends Controller
             'nombre_categoria' => 'required|string|max:255|unique:categorias,nombre_categoria,' . $id . ',id_categoria',
             'vida_util_valor' => 'nullable|integer|min:1',
             'vida_util_unidad' => 'nullable|in:meses,anos',
-            'nivel_dependencia' => 'required|in:Alta,Media,Baja',
+            'nivel_dependencia' => ['required', Rule::in(Catalogo::nombres('niveles_dependencia'))],
             'justificacion_dependencia' => 'nullable|string',
         ]);
 
@@ -245,9 +306,22 @@ class ActivoTecnologicoController extends Controller
             'aula' => 'nullable|string|max:255',
         ]);
 
+        if ($this->ubicacionDuplicada($data)) {
+            return back()->withErrors(['aula' => 'Ya existe una ubicación con esa sección y aula.'])->withInput();
+        }
+
         Ubicacion::create($data);
 
         return redirect()->route('admin.activos.ubicaciones')->with('success', 'Ubicación creada con éxito');
+    }
+
+    /** La pareja (sección, aula) es única en la base de datos; se valida antes para dar un mensaje claro. */
+    private function ubicacionDuplicada(array $data, ?int $ignorarId = null): bool
+    {
+        return Ubicacion::where('seccion', $data['seccion'])
+            ->where('aula', $data['aula'] ?? null)
+            ->when($ignorarId, fn ($q) => $q->where('id_ubicacion', '!=', $ignorarId))
+            ->exists();
     }
 
     public function updateUbicacion(Request $request, $id)
@@ -258,6 +332,10 @@ class ActivoTecnologicoController extends Controller
             'seccion' => 'required|string|max:255',
             'aula' => 'nullable|string|max:255',
         ]);
+
+        if ($this->ubicacionDuplicada($data, (int) $ubicacion->id_ubicacion)) {
+            return back()->withErrors(['aula' => 'Ya existe una ubicación con esa sección y aula.'])->withInput();
+        }
 
         $ubicacion->update($data);
 
@@ -312,10 +390,9 @@ class ActivoTecnologicoController extends Controller
             ->get();
 
         $usuarios = \App\Models\Usuario::orderBy('nombre')->get();
+        // Solo los modos de falla de la categoría del activo: evaluar contra los de
+        // otra categoría no tiene sentido y el backend lo rechaza.
         $modosFalla = \App\Models\ModoFalla::where('fk_id_categoria', $activo->fk_id_categoria)->orderBy('nombre_modo_falla')->get();
-        if ($modosFalla->isEmpty()) {
-            $modosFalla = \App\Models\ModoFalla::orderBy('nombre_modo_falla')->get();
-        }
 
         return view('activos.show', compact('activo', 'logs', 'usuarios', 'modosFalla'));
     }
@@ -362,19 +439,27 @@ class ActivoTecnologicoController extends Controller
     {
         $activo = ActivoTecnologico::findOrFail($id);
 
-        $data = $request->validate([
+        $reglas = [
             'fk_id_categoria' => 'required|integer|exists:categorias,id_categoria',
             'fk_id_ubicacion' => 'required|integer|exists:ubicaciones,id_ubicacion',
             'codigo_patrimonial' => 'required|string|max:255|unique:activos_tecnologicos,codigo_patrimonial,' . $activo->id_activo . ',id_activo',
             'nombre_equipo' => 'required|string|max:255',
             'marca' => 'nullable|string|max:255',
             'modelo' => 'nullable|string|max:255',
-            'fecha_adquisicion' => 'nullable|date',
-            'estado_operativo' => 'required|string|max:255',
-            'etapa_ciclo_vida' => 'required|string|max:255',
-            'motivo_baja' => 'nullable|required_if:estado_operativo,De Baja|in:' . implode(',', self::MOTIVOS_BAJA),
+            'fecha_adquisicion' => 'required|date|before_or_equal:today',
+            'estado_operativo' => ['required', 'string', Rule::in(Catalogo::nombres('estados_operativos'))],
+            'etapa_ciclo_vida' => ['required', 'string', Rule::in(Catalogo::nombres('etapas_ciclo_vida'))],
+            'motivo_baja' => ['nullable', 'required_if:estado_operativo,De Baja', Rule::in(Catalogo::nombres('motivos_baja'))],
             'observaciones' => 'nullable|string',
-        ]);
+        ];
+
+        // Se valida todo (activo + ficha técnica) antes de modificar nada.
+        $tipo = $this->tipoDetalle(Categoria::find($request->input('fk_id_categoria')));
+        $reglasDetalle = $this->reglasDetalle($tipo);
+        $validado = $request->validate($reglas + $reglasDetalle);
+
+        $data = Arr::only($validado, array_keys($reglas));
+        $detalle = Arr::only($validado, array_keys($reglasDetalle));
 
         // Trazabilidad de la baja: 'De Baja' es un estado_operativo más, pero
         // fecha_baja/motivo_baja/fk_id_usuario_baja solo tienen sentido en el
@@ -425,60 +510,27 @@ class ActivoTecnologicoController extends Controller
             }
         }
 
-        $activo->update($data);
+        DB::transaction(function () use ($activo, $data, $cambios, $tipo, $detalle, $request) {
+            $activo->update($data);
 
-        if (!empty($cambios)) {
-            \App\Models\Log::create([
-                'id_usuario' => auth()->id() ?? (\App\Models\Usuario::first()->id_usuario ?? 1),
-                'accion_realizada' => 'Modificación de Activo Tecnológico',
-                'tabla_afectada' => 'activos_tecnologicos',
-                'registro_id' => $activo->id_activo,
-                'fecha_hora' => now(),
-                'valor_anterior' => 'Datos previos actualizados',
-                'valor_nuevo' => implode(' | ', $cambios),
-            ]);
-        }
-
-        // Actualizar/Crear detalles según la categoría elegida
-        $categoria = Categoria::find($request->fk_id_categoria);
-        if ($categoria) {
-            $catName = strtolower(trim($categoria->nombre_categoria));
-
-            if (str_contains($catName, 'computadora') || str_contains($catName, 'pc') || str_contains($catName, 'laptop')) {
-                $compData = $request->validate([
-                    'procesador' => 'nullable|string|max:255',
-                    'ram_gb' => 'nullable|integer',
-                    'disco_solido_gb' => 'nullable|integer',
-                    'disco_rigido_gb' => 'nullable|integer',
-                    'sistema_operativo' => 'nullable|string|max:255',
-                    'lector' => 'nullable',
-                    'parlantes' => 'nullable',
-                    'teclado_mouse' => 'nullable',
-                    'monitor' => 'nullable',
-                    'camara_web' => 'nullable',
+            if (!empty($cambios)) {
+                \App\Models\Log::create([
+                    'id_usuario' => auth()->id() ?? (\App\Models\Usuario::first()->id_usuario ?? 1),
+                    'accion_realizada' => 'Modificación de Activo Tecnológico',
+                    'tabla_afectada' => 'activos_tecnologicos',
+                    'registro_id' => $activo->id_activo,
+                    'fecha_hora' => now(),
+                    'valor_anterior' => 'Datos previos actualizados',
+                    'valor_nuevo' => implode(' | ', $cambios),
                 ]);
-                $compData['lector'] = $request->boolean('lector');
-                $compData['parlantes'] = $request->boolean('parlantes');
-                $compData['teclado_mouse'] = $request->boolean('teclado_mouse');
-                $compData['monitor'] = $request->boolean('monitor');
-                $compData['camara_web'] = $request->boolean('camara_web');
-                DetalleComputadora::updateOrCreate(['fk_id_activo' => $activo->id_activo], $compData);
-            } elseif (str_contains($catName, 'red') || str_contains($catName, 'servidor') || str_contains($catName, 'switch') || str_contains($catName, 'router') || str_contains($catName, 'impresora') || str_contains($catName, 'printer')) {
-                $redData = $request->validate([
-                    'direccion_ip' => 'nullable|string|max:255',
-                    'version_firmware' => 'nullable|string|max:255',
-                ]);
-                DetalleEquipoRed::updateOrCreate(['fk_id_activo' => $activo->id_activo], $redData);
-            } elseif (str_contains($catName, 'proyector')) {
-                $proyData = $request->validate([
-                    'tipo_cable' => 'nullable|string|max:255',
-                    'calidad_imagen' => 'nullable|integer',
-                ]);
-                DetalleProyector::updateOrCreate(['fk_id_activo' => $activo->id_activo], $proyData);
             }
-        }
 
-        return redirect()->route('admin.activos.inventario')->with('success', 'Activo tecnológico actualizado con éxito.');
+            // Actualizar/crear la ficha técnica según la categoría elegida
+            $this->guardarDetalle($tipo, $activo, $detalle, $request);
+        });
+
+        return redirect()->route('admin.activos.inventario')
+            ->with('success', 'Activo tecnológico actualizado con éxito.' . $this->avisoDetalleNoGuardado($tipo, $request));
     }
 
     /**

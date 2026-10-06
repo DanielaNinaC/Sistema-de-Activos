@@ -29,23 +29,6 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl flex items-center gap-2 text-sm shadow-sm">
-            <span class="font-bold">✓</span> {{ session('success') }}
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 space-y-1 shadow-sm">
-            <div class="font-semibold text-sm">Por favor corrige los siguientes errores:</div>
-            <ul class="list-disc list-inside text-xs space-y-0.5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     {{-- Banner Informativo del Origen Vinculado (si vino desde Incidente o Evaluación) --}}
     @if($preIncidenteId)
         <div class="bg-rose-50 border border-rose-200 text-rose-900 px-4 py-3 rounded-2xl flex items-center justify-between text-xs shadow-sm">
@@ -153,10 +136,9 @@
                         Tipo de Mantenimiento <span class="text-rose-500">*</span>
                     </label>
                     <select name="tipo_mantenimiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Preventivo" {{ old('tipo_mantenimiento') == 'Preventivo' ? 'selected' : '' }}>Preventivo</option>
-                        <option value="Correctivo" {{ old('tipo_mantenimiento') == 'Correctivo' ? 'selected' : '' }}>Correctivo</option>
-                        <option value="Programado" {{ old('tipo_mantenimiento') == 'Programado' ? 'selected' : '' }}>Programado</option>
-                        <option value="Inspección" {{ old('tipo_mantenimiento') == 'Inspección' ? 'selected' : '' }}>Inspección / Evaluación Técnica</option>
+                        @foreach(\App\Support\Catalogo::filas('tipos_mantenimiento') as $tipo)
+                            <option value="{{ $tipo->nombre }}" {{ old('tipo_mantenimiento') == $tipo->nombre ? 'selected' : '' }}>{{ \App\Support\Catalogo::etiqueta($tipo) }}</option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -166,10 +148,9 @@
                         Estado Inicial <span class="text-rose-500">*</span>
                     </label>
                     <select name="estado_mantenimiento" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Programado" {{ old('estado_mantenimiento') == 'Programado' ? 'selected' : '' }}>Programado</option>
-                        <option value="Pendiente" {{ old('estado_mantenimiento') == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
-                        <option value="En ejecución" {{ old('estado_mantenimiento') == 'En ejecución' ? 'selected' : '' }}>En ejecución</option>
-                        <option value="Finalizado" {{ old('estado_mantenimiento') == 'Finalizado' ? 'selected' : '' }}>Finalizado</option>
+                        @foreach(\App\Support\Catalogo::estadosMantenimientoParaRegistro() as $estado)
+                            <option value="{{ $estado->nombre }}" {{ old('estado_mantenimiento') == $estado->nombre ? 'selected' : '' }}>{{ $estado->nombre }}</option>
+                        @endforeach
                     </select>
                 </div>
 

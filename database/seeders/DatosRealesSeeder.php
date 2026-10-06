@@ -289,7 +289,7 @@ class DatosRealesSeeder extends Seeder
      * Fuente de Información. El esquema real (modos_falla) no tiene columnas
      * propias para causa/efecto/fuente: solo nombre_modo_falla y un nivel de
      * severidad/MSR tomado de listas fijas (Tabla 20/Tabla 22 de la tesis,
-     * ver MotorFmeaService::MAPA_SEVERIDAD/MAPA_MSR), cada uno con su propio
+     * ver los catálogos niveles_severidad/niveles_msr), cada uno con su propio
      * campo de justificación en texto libre. Causa raíz, efecto y fuente se
      * concatenan en esas justificaciones para no perder el dato.
      *
@@ -366,8 +366,8 @@ class DatosRealesSeeder extends Seeder
                     'nombre_modo_falla' => $m['nombre_modo_falla'],
                 ],
                 [
-                    'valor_severidad_base' => \App\Services\MotorFmeaService::MAPA_SEVERIDAD[$m['nivel_severidad']],
-                    'valor_msr_base' => \App\Services\MotorFmeaService::MAPA_MSR[$m['nivel_msr']],
+                    'valor_severidad_base' => \App\Support\Catalogo::valorSeveridad($m['nivel_severidad']),
+                    'valor_msr_base' => \App\Support\Catalogo::valorMsr($m['nivel_msr']),
                     'nivel_severidad' => $m['nivel_severidad'],
                     'nivel_msr' => $m['nivel_msr'],
                     'justificacion_severidad' => "Causa raíz: {$m['causa']} Efecto/consecuencia: {$m['efecto']} Fuente: {$m['fuente']}.",

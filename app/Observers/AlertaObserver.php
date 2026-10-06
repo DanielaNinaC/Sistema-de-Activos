@@ -6,13 +6,15 @@ namespace App\Observers;
 use App\Mail\AlertaCriticaMail;
 use App\Models\Alerta;
 use App\Models\Usuario;
+use App\Support\Catalogo;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class AlertaObserver
 {
     /**
-     * Notifica (por ahora solo correo) las alertas de riesgo Crítico.
+     * Notifica (por ahora solo correo) las alertas de los niveles de riesgo que
+     * lo piden en el catálogo niveles_riesgo (columna notifica_alerta: Crítico).
      * El envío a Teams está deshabilitado temporalmente (ver abajo).
      * 'tipo_alerta' en este sistema guarda el COLOR del semáforo
      * (Roja/Naranja/Amarilla/Verde — ver MotorFmeaService::obtenerNivelYAlerta()),
@@ -23,7 +25,7 @@ class AlertaObserver
     {
         $alerta->loadMissing('evaluacion.activo', 'evaluacion.modoFalla');
 
-        if ($alerta->evaluacion?->nivel_riesgo !== 'Crítico') {
+        if (!Catalogo::nivelNotificaAlerta($alerta->evaluacion?->nivel_riesgo)) {
             return;
         }
 

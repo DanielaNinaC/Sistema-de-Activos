@@ -24,16 +24,6 @@
         </a>
     </div>
 
-    {{-- Alerta Éxito --}}
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="text-sm font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
     {{-- Barra de Búsqueda --}}
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
         <form method="GET" action="{{ route('admin.incidentes.seguimiento') }}" class="flex flex-col sm:flex-row gap-3">
@@ -193,11 +183,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Nuevo Estado <span class="text-rose-500">*</span></label>
                     <select id="update_estado_incidente" name="estado_incidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Reportado">Reportado</option>
-                        <option value="En proceso">En proceso</option>
-                        <option value="En espera">En espera</option>
-                        <option value="Resuelto">Resuelto (Pasa al historial)</option>
-                        <option value="Cerrado">Cerrado (Pasa al historial)</option>
+                        @foreach(\App\Support\Catalogo::filas('estados_incidente') as $estado)
+                            <option value="{{ $estado->nombre }}">{{ \App\Support\Catalogo::etiqueta($estado) }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>

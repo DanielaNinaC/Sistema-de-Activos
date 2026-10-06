@@ -142,6 +142,55 @@ Route::middleware('auth')->group(function () {
                 Route::get('/activos-baja/excel', [App\Http\Controllers\Admin\InformesController::class, 'activosDeBajaExcel'])->name('activos-baja.excel');
 
                 Route::get('/historial-tratamiento', [App\Http\Controllers\Admin\InformesController::class, 'historialTratamiento'])->name('historial-tratamiento');
+
+                // ── Reportes para Auditoría de TI (RA-01..RA-07) ──
+                Route::prefix('auditoria-ti')->name('auditoria-ti.')->group(function () {
+                    Route::get('/ra-01-inventario', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra01Inventario'])->name('ra01');
+                    Route::get('/ra-01-inventario/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra01InventarioPdf'])->name('ra01.pdf');
+                    Route::get('/ra-01-inventario/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra01InventarioExcel'])->name('ra01.excel');
+
+                    Route::get('/ra-02-mantenimiento', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra02Mantenimiento'])->name('ra02');
+                    Route::get('/ra-02-mantenimiento/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra02MantenimientoPdf'])->name('ra02.pdf');
+                    Route::get('/ra-02-mantenimiento/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra02MantenimientoExcel'])->name('ra02.excel');
+
+                    Route::get('/ra-03-incidentes', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra03Incidentes'])->name('ra03');
+                    Route::get('/ra-03-incidentes/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra03IncidentesPdf'])->name('ra03.pdf');
+                    Route::get('/ra-03-incidentes/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra03IncidentesExcel'])->name('ra03.excel');
+
+                    Route::get('/ra-04-criticidad', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra04Criticidad'])->name('ra04');
+                    Route::get('/ra-04-criticidad/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra04CriticidadPdf'])->name('ra04.pdf');
+                    Route::get('/ra-04-criticidad/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra04CriticidadExcel'])->name('ra04.excel');
+
+                    Route::get('/ra-05-roles-permisos', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra05RolesPermisos'])->name('ra05');
+                    Route::get('/ra-05-roles-permisos/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra05RolesPermisosPdf'])->name('ra05.pdf');
+                    Route::get('/ra-05-roles-permisos/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra05RolesPermisosExcel'])->name('ra05.excel');
+
+                    Route::get('/ra-06-verificacion', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra06Verificacion'])->name('ra06');
+                    Route::get('/ra-06-verificacion/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra06VerificacionPdf'])->name('ra06.pdf');
+
+                    Route::get('/ra-07-activos-red', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra07ActivosRed'])->name('ra07');
+                    Route::get('/ra-07-activos-red/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra07ActivosRedPdf'])->name('ra07.pdf');
+                    Route::get('/ra-07-activos-red/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra07ActivosRedExcel'])->name('ra07.excel');
+                });
+            });
+
+            // ── Auditoría Interna de TI (asistente) ──
+            Route::middleware('modulo:informes')->prefix('auditoria-interna')->name('auditoria-interna.')->group(function () {
+                Route::get('/', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'index'])->name('index');
+                Route::get('/crear', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'create'])->name('create');
+                Route::post('/', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'store'])->name('store');
+                Route::get('/{id}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'show'])->name('show');
+                Route::put('/{id}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'update'])->name('update');
+                Route::post('/{id}/generar-textos', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'generarTextos'])->name('generar-textos');
+                Route::get('/{id}/pdf', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'exportarPdf'])->name('pdf');
+                Route::get('/{id}/excel', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'exportarExcel'])->name('excel');
+                Route::post('/{id}/muestra/generar', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'generarMuestra'])->name('muestra.generar');
+                Route::put('/{id}/muestra/{muestraId}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'verificarMuestra'])->name('muestra.verificar');
+                Route::post('/{id}/hallazgos', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'hallazgoStore'])->name('hallazgos.store');
+                Route::put('/hallazgos/{hallazgoId}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'hallazgoUpdate'])->name('hallazgos.update');
+                Route::put('/seguimiento/{hallazgoId}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'seguimientoUpdate'])->name('seguimiento.update');
+                Route::post('/{id}/enviar-revision', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'enviarRevision'])->name('enviar-revision');
+                Route::post('/{id}/aprobar', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'aprobar'])->name('aprobar');
             });
         });
 });
