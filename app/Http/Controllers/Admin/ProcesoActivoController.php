@@ -7,6 +7,7 @@ use App\Models\ActivoTecnologico;
 use App\Models\EvaluacionRiesgo;
 use App\Models\Incidente;
 use App\Models\Mantenimiento;
+use App\Models\MantenimientoActividad;
 use App\Models\ModoFalla;
 use App\Models\OrigenMantenimiento;
 use App\Models\PlanTratamientoRiesgo;
@@ -14,6 +15,7 @@ use App\Models\Usuario;
 use App\Services\MotorFmeaService;
 use App\Support\Catalogo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -318,13 +320,13 @@ class ProcesoActivoController extends Controller
     {
         $tresDiasDespues = \Carbon\Carbon::now()->addDays(3)->endOfDay();
 
-        $alertasProx3Dias = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'origenMantenimiento'])
+        $alertasProx3Dias = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'usuarioFinaliza', 'actividades', 'origenMantenimiento'])
             ->whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoAbiertos())
             ->where('fecha_programada', '<=', $tresDiasDespues)
             ->orderBy('fecha_programada')
             ->get();
 
-        $query = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'origenMantenimiento', 'evaluacionOrigen', 'incidente']);
+        $query = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'usuarioFinaliza', 'actividades', 'origenMantenimiento', 'evaluacionOrigen', 'incidente']);
 
         if ($buscar = $request->input('buscar')) {
             $query->where(function ($q) use ($buscar) {
@@ -349,23 +351,62 @@ class ProcesoActivoController extends Controller
         $data = $request->validate([
             'estado_mantenimiento' => ['required', 'string', Rule::in(Catalogo::nombres('estados_mantenimiento'))],
             'descripcion_trabajo' => 'nullable|string',
+            'tareas' => 'nullable|array',
         ]);
 
-        $seFinalizo = in_array($data['estado_mantenimiento'], Catalogo::estadosMantenimientoFinalizados(), true) && !$mantenimiento->fecha_ejecucion;
+        $pasaAFinalizado = in_array($data['estado_mantenimiento'], Catalogo::estadosMantenimientoFinalizados(), true);
 
-        if ($seFinalizo) {
-            $data['fecha_ejecucion'] = date('Y-m-d');
+        // Si ya está realizado, proteger la trazabilidad histórica
+        if ($mantenimiento->estaRealizado() && $data['estado_mantenimiento'] !== $mantenimiento->estado_mantenimiento) {
+            return redirect()->back()->withErrors([
+                'estado_mantenimiento' => 'Este mantenimiento ya se encuentra Realizado y su evidencia histórica no puede ser modificada libremente.'
+            ]);
         }
 
+        // Si intenta cambiar a 'Realizado' / 'Finalizado', validar evidencia obligatoria
+        if ($pasaAFinalizado && !$mantenimiento->estaRealizado()) {
+            $tareas = $request->input('tareas', []);
+            $observaciones = trim((string) ($data['descripcion_trabajo'] ?? ''));
+
+            if (empty($tareas) && $observaciones === '') {
+                return redirect()->back()->withErrors([
+                    'evidencia' => 'Debe registrar al menos una tarea realizada o ingresar una observación/detalle del mantenimiento antes de finalizar.'
+                ])->withInput();
+            }
+
+            $data['fecha_ejecucion'] = date('Y-m-d');
+            $data['fecha_hora_realizacion'] = now();
+            $data['fk_id_usuario_finaliza'] = Auth::id() ?? $mantenimiento->fk_id_usuario_asignado;
+
+            // Guardar tareas seleccionadas
+            $mantenimiento->actividades()->delete();
+            foreach ($tareas as $item) {
+                $numTarea = is_numeric($item) ? (int) $item : null;
+                $nombreTarea = null;
+
+                if ($numTarea && isset(Mantenimiento::TAREAS_CHECKLIST[$numTarea])) {
+                    $nombreTarea = Mantenimiento::TAREAS_CHECKLIST[$numTarea];
+                } elseif (is_string($item) && in_array($item, Mantenimiento::TAREAS_CHECKLIST, true)) {
+                    $nombreTarea = $item;
+                    $numTarea = array_search($item, Mantenimiento::TAREAS_CHECKLIST, true) ?: null;
+                } elseif (is_string($item) && trim($item) !== '') {
+                    $nombreTarea = trim($item);
+                }
+
+                if ($nombreTarea) {
+                    $mantenimiento->actividades()->create([
+                        'numero_tarea' => $numTarea,
+                        'tarea' => $nombreTarea,
+                    ]);
+                }
+            }
+        }
+
+        unset($data['tareas']);
         $mantenimiento->update($data);
 
-        // Cierre del ciclo (disparador inverso): el hecho físico que cambia
-        // el riesgo es la ejecución real del Mantenimiento, no el cambio de
-        // estado del Tratamiento. Al finalizar un Mantenimiento vinculado a
-        // una evaluación (id_evaluacion_origen, ya existente en el
-        // diccionario de datos), se cierra el Tratamiento "Mitigar" que lo
-        // originó y se dispara una nueva evaluación del activo.
-        if ($seFinalizo && $mantenimiento->id_evaluacion_origen) {
+        // Cierre del ciclo FMEA si proviene de evaluación de riesgo
+        if ($pasaAFinalizado && $mantenimiento->id_evaluacion_origen) {
             $actualizados = PlanTratamientoRiesgo::where('fk_id_evaluacion', $mantenimiento->id_evaluacion_origen)
                 ->whereIn('estado_tratamiento', Catalogo::estadosTratamientoAbiertos())
                 ->update(['estado_tratamiento' => 'Completado']);
@@ -378,12 +419,89 @@ class ProcesoActivoController extends Controller
         return redirect()->back()->with('success', 'Mantenimiento actualizado con éxito');
     }
 
+    /**
+     * Registra un mantenimiento como "Realizado" con evidencia obligatoria
+     * (checklist de tareas y/o observaciones detalladas).
+     */
+    public function mantenimientoRealizar(Request $request, $id, MotorFmeaService $service)
+    {
+        $mantenimiento = Mantenimiento::findOrFail($id);
+
+        if ($mantenimiento->estaRealizado()) {
+            return redirect()->back()->withErrors([
+                'evidencia' => 'Este mantenimiento ya fue registrado como Realizado previamente.'
+            ]);
+        }
+
+        $request->validate([
+            'tareas' => 'nullable|array',
+            'tareas.*' => 'nullable',
+            'observaciones' => 'nullable|string|max:5000',
+        ]);
+
+        $tareas = $request->input('tareas', []);
+        $observaciones = trim((string) $request->input('observaciones', ''));
+
+        // Regla de validación: Condición A (al menos 1 tarea) O Condición B (observación con contenido)
+        if (empty($tareas) && $observaciones === '') {
+            return redirect()->back()->withErrors([
+                'evidencia' => 'Debe registrar al menos una tarea realizada o ingresar una observación/detalle del mantenimiento antes de finalizar.'
+            ])->withInput();
+        }
+
+        // Actualizar datos del mantenimiento
+        $mantenimiento->estado_mantenimiento = 'Realizado';
+        $mantenimiento->fecha_ejecucion = date('Y-m-d');
+        $mantenimiento->fecha_hora_realizacion = now();
+        $mantenimiento->fk_id_usuario_finaliza = Auth::id() ?? $mantenimiento->fk_id_usuario_asignado;
+        $mantenimiento->descripcion_trabajo = $observaciones !== '' ? $observaciones : null;
+        $mantenimiento->save();
+
+        // Guardar únicamente las tareas que fueron seleccionadas
+        $mantenimiento->actividades()->delete();
+        foreach ($tareas as $item) {
+            $numTarea = is_numeric($item) ? (int) $item : null;
+            $nombreTarea = null;
+
+            if ($numTarea && isset(Mantenimiento::TAREAS_CHECKLIST[$numTarea])) {
+                $nombreTarea = Mantenimiento::TAREAS_CHECKLIST[$numTarea];
+            } elseif (is_string($item) && in_array($item, Mantenimiento::TAREAS_CHECKLIST, true)) {
+                $nombreTarea = $item;
+                $numTarea = array_search($item, Mantenimiento::TAREAS_CHECKLIST, true) ?: null;
+            } elseif (is_string($item) && trim($item) !== '') {
+                $nombreTarea = trim($item);
+            }
+
+            if ($nombreTarea) {
+                $mantenimiento->actividades()->create([
+                    'numero_tarea' => $numTarea,
+                    'tarea' => $nombreTarea,
+                ]);
+            }
+        }
+
+        // Cierre del tratamiento en evaluación de riesgos FMEA si aplica
+        if ($mantenimiento->id_evaluacion_origen) {
+            $actualizados = PlanTratamientoRiesgo::where('fk_id_evaluacion', $mantenimiento->id_evaluacion_origen)
+                ->whereIn('estado_tratamiento', Catalogo::estadosTratamientoAbiertos())
+                ->update(['estado_tratamiento' => 'Completado']);
+
+            if ($actualizados > 0) {
+                $service->evaluarActivo($mantenimiento->fk_id_activo);
+            }
+        }
+
+        return redirect()->back()->with('success', 'Mantenimiento registrado como Realizado con éxito y evidencia almacenada en el historial.');
+    }
+
     public function mantenimientoShow($id)
     {
         $mantenimiento = Mantenimiento::with([
             'activo.categoria', 
             'activo.ubicacion', 
             'usuarioAsignado.rol', 
+            'usuarioFinaliza.rol',
+            'actividades',
             'origenMantenimiento', 
             'evaluacionOrigen.activo', 
             'incidente.usuarioReporta'
@@ -394,7 +512,7 @@ class ProcesoActivoController extends Controller
 
     public function mantenimientoHistorial(Request $request)
     {
-        $query = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'origenMantenimiento', 'evaluacionOrigen', 'incidente']);
+        $query = Mantenimiento::with(['activo.ubicacion', 'usuarioAsignado', 'usuarioFinaliza', 'actividades', 'origenMantenimiento', 'evaluacionOrigen', 'incidente']);
 
         if ($buscar = $request->input('buscar')) {
             $query->where(function ($q) use ($buscar) {

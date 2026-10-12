@@ -144,15 +144,24 @@
                                         Ver más
                                     </a>
 
-                                    <button type="button" 
-                                            onclick="openUpdateModal({{ $mantenimiento->id_mantenimiento }}, '{{ addslashes($mantenimiento->estado_mantenimiento) }}', '{{ addslashes($mantenimiento->descripcion_trabajo) }}')" 
-                                            class="btn btn-xs btn-warning"
-                                            title="Cambiar estado del mantenimiento">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Editar
-                                    </button>
+                                    @if(!$mantenimiento->estaRealizado())
+                                        <button type="button" 
+                                                onclick="openRealizarModal({{ $mantenimiento->id_mantenimiento }}, '{{ addslashes($mantenimiento->activo->nombre_equipo ?? '') }}', '{{ addslashes($mantenimiento->activo->codigo_patrimonial ?? '') }}', '{{ addslashes($mantenimiento->tipo_mantenimiento) }}', '{{ \Carbon\Carbon::parse($mantenimiento->fecha_programada)->format('d/m/Y') }}')" 
+                                                class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-xs flex items-center gap-1 transition"
+                                                title="Registrar evidencia del mantenimiento">
+                                            Realizar ✓
+                                        </button>
+
+                                        <button type="button" 
+                                                onclick="openUpdateModal({{ $mantenimiento->id_mantenimiento }}, '{{ addslashes($mantenimiento->estado_mantenimiento) }}', '{{ addslashes($mantenimiento->descripcion_trabajo) }}', '{{ addslashes($mantenimiento->activo->nombre_equipo ?? '') }}', '{{ addslashes($mantenimiento->activo->codigo_patrimonial ?? '') }}', '{{ addslashes($mantenimiento->tipo_mantenimiento) }}', '{{ \Carbon\Carbon::parse($mantenimiento->fecha_programada)->format('d/m/Y') }}')" 
+                                                class="btn btn-xs btn-warning"
+                                                title="Cambiar estado del mantenimiento">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                            Editar
+                                        </button>
+                                    @endif
 
                                     @if($mantenimiento->evidencia_pdf)
                                         <a href="{{ Storage::url($mantenimiento->evidencia_pdf) }}" target="_blank" 
@@ -208,7 +217,7 @@
                         @endforeach
                     </select>
                     <p class="text-[11px] text-amber-700 mt-1.5 hidden" id="avisoFinalizado">
-                        Al marcar "Finalizado" este mantenimiento podrá afectar la próxima evaluación de riesgo del activo (el desgaste se recalcula desde esta fecha).
+                        Para marcar como "Realizado" o "Finalizado", se solicitará registrar evidencia de la intervención con el checklist de tareas.
                     </p>
                 </div>
                 <div>
@@ -229,20 +238,43 @@
     </div>
 </div>
 
+{{-- Modal para Registrar Mantenimiento Realizado con Checklist --}}
+@include('mantenimiento.partials.modal-realizar')
+
 <script>
-    function toggleAvisoFinalizado() {
+    var currentHistorialId = null;
+    var currentHistorialActivo = '';
+    var currentHistorialCodigo = '';
+    var currentHistorialTipo = '';
+    var currentHistorialFecha = '';
+
+    function checkHistorialEstado() {
         var select = document.getElementById('update_estado_mantenimiento');
         var aviso = document.getElementById('avisoFinalizado');
-        if (select && aviso) aviso.classList.toggle('hidden', select.value !== 'Finalizado');
+        if (!select) return;
+
+        var val = select.value;
+        var esCierre = (val === 'Realizado' || val === 'Finalizado');
+        if (aviso) aviso.classList.toggle('hidden', !esCierre);
+
+        if (esCierre && currentHistorialId) {
+            closeUpdateModal();
+            openRealizarModal(currentHistorialId, currentHistorialActivo, currentHistorialCodigo, currentHistorialTipo, currentHistorialFecha);
+        }
     }
 
-    function openUpdateModal(id, estado, descripcion) {
+    function openUpdateModal(id, estado, descripcion, activo, codigo, tipo, fecha) {
+        currentHistorialId = id;
+        currentHistorialActivo = activo || 'Activo #' + id;
+        currentHistorialCodigo = codigo || '—';
+        currentHistorialTipo = tipo || 'Mantenimiento';
+        currentHistorialFecha = fecha || '';
+
         var form = document.getElementById('updateForm');
         form.action = '/admin/mantenimiento/' + id;
 
         document.getElementById('update_estado_mantenimiento').value = estado;
         document.getElementById('update_descripcion_trabajo').value = descripcion;
-        toggleAvisoFinalizado();
 
         var modal = document.getElementById('updateModal');
         var card = document.getElementById('updateModalCard');
@@ -253,21 +285,23 @@
         }, 10);
     }
 
-    (function initAvisoFinalizado() {
+    (function initHistorialListeners() {
         var select = document.getElementById('update_estado_mantenimiento');
         if (!select) return;
-        select.removeEventListener('change', toggleAvisoFinalizado);
-        select.addEventListener('change', toggleAvisoFinalizado);
+        select.removeEventListener('change', checkHistorialEstado);
+        select.addEventListener('change', checkHistorialEstado);
     })();
 
     function closeUpdateModal() {
         var modal = document.getElementById('updateModal');
         var card = document.getElementById('updateModalCard');
-        card.classList.remove('scale-100', 'opacity-100');
-        card.classList.add('scale-95', 'opacity-0');
-        setTimeout(function () {
-            modal.classList.add('hidden');
-        }, 150);
+        if (modal && card) {
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            setTimeout(function () {
+                modal.classList.add('hidden');
+            }, 150);
+        }
     }
 </script>
 @endsection

@@ -11,7 +11,10 @@ Route::get('/', [InicioController::class, 'index'])->name('inicio');
 Route::middleware(['web'])->group(function () {
     // Endpoint para refrescar el token CSRF (evita errores 419 por inactividad)
     Route::get('/csrf-token', function () {
-        return response()->json(['token' => csrf_token()]);
+        return response()->json([
+            'token' => csrf_token(),
+            'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+        ]);
     })->name('csrf.refresh');
 
     Route::middleware('guest')->group(function () {
@@ -78,6 +81,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/mantenimiento/historial', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoHistorial'])->name('mantenimiento.historial');
                 Route::get('/mantenimiento/detalles/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoShow'])->name('mantenimiento.show');
                 Route::put('/mantenimiento/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoUpdate'])->name('mantenimiento.update');
+                Route::post('/mantenimiento/{id}/realizar', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoRealizar'])->name('mantenimiento.realizar');
             });
 
             // ── Gestión de Usuarios (requiere permiso_usuarios) ──

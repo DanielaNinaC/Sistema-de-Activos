@@ -94,10 +94,10 @@ import { enhanceSearchableSelects } from './searchable-select.js';
                     credentials: 'same-origin',
                 });
 
-                // Handle 419 (CSRF token mismatch) — session likely expired
-                if (response.status === 419) {
+                // Handle 419 (CSRF token mismatch) / 401 — session expired
+                if (response.status === 419 || response.status === 401) {
                     pageCache.clear();
-                    window.location.href = url;
+                    window.location.href = '/login?inactividad=1';
                     return;
                 }
 
@@ -290,10 +290,16 @@ import { enhanceSearchableSelects } from './searchable-select.js';
                 redirect: 'follow',
             })
                 .then(response => {
-                    // Handle 419 — CSRF expired, resubmit normally
-                    if (response.status === 419) {
+                    // Handle 419 o 401 — CSRF o sesión expirada por inactividad
+                    if (response.status === 419 || response.status === 401) {
                         pageCache.clear();
-                        window.location.reload();
+                        window.location.href = '/login?inactividad=1';
+                        return;
+                    }
+
+                    if (response.redirected && response.url.includes('/login')) {
+                        pageCache.clear();
+                        window.location.href = response.url;
                         return;
                     }
 
@@ -369,9 +375,9 @@ import { enhanceSearchableSelects } from './searchable-select.js';
         });
     }
 
-    // --- Periodic CSRF token refresh ---
+    // --- Periodic CSRF token refresh & session verification ---
     function setupCsrfRefresh() {
-        const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutos
+        const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutos
 
         setInterval(function () {
             fetch('/csrf-token', {
@@ -380,7 +386,14 @@ import { enhanceSearchableSelects } from './searchable-select.js';
             })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.token) {
+                    // Si el servidor detectó que la sesión expiró (usuario ya no está autenticado)
+                    if (data && data.authenticated === false && !window.location.pathname.includes('/login')) {
+                        pageCache.clear();
+                        window.location.href = '/login?inactividad=1';
+                        return;
+                    }
+
+                    if (data && data.token) {
                         const meta = document.querySelector('meta[name="csrf-token"]');
                         if (meta) meta.setAttribute('content', data.token);
                         document.querySelectorAll('input[name="_token"]').forEach(input => {

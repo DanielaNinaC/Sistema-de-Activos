@@ -42,4 +42,9 @@ class Incidente extends Model
     {
         return $this->belongsTo(ModoFalla::class, 'fk_id_modo_falla', 'id_modo_falla');
     }
+
+    public function mantenimientos()
+    {
+        return $this->hasMany(Mantenimiento::class, 'fk_id_incidente', 'id_incidente');
+    }
 }

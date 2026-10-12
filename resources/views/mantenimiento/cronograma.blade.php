@@ -189,11 +189,19 @@
 
                             <div class="pt-1.5 border-t border-slate-200/60 flex items-center justify-between">
                                 <span class="text-[11px] font-semibold text-slate-700">Estado: {{ $alerta->estado_mantenimiento }}</span>
-                                <button type="button" 
-                                        onclick="openUpdateModal({{ $alerta->id_mantenimiento }}, '{{ addslashes($alerta->estado_mantenimiento) }}', '{{ addslashes($alerta->descripcion_trabajo) }}')" 
-                                        class="btn btn-xs btn-dark">
-                                    Editar
-                                </button>
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" 
+                                            onclick="openRealizarModal({{ $alerta->id_mantenimiento }}, '{{ addslashes($alerta->activo->nombre_equipo ?? '') }}', '{{ addslashes($alerta->activo->codigo_patrimonial ?? '') }}', '{{ addslashes($alerta->tipo_mantenimiento) }}', '{{ \Carbon\Carbon::parse($alerta->fecha_programada)->format('d/m/Y') }}')" 
+                                            class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-xs flex items-center gap-1 transition"
+                                            title="Registrar evidencia de mantenimiento">
+                                        Realizar ✓
+                                    </button>
+                                    <button type="button" 
+                                            onclick="openUpdateModal({{ $alerta->id_mantenimiento }}, '{{ addslashes($alerta->estado_mantenimiento) }}', '{{ addslashes($alerta->descripcion_trabajo) }}', '{{ addslashes($alerta->activo->nombre_equipo ?? '') }}', '{{ addslashes($alerta->activo->codigo_patrimonial ?? '') }}', '{{ addslashes($alerta->tipo_mantenimiento) }}', '{{ \Carbon\Carbon::parse($alerta->fecha_programada)->format('d/m/Y') }}')" 
+                                            class="btn btn-xs btn-dark">
+                                        Editar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     @endforeach
@@ -230,7 +238,7 @@
                         @endforeach
                     </select>
                     <p class="text-[11px] text-amber-700 mt-1.5 hidden" id="avisoFinalizado">
-                        Al marcar "Finalizado" este mantenimiento podrá afectar la próxima evaluación de riesgo del activo (el desgaste se recalcula desde esta fecha).
+                        Para marcar como "Realizado" o "Finalizado", se solicitará registrar evidencia de la intervención con el checklist de tareas.
                     </p>
                 </div>
                 <div>
@@ -251,20 +259,43 @@
     </div>
 </div>
 
+{{-- Modal para Registrar Mantenimiento Realizado con Checklist --}}
+@include('mantenimiento.partials.modal-realizar')
+
 <script>
-    function toggleAvisoFinalizado() {
+    var currentCronogramaId = null;
+    var currentCronogramaActivo = '';
+    var currentCronogramaCodigo = '';
+    var currentCronogramaTipo = '';
+    var currentCronogramaFecha = '';
+
+    function checkCronogramaEstado() {
         var select = document.getElementById('update_estado_mantenimiento');
         var aviso = document.getElementById('avisoFinalizado');
-        if (select && aviso) aviso.classList.toggle('hidden', select.value !== 'Finalizado');
+        if (!select) return;
+
+        var val = select.value;
+        var esCierre = (val === 'Realizado' || val === 'Finalizado');
+        if (aviso) aviso.classList.toggle('hidden', !esCierre);
+
+        if (esCierre && currentCronogramaId) {
+            closeUpdateModal();
+            openRealizarModal(currentCronogramaId, currentCronogramaActivo, currentCronogramaCodigo, currentCronogramaTipo, currentCronogramaFecha);
+        }
     }
 
-    function openUpdateModal(id, estado, descripcion) {
+    function openUpdateModal(id, estado, descripcion, activo, codigo, tipo, fecha) {
+        currentCronogramaId = id;
+        currentCronogramaActivo = activo || 'Activo #' + id;
+        currentCronogramaCodigo = codigo || '—';
+        currentCronogramaTipo = tipo || 'Mantenimiento';
+        currentCronogramaFecha = fecha || '';
+
         var form = document.getElementById('updateForm');
         form.action = '/admin/mantenimiento/' + id;
 
         document.getElementById('update_estado_mantenimiento').value = estado;
         document.getElementById('update_descripcion_trabajo').value = descripcion;
-        toggleAvisoFinalizado();
 
         var modal = document.getElementById('updateModal');
         var card = document.getElementById('updateModalCard');
@@ -275,21 +306,23 @@
         }, 10);
     }
 
-    (function initAvisoFinalizado() {
+    (function initCronogramaListeners() {
         var select = document.getElementById('update_estado_mantenimiento');
         if (!select) return;
-        select.removeEventListener('change', toggleAvisoFinalizado);
-        select.addEventListener('change', toggleAvisoFinalizado);
+        select.removeEventListener('change', checkCronogramaEstado);
+        select.addEventListener('change', checkCronogramaEstado);
     })();
 
     function closeUpdateModal() {
         var modal = document.getElementById('updateModal');
         var card = document.getElementById('updateModalCard');
-        card.classList.remove('scale-100', 'opacity-100');
-        card.classList.add('scale-95', 'opacity-0');
-        setTimeout(function () {
-            modal.classList.add('hidden');
-        }, 150);
+        if (modal && card) {
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            setTimeout(function () {
+                modal.classList.add('hidden');
+            }, 150);
+        }
     }
 </script>
 @endsection

@@ -527,6 +527,40 @@
     </div>
 </div>
 
+<!-- Modal de Advertencia por Inactividad (30 min) -->
+<div id="inactivityWarningModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs transition-opacity duration-300">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100 transform transition-all duration-300 scale-95 opacity-0 text-center space-y-5" id="inactivityWarningCard">
+        <!-- Icono con animación -->
+        <div class="mx-auto w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shadow-inner border border-amber-100/80">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+
+        <div class="space-y-2">
+            <h3 class="text-xl font-extrabold text-slate-900">¿Sigues ahí?</h3>
+            <p class="text-sm text-slate-500 leading-relaxed">
+                Por seguridad institucional, tu sesión en SIATEC expirará en:
+            </p>
+            <div class="inline-block px-5 py-2 bg-amber-50 text-amber-700 font-mono font-extrabold text-2xl rounded-xl border border-amber-200" id="inactivityTimerText">
+                02:00
+            </div>
+            <p class="text-xs text-slate-400">
+                El tiempo de espera máximo permitido está configurado en 30 minutos.
+            </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button type="button" onclick="cerrarSesionPorInactividad()" class="w-full sm:w-1/2 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition order-2 sm:order-1">
+                Cerrar Sesión
+            </button>
+            <button type="button" onclick="mantenerSesionActiva()" class="w-full sm:w-1/2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-bold text-white shadow-md hover:shadow-indigo-200 transition order-1 sm:order-2">
+                Continuar
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     // Inicialización de menús desplegables (Notificaciones, Perfil y Sidebar)
     (function () {
@@ -735,6 +769,157 @@
         }
     }
     @endif
+</script>
+
+<script>
+    // ── GESTOR DE INACTIVIDAD Y TIEMPO DE ESPERA (30 MINUTOS) ──
+    (function () {
+        'use strict';
+
+        const TIEMPO_LIMITE_MS = 30 * 60 * 1000;       // 30 minutos límite total
+        const TIEMPO_AVISO_MS = 28 * 60 * 1000;        // Aviso al minuto 28 (2 minutos restantes)
+        const INTERVALO_REFRESCO_MS = 5 * 60 * 1000;   // Cada 5 min de uso activo refresca sesión
+
+        let ultimaActividad = Date.now();
+        let ultimoRefresco = Date.now();
+        let modalVisible = false;
+        let temporizador = null;
+
+        // Registrar interacción del usuario
+        function registrarActividad() {
+            ultimaActividad = Date.now();
+
+            // Si el usuario está activo y han pasado al menos 5 min desde el último refresco,
+            // renovar silenciosamente la sesión y token CSRF en segundo plano
+            if (Date.now() - ultimoRefresco >= INTERVALO_REFRESCO_MS) {
+                refrescarSesionSilenciosa();
+            }
+        }
+
+        // Refrescar el token y la sesión activa en el servidor
+        function refrescarSesionSilenciosa() {
+            ultimoRefresco = Date.now();
+            fetch("{{ route('csrf.refresh') }}", {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data && data.authenticated === false) {
+                    // Si el servidor detectó que la sesión expiró, redirigir limpiamente
+                    window.location.href = "{{ route('login') }}?inactividad=1";
+                    return;
+                }
+                if (data && data.token) {
+                    var meta = document.querySelector('meta[name="csrf-token"]');
+                    if (meta) meta.setAttribute('content', data.token);
+                    document.querySelectorAll('input[name="_token"]').forEach(function (inp) {
+                        inp.value = data.token;
+                    });
+                }
+            })
+            .catch(function () { /* Silencioso ante pérdidas transitorias de conexión */ });
+        }
+
+        // Mostrar u ocultar modal de advertencia
+        function mostrarModalAviso(tiempoRestanteSeg) {
+            var modal = document.getElementById('inactivityWarningModal');
+            var card = document.getElementById('inactivityWarningCard');
+            var timerText = document.getElementById('inactivityTimerText');
+
+            if (!modal || !card) return;
+
+            var minutos = Math.floor(tiempoRestanteSeg / 60);
+            var segundos = tiempoRestanteSeg % 60;
+            var minStr = minutos < 10 ? '0' + minutos : minutos;
+            var segStr = segundos < 10 ? '0' + segundos : segundos;
+
+            if (timerText) {
+                timerText.innerText = minStr + ':' + segStr;
+            }
+
+            if (!modalVisible) {
+                modalVisible = true;
+                modal.classList.remove('hidden');
+                setTimeout(function () {
+                    card.classList.remove('scale-95', 'opacity-0');
+                    card.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+        }
+
+        function ocultarModalAviso() {
+            var modal = document.getElementById('inactivityWarningModal');
+            var card = document.getElementById('inactivityWarningCard');
+            if (modal && card) {
+                card.classList.remove('scale-100', 'opacity-100');
+                card.classList.add('scale-95', 'opacity-0');
+                setTimeout(function () {
+                    modal.classList.add('hidden');
+                    modalVisible = false;
+                }, 200);
+            } else {
+                modalVisible = false;
+            }
+        }
+
+        // Funciones expuestas a botones de la interfaz
+        window.mantenerSesionActiva = function () {
+            ultimaActividad = Date.now();
+            refrescarSesionSilenciosa();
+            ocultarModalAviso();
+        };
+
+        window.cerrarSesionPorInactividad = function () {
+            window.location.href = "{{ route('login') }}?inactividad=1";
+        };
+
+        // Monitoreo cada 1 segundo
+        function verificarInactividad() {
+            var inactivoMs = Date.now() - ultimaActividad;
+
+            // Superó los 30 minutos de inactividad
+            if (inactivoMs >= TIEMPO_LIMITE_MS) {
+                clearInterval(temporizador);
+                window.location.href = "{{ route('login') }}?inactividad=1";
+                return;
+            }
+
+            // Entre 28 y 30 minutos (quedan <= 2 minutos)
+            if (inactivoMs >= TIEMPO_AVISO_MS) {
+                var segRestantes = Math.max(0, Math.ceil((TIEMPO_LIMITE_MS - inactivoMs) / 1000));
+                mostrarModalAviso(segRestantes);
+            } else if (modalVisible) {
+                ocultarModalAviso();
+            }
+        }
+
+        // Detección de actividad del usuario con throttle para máximo rendimiento
+        var throttleTimeout = null;
+        function onUserActivity() {
+            if (!throttleTimeout) {
+                registrarActividad();
+                throttleTimeout = setTimeout(function () {
+                    throttleTimeout = null;
+                }, 3000); // Máximo una actualización cada 3 segundos
+            }
+        }
+
+        ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'].forEach(function (evento) {
+            window.addEventListener(evento, onUserActivity, { passive: true });
+        });
+
+        // Iniciar temporizador de verificación
+        temporizador = setInterval(verificarInactividad, 1000);
+
+        // Cuando la pestaña recupera foco (tras suspensión o cambio de pestaña)
+        window.addEventListener('focus', function () {
+            verificarInactividad();
+            if (Date.now() - ultimaActividad < TIEMPO_AVISO_MS) {
+                refrescarSesionSilenciosa();
+            }
+        });
+    })();
 </script>
 
 @stack('scripts')

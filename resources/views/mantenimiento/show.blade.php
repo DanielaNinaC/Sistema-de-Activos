@@ -24,14 +24,28 @@
         </div>
 
         <div class="flex items-center gap-2.5">
-            <button type="button" 
-                    onclick="openUpdateModal({{ $mantenimiento->id_mantenimiento }}, '{{ addslashes($mantenimiento->estado_mantenimiento) }}', '{{ addslashes($mantenimiento->descripcion_trabajo) }}')" 
-                    class="btn btn-warning">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Editar Estado
-            </button>
+            @if($mantenimiento->estaRealizado())
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Intervención Realizada ✓
+                </span>
+            @else
+                <button type="button" 
+                        onclick="openRealizarModal({{ $mantenimiento->id_mantenimiento }}, '{{ addslashes($mantenimiento->activo->nombre_equipo ?? '') }}', '{{ addslashes($mantenimiento->activo->codigo_patrimonial ?? '') }}', '{{ addslashes($mantenimiento->tipo_mantenimiento) }}', '{{ \Carbon\Carbon::parse($mantenimiento->fecha_programada)->format('d/m/Y') }}')" 
+                        class="btn btn-primary bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Registrar Realización
+                </button>
+                <button type="button" 
+                        onclick="openUpdateModal({{ $mantenimiento->id_mantenimiento }}, '{{ addslashes($mantenimiento->estado_mantenimiento) }}', '{{ addslashes($mantenimiento->descripcion_trabajo) }}')" 
+                        class="btn btn-secondary">
+                    Editar Estado
+                </button>
+            @endif
             <a href="{{ route('admin.mantenimiento.historial') }}" 
                class="btn btn-secondary">
                 Ver Historial
@@ -228,15 +242,87 @@
             @endif
         </div>
 
-        {{-- Tarjeta 4: Descripción del Trabajo u Observaciones --}}
+        {{-- Tarjeta 4: Evidencia de la Intervención y Actividades Realizadas --}}
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4 md:col-span-2">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-700 pb-3 border-b border-slate-100">
-                Descripción del Trabajo Técnico Realizado u Observaciones
-            </h3>
-
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-800 leading-relaxed whitespace-pre-line">
-                {{ $mantenimiento->descripcion_trabajo ?: 'Sin observaciones o descripción detallada adicional.' }}
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    Evidencia de la Intervención Realizada
+                </h3>
+                @if($mantenimiento->estaRealizado())
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                        Intervención Cerrada
+                    </span>
+                @else
+                    <span class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                        Pendiente de Ejecución
+                    </span>
+                @endif
             </div>
+
+            {{-- 1. Actividades realizadas (solo si seleccionó tareas) --}}
+            @if($mantenimiento->actividades->count() > 0)
+                <div class="space-y-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-600 block">
+                        Actividades realizadas ({{ $mantenimiento->actividades->count() }})
+                    </span>
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left text-xs divide-y divide-slate-100">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-2.5 font-bold text-slate-600 uppercase tracking-wider text-[11px]">
+                                        Actividades realizadas
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 bg-white">
+                                @foreach($mantenimiento->actividades as $act)
+                                    <tr class="hover:bg-slate-50/50 transition">
+                                        <td class="px-4 py-2.5 text-slate-800 flex items-center gap-2.5">
+                                            <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0">✓</span>
+                                            <span class="font-medium">{{ $act->tarea }}</span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+
+            {{-- 2. Observaciones / Detalle --}}
+            <div class="space-y-1.5 pt-1">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-600 block">
+                    Observaciones / Detalle:
+                </span>
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-800 leading-relaxed whitespace-pre-line">
+                    @if($mantenimiento->descripcion_trabajo)
+                        {{ $mantenimiento->descripcion_trabajo }}
+                    @else
+                        <span class="text-slate-500 italic">Observaciones: Sin observaciones adicionales.</span>
+                    @endif
+                </div>
+            </div>
+
+            {{-- 3. Trazabilidad de Responsable y Fechas si ya fue realizado --}}
+            @if($mantenimiento->estaRealizado())
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100 text-xs">
+                    <div class="bg-slate-50/80 p-3 rounded-xl border border-slate-200/70">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Fecha y Hora de Realización:</span>
+                        <span class="font-mono font-bold text-slate-800">
+                            {{ $mantenimiento->fecha_hora_realizacion ? $mantenimiento->fecha_hora_realizacion->format('d/m/Y H:i') . ' hs' : ($mantenimiento->fecha_ejecucion ? \Carbon\Carbon::parse($mantenimiento->fecha_ejecucion)->format('d/m/Y') : '—') }}
+                        </span>
+                    </div>
+                    <div class="bg-slate-50/80 p-3 rounded-xl border border-slate-200/70">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Responsable de Cierre / Realización:</span>
+                        <span class="font-bold text-slate-800">
+                            {{ $mantenimiento->usuarioFinaliza ? $mantenimiento->usuarioFinaliza->nombre . ' ' . ($mantenimiento->usuarioFinaliza->apellido ?? '') : ($mantenimiento->usuarioAsignado ? $mantenimiento->usuarioAsignado->nombre . ' ' . ($mantenimiento->usuarioAsignado->apellido ?? '') : '—') }}
+                        </span>
+                    </div>
+                </div>
+            @endif
         </div>
 
     </div>
@@ -263,7 +349,7 @@
                         @endforeach
                     </select>
                     <p class="text-[11px] text-amber-700 mt-1.5 hidden" id="avisoFinalizado">
-                        Al marcar "Finalizado" este mantenimiento podrá afectar la próxima evaluación de riesgo del activo (el desgaste se recalcula desde esta fecha).
+                        Para marcar como "Realizado" o "Finalizado", el sistema abrirá la ventana de registro de evidencia con el checklist de tareas.
                     </p>
                 </div>
                 <div>
@@ -284,20 +370,39 @@
     </div>
 </div>
 
+{{-- Modal para Registrar Mantenimiento Realizado con Checklist --}}
+@include('mantenimiento.partials.modal-realizar')
+
 <script>
-    function toggleAvisoFinalizado() {
+    var currentMantenimientoId = {{ $mantenimiento->id_mantenimiento }};
+    var currentActivoNombre = '{{ addslashes($mantenimiento->activo->nombre_equipo ?? "") }}';
+    var currentCodigoPat = '{{ addslashes($mantenimiento->activo->codigo_patrimonial ?? "") }}';
+    var currentTipo = '{{ addslashes($mantenimiento->tipo_mantenimiento ?? "") }}';
+    var currentFechaProg = '{{ \Carbon\Carbon::parse($mantenimiento->fecha_programada)->format("d/m/Y") }}';
+
+    function checkEstadoSeleccionado() {
         var select = document.getElementById('update_estado_mantenimiento');
         var aviso = document.getElementById('avisoFinalizado');
-        if (select && aviso) aviso.classList.toggle('hidden', select.value !== 'Finalizado');
+        if (!select) return;
+
+        var val = select.value;
+        var esCierre = (val === 'Realizado' || val === 'Finalizado');
+        if (aviso) aviso.classList.toggle('hidden', !esCierre);
+
+        if (esCierre) {
+            // Abrir directamente la ventana modal de evidencia con checklist
+            closeUpdateModal();
+            openRealizarModal(currentMantenimientoId, currentActivoNombre, currentCodigoPat, currentTipo, currentFechaProg);
+        }
     }
 
     function openUpdateModal(id, estado, descripcion) {
+        currentMantenimientoId = id;
         var form = document.getElementById('updateForm');
         form.action = '/admin/mantenimiento/' + id;
 
         document.getElementById('update_estado_mantenimiento').value = estado;
         document.getElementById('update_descripcion_trabajo').value = descripcion;
-        toggleAvisoFinalizado();
 
         var modal = document.getElementById('updateModal');
         var card = document.getElementById('updateModalCard');
@@ -308,21 +413,23 @@
         }, 10);
     }
 
-    (function initAvisoFinalizado() {
+    (function initEstadoListener() {
         var select = document.getElementById('update_estado_mantenimiento');
         if (!select) return;
-        select.removeEventListener('change', toggleAvisoFinalizado);
-        select.addEventListener('change', toggleAvisoFinalizado);
+        select.removeEventListener('change', checkEstadoSeleccionado);
+        select.addEventListener('change', checkEstadoSeleccionado);
     })();
 
     function closeUpdateModal() {
         var modal = document.getElementById('updateModal');
         var card = document.getElementById('updateModalCard');
-        card.classList.remove('scale-100', 'opacity-100');
-        card.classList.add('scale-95', 'opacity-0');
-        setTimeout(function () {
-            modal.classList.add('hidden');
-        }, 150);
+        if (modal && card) {
+            card.classList.remove('scale-100', 'opacity-100');
+            card.classList.add('scale-95', 'opacity-0');
+            setTimeout(function () {
+                modal.classList.add('hidden');
+            }, 150);
+        }
     }
 </script>
 @endsection

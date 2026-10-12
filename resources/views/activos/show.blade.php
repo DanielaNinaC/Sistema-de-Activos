@@ -525,10 +525,20 @@
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border {{ $mBadge }}">{{ $mant->estado_mantenimiento }}</span>
                                         </td>
                                         <td class="px-4 py-3 text-center whitespace-nowrap">
-                                            <a href="{{ route('admin.mantenimiento.show', $mant->id_mantenimiento) }}" class="btn btn-xs btn-primary" title="Ver detalles completos">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                                Ver
-                                            </a>
+                                            <div class="flex items-center justify-center gap-1.5">
+                                                <a href="{{ route('admin.mantenimiento.show', $mant->id_mantenimiento) }}" class="btn btn-xs btn-primary" title="Ver detalles completos y evidencia">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                                    Ver
+                                                </a>
+                                                @if(!$mant->estaRealizado())
+                                                    <button type="button" 
+                                                            onclick="openRealizarModal({{ $mant->id_mantenimiento }}, '{{ addslashes($activo->nombre_equipo) }}', '{{ addslashes($activo->codigo_patrimonial ?? '') }}', '{{ addslashes($mant->tipo_mantenimiento) }}', '{{ \Carbon\Carbon::parse($mant->fecha_programada)->format('d/m/Y') }}')" 
+                                                            class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-xs flex items-center gap-1 transition"
+                                                            title="Registrar evidencia del mantenimiento">
+                                                        Realizar ✓
+                                                    </button>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -1270,4 +1280,6 @@
     document.addEventListener('turbo:load', window.initFichaTabs);
 })();
 </script>
+
+@include('mantenimiento.partials.modal-realizar')
 @endsection
