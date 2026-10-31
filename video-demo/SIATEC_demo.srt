@@ -1,0 +1,321 @@
+1
+00:00:00,050 --> 00:00:04,416
+Les presentamos SIATEC, el Sistema
+de Control y Seguimiento de
+
+2
+00:00:04,466 --> 00:00:08,404
+Activos Tecnológicos de TI de la
+Unidad Educativa Franco
+
+3
+00:00:08,454 --> 00:00:12,321
+Boliviano, alineado a las normas
+ISO 55001 e ISO 31000.
+
+4
+00:00:12,983 --> 00:00:17,757
+Recorreremos el acceso al sistema, el
+panel de control, el inventario,
+
+5
+00:00:17,807 --> 00:00:22,511
+los incidentes y el mantenimiento, el
+motor de riesgos FMEA con pesos
+
+6
+00:00:22,561 --> 00:00:26,370
+AHP, los informes de auditoría y
+la gestión de usuarios.
+
+7
+00:00:27,717 --> 00:00:32,292
+SIATEC se integra al Panel de Sistemas
+del colegio como un módulo más.
+
+8
+00:00:32,342 --> 00:00:36,323
+Desde aquí, el personal de TI
+accede directamente al sistema.
+
+9
+00:00:38,783 --> 00:00:43,212
+El inicio de sesión exige correo,
+contraseña y un código de seguridad
+
+10
+00:00:43,262 --> 00:00:46,587
+generado en el servidor, que
+se renueva con un clic.
+
+11
+00:00:46,637 --> 00:00:51,066
+Además, la sesión se cierra sola tras
+treinta minutos de inactividad.
+
+12
+00:00:54,883 --> 00:00:59,735
+Al ingresar, el panel de control resume
+el estado del parque tecnológico:
+
+13
+00:00:59,785 --> 00:01:03,026
+activos registrados, riesgos
+críticos, incidentes
+
+14
+00:01:03,076 --> 00:01:05,510
+abiertos y mantenimientos pendientes.
+
+15
+00:01:05,650 --> 00:01:08,674
+Las barras muestran la
+distribución del inventario por
+
+16
+00:01:08,724 --> 00:01:11,521
+categoría y la situación
+operativa de los equipos.
+
+17
+00:01:11,783 --> 00:01:16,036
+Más abajo se resumen las últimas
+alertas, y la campana de notificaciones
+
+18
+00:01:16,086 --> 00:01:19,741
+concentra los riesgos y
+mantenimientos que requieren atención.
+
+19
+00:01:27,417 --> 00:01:32,381
+El inventario centraliza más de
+seiscientos activos, con su código
+
+20
+00:01:32,431 --> 00:01:37,699
+patrimonial, categoría, ubicación,
+estado operativo y nivel de riesgo.
+
+21
+00:01:37,749 --> 00:01:40,207
+Además, se exporta a Excel o PDF.
+
+22
+00:01:40,450 --> 00:01:45,173
+La búsqueda filtra por código,
+equipo, categoría o ubicación.
+
+23
+00:01:45,223 --> 00:01:47,677
+Busquemos el servidor principal.
+
+24
+00:01:49,617 --> 00:01:54,674
+La ficha técnica reúne en un solo lugar la
+información general, el historial, los
+
+25
+00:01:54,724 --> 00:01:59,151
+mantenimientos, los incidentes y las
+evaluaciones de riesgo del activo.
+
+26
+00:01:59,517 --> 00:02:03,013
+Cada categoría define su vida útil
+y su nivel de dependencia
+
+27
+00:02:03,063 --> 00:02:07,150
+institucional, datos que alimentan
+directamente el cálculo del riesgo.
+
+28
+00:02:11,050 --> 00:02:14,709
+Cuando un equipo falla, se
+registra el incidente indicando
+
+29
+00:02:14,759 --> 00:02:17,459
+el activo, la prioridad y el modo de falla.
+
+30
+00:02:17,509 --> 00:02:21,553
+Estos registros alimentan la
+frecuencia del análisis de riesgos.
+
+31
+00:02:21,917 --> 00:02:26,157
+El cronograma organiza los mantenimientos
+preventivos y correctivos en un
+
+32
+00:02:26,207 --> 00:02:29,918
+calendario, y advierte los que
+vencen en los próximos tres días.
+
+33
+00:02:30,183 --> 00:02:34,587
+El historial conserva la trazabilidad de
+cada intervención, incluidas las que
+
+34
+00:02:34,637 --> 00:02:38,289
+se generan automáticamente a partir
+de la evaluación de riesgos.
+
+35
+00:02:42,217 --> 00:02:45,554
+El corazón del sistema es
+el motor de riesgos.
+
+36
+00:02:45,604 --> 00:02:50,561
+Cada categoría tiene sus modos de
+falla, con su severidad y su nivel
+
+37
+00:02:50,611 --> 00:02:54,684
+de monitoreo y respuesta, según
+la metodología FMEA-MSR.
+
+38
+00:02:54,950 --> 00:02:59,122
+Los pesos se obtienen con el Proceso
+de Jerarquía Analítica, AHP:
+
+39
+00:02:59,172 --> 00:03:02,890
+la severidad pesa cerca del
+sesenta y cinco por ciento, la
+
+40
+00:03:02,940 --> 00:03:06,008
+frecuencia el veintitrés y
+el monitoreo el doce.
+
+41
+00:03:06,058 --> 00:03:10,815
+El score final combina el riesgo técnico
+con la dependencia institucional.
+
+42
+00:03:11,617 --> 00:03:15,858
+El motor FMEA evalúa un activo, o
+todo el inventario a la vez,
+
+43
+00:03:15,908 --> 00:03:19,111
+aplicando cinco fases de
+inferencia automática.
+
+44
+00:03:19,350 --> 00:03:23,652
+Cada evaluación queda registrada
+con su severidad, frecuencia,
+
+45
+00:03:23,702 --> 00:03:27,091
+monitoreo, score y un nivel
+de riesgo semafórico.
+
+46
+00:03:27,350 --> 00:03:32,057
+Los riesgos medios, altos y críticos
+generan alertas de color amarillo,
+
+47
+00:03:32,107 --> 00:03:35,810
+naranja o rojo, que se notifican
+por correo electrónico.
+
+48
+00:03:36,050 --> 00:03:41,238
+Y el plan de tratamiento, conforme a ISO
+31000, propone estrategias automáticas y
+
+49
+00:03:41,288 --> 00:03:45,571
+destaca las evaluaciones críticas que
+aún no tienen un tratamiento.
+
+50
+00:03:49,483 --> 00:03:52,123
+Los informes apoyan la toma de decisiones.
+
+51
+00:03:52,173 --> 00:03:55,518
+El reporte de vida útil
+identifica los equipos que ya
+
+52
+00:03:55,568 --> 00:03:57,824
+la superaron y sugiere su reemplazo.
+
+53
+00:03:58,083 --> 00:04:01,822
+La evolución del score muestra cómo
+cambia el riesgo de un activo
+
+54
+00:04:01,872 --> 00:04:04,795
+en el tiempo, con una línea
+por cada modo de falla.
+
+55
+00:04:07,017 --> 00:04:11,645
+Los reportes de auditoría de TI,
+como la clasificación por
+
+56
+00:04:11,695 --> 00:04:16,484
+criticidad, citan sus criterios de
+referencia de ISO 27001 e
+
+57
+00:04:16,534 --> 00:04:19,630
+ISO 55001, y se exportan a PDF y Excel.
+
+58
+00:04:19,883 --> 00:04:23,865
+El asistente de auditoría interna
+guía el proceso completo:
+
+59
+00:04:23,915 --> 00:04:28,923
+datos generales, muestra, resultados,
+hallazgos, seguimiento y aprobación,
+
+60
+00:04:28,973 --> 00:04:33,296
+con textos generados mediante
+procesamiento de lenguaje natural.
+
+61
+00:04:37,217 --> 00:04:41,799
+La gestión de usuarios asigna roles con
+permisos por módulo, y cada acción queda
+
+62
+00:04:41,849 --> 00:04:45,506
+registrada en un log de actividad
+que garantiza la trazabilidad.
+
+63
+00:04:47,050 --> 00:04:47,478
+SIATEC:
+
+64
+00:04:47,528 --> 00:04:51,710
+un solo sistema para gestionar el
+ciclo de vida de los activos
+
+65
+00:04:51,760 --> 00:04:55,123
+tecnológicos, con decisiones
+basadas en el riesgo.
+
+66
+00:04:55,173 --> 00:04:56,762
+Gracias por su atención.
+

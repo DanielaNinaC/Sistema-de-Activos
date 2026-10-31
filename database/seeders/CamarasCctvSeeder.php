@@ -21,6 +21,8 @@ use RuntimeException;
  */
 class CamarasCctvSeeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SincronizaNormalizacion;
+
     private const ID_CATEGORIA = 10;
     private const SECCION_PROVISIONAL = 'Seguridad';
 

@@ -263,4 +263,87 @@ class Catalogo
             'color_hex' => self::fila('tipos_alerta', $nivel->tipo_alerta)->color_hex ?? '#94a3b8',
         ];
     }
+
+    /**
+     * Información cualitativa y criterio de la Severidad (Tabla 20 de la tesis).
+     */
+    public static function infoSeveridad(int $valor): array
+    {
+        $filas = self::filas('niveles_severidad')->sortBy('orden');
+        $fila = $filas->first(fn ($f) => (int) $f->valor === $valor);
+        if (!$fila) {
+            $fila = $filas->sortBy(fn ($f) => abs((int) $f->valor - $valor))->first();
+        }
+
+        return [
+            'valor' => $valor,
+            'etiqueta' => $fila->etiqueta ?? 'Moderada',
+            'descripcion' => $fila->descripcion ?? 'Nivel de severidad técnica',
+            'clave' => $fila->clave ?? 'moderada',
+        ];
+    }
+
+    /**
+     * Información cualitativa y criterio de Monitoreo y Respuesta (MSR, Tabla 22 de la tesis).
+     */
+    public static function infoMsr(int $valor): array
+    {
+        $filas = self::filas('niveles_msr')->sortBy('orden');
+        $fila = $filas->first(fn ($f) => (int) $f->valor === $valor);
+        if (!$fila) {
+            $fila = $filas->sortBy(fn ($f) => abs((int) $f->valor - $valor))->first();
+        }
+
+        return [
+            'valor' => $valor,
+            'etiqueta' => $fila->etiqueta ?? 'Moderada',
+            'descripcion' => $fila->descripcion ?? 'Nivel de controles de monitoreo y respuesta',
+            'clave' => $fila->clave ?? 'moderada',
+        ];
+    }
+
+    /**
+     * Información cualitativa y regla aplicada de Frecuencia (Tabla 21 de la tesis).
+     */
+    public static function infoFrecuencia(float $porcentajeDesgaste, int $incidentes): array
+    {
+        $reglas = self::filas('niveles_frecuencia');
+        foreach ($reglas as $regla) {
+            if ($regla->operador === null) {
+                return [
+                    'valor' => (int) $regla->valor,
+                    'etiqueta' => $regla->nombre,
+                    'descripcion' => 'Condición base: desgaste < 40% y sin incidentes técnicos registrados desde el último mantenimiento.',
+                    'regla' => 'Desgaste < 40% y 0 incidentes',
+                ];
+            }
+
+            $cumpleDesgaste = $porcentajeDesgaste >= (float) $regla->desgaste_minimo;
+            $cumpleIncidentes = $incidentes >= (int) $regla->incidentes_minimo;
+
+            $cumple = $regla->operador === 'AND'
+                ? ($cumpleDesgaste && $cumpleIncidentes)
+                : ($cumpleDesgaste || $cumpleIncidentes);
+
+            if ($cumple) {
+                $condicion = $regla->operador === 'AND'
+                    ? "Desgaste ≥ {$regla->desgaste_minimo}% e incidentes ≥ {$regla->incidentes_minimo}"
+                    : "Desgaste ≥ {$regla->desgaste_minimo}% o incidentes ≥ {$regla->incidentes_minimo}";
+
+                return [
+                    'valor' => (int) $regla->valor,
+                    'etiqueta' => $regla->nombre,
+                    'descripcion' => "Regla FMEA activada: {$condicion} desde el último mantenimiento.",
+                    'regla' => $condicion,
+                ];
+            }
+        }
+
+        return [
+            'valor' => 2,
+            'etiqueta' => 'Baja',
+            'descripcion' => 'Condición base del sistema.',
+            'regla' => 'Por defecto',
+        ];
+    }
 }

@@ -22,6 +22,8 @@ use RuntimeException;
  */
 class ProyectoresSeeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SincronizaNormalizacion;
+
     private const ID_CATEGORIA = 9;
 
     /** Ubicación que se crea si no existe; cualquier otra que falte detiene la carga. */

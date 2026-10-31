@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 
 class DatosPruebaSeeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SincronizaNormalizacion;
+
     public function run(): void
     {
         // 1. Categorías

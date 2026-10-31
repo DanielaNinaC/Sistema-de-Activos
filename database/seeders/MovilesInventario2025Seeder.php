@@ -27,6 +27,8 @@ use RuntimeException;
  */
 class MovilesInventario2025Seeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SincronizaNormalizacion;
+
     private const PREFIJO_TABLET_MATERNAL = 'TABLETS|SALA DE ARTES-MATERNAL (TABLETS)|PROFESORES';
     private const NUEVA_TABLET_ITEM = 32;
     private const NUEVA_TABLET_CODIGO = 'TAB-SC-32';

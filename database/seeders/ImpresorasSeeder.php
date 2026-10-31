@@ -22,6 +22,8 @@ use RuntimeException;
  */
 class ImpresorasSeeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SincronizaNormalizacion;
+
     private const ID_CATEGORIA = 8;
 
     private const ESTADOS = [

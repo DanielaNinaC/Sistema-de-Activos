@@ -107,7 +107,7 @@ class ProcesoRiesgoController extends Controller
         return redirect()->route('admin.riesgos.modos')->with('success', 'Modo de falla actualizado con éxito');
     }
 
-    public function evaluacionIndex(MotorFmeaService $service)
+    public function evaluacionIndex(Request $request, MotorFmeaService $service)
     {
         $activos = ActivoTecnologico::with(['categoria.modosFalla', 'incidentes', 'mantenimientos'])->orderBy('id_activo')->get();
 
@@ -124,7 +124,23 @@ class ProcesoRiesgoController extends Controller
         $evaluaciones = EvaluacionRiesgo::with(['activo', 'modoFalla'])->where('vigente', true)->orderByDesc('fecha_evaluacion')->paginate(15);
         $ultimoPeso = PesoAhp::where('vigente', true)->first();
 
-        return view('riesgos.evaluacion-fmea', compact('activos', 'modos', 'evaluaciones', 'ultimoPeso'));
+        // Resultado de inferencia: de sesión (recién evaluado) o cargado por activo_id / activo más reciente
+        $resultadoInferencia = session('resultadoMotor');
+        $esConsultaHistorica = false;
+        if (!$resultadoInferencia) {
+            $idActivoParaInferencia = $request->input('activo_id');
+            if ($idActivoParaInferencia) {
+                $esConsultaHistorica = true;
+                $resultadoInferencia = $service->obtenerInferenciaActivo((int) $idActivoParaInferencia);
+            } else {
+                $idActivoParaInferencia = EvaluacionRiesgo::where('vigente', true)->orderByDesc('fecha_evaluacion')->value('fk_id_activo');
+                if ($idActivoParaInferencia) {
+                    $resultadoInferencia = $service->obtenerInferenciaActivo((int) $idActivoParaInferencia);
+                }
+            }
+        }
+
+        return view('riesgos.evaluacion-fmea', compact('activos', 'modos', 'evaluaciones', 'ultimoPeso', 'resultadoInferencia', 'esConsultaHistorica'));
     }
 
     public function evaluarActivo(EvaluarActivoRequest $request, MotorFmeaService $service)

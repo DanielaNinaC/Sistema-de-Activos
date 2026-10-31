@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\DB;
  */
 class DatosRealesSeeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SincronizaNormalizacion;
+
     public function run(): void
     {
         $this->categorias();

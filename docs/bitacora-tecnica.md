@@ -394,3 +394,15 @@ npm run dev            # Vite en :5173 (necesario: sin él la app se queda sin C
   detenido, la app devuelve `SQLSTATE[HY000] [2002]`.
 - La extensión `gd` de PHP tuvo que habilitarse en `C:\php82\php.ini` para
   `phpoffice/phpspreadsheet` (cambio a nivel de sistema, no del proyecto).
+
+## 8. Normalización a 3FN (en curso, por fases con confirmación)
+
+Estado: **Fase 3 entregada** (expansión + contracción escritas y probadas); Fase 4 (refactor del código) y Fase 5 (verificación) pendientes. Detalle en `docs/modelo-normalizado-fase2.md` (§8 = estado).
+
+- **Expandir → poblar → verificar → contraer.** Las migraciones `2026_10_12_1000*` solo agregan; **no quitan** columnas que el código lee. La contracción vive en `database/contraccion/` y *no* corre con `migrate` (el migrador carga todo `*_*.php` de `database/migrations`); se ejecuta con `--path=database/contraccion` después de la Fase 4.
+- **Trampas de portabilidad** (pruebas en SQLite, sistema en MySQL): sin `UPDATE … JOIN` (subconsultas correlacionadas), sin `ALTER … MODIFY` crudo, `dropForeign` solo con arreglo de columnas, sin `CHECK`.
+- **Helpers** en `database/support/NormalizacionMigracion.php` (alias `N`), fuera de `database/migrations` por la razón anterior.
+- **`php artisan normalizacion:sincronizar`** completa las `fk_id_*` de filas creadas con el código antiguo; los seeders de datos lo invocan con el trait `SincronizaNormalizacion` (andamiaje de transición).
+- **Riesgo R-1**: modos de falla sin nivel ni `valor_*_base` bloquean la contracción; hoy el motor usa S=5 / MSR=4 por defecto (`MotorFmeaService`). Hay que clasificarlos antes de contraer.
+- Las pruebas de contracción **no** pueden usar `RefreshDatabase` ni `DatabaseMigrations` (esta última hace rollback de todas las migraciones y las antiguas no lo soportan en SQLite): migran su propia base en memoria en `setUp`.
+- Línea base de pruebas: 131 ✓ + 1 fallo previo (`PlanTratamientoTest` línea 140, `fecha_ejecucion` nula tras finalizar mantenimiento — viene de los cambios de finalización; no relacionado con la normalización).

@@ -23,6 +23,8 @@ use RuntimeException;
  */
 class EquiposRedSeeder extends Seeder
 {
+    use \Database\Seeders\Concerns\SincronizaNormalizacion;
+
     /** categoría => [palabra esperada en su nombre, etiqueta para origen_externo, conteos esperados por estado] */
     private const CATEGORIAS = [
         2 => ['nombre' => 'router', 'tipo' => 'ROUTER', 'total' => 1, 'estados' => [1 => 1, 2 => 0, 3 => 0]],
