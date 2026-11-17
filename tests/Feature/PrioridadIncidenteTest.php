@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Admin\ProcesoActivoController;
 use App\Models\ActivoTecnologico;
 use App\Models\Categoria;
 use App\Models\Incidente;
 use App\Models\Rol;
 use App\Models\Ubicacion;
 use App\Models\Usuario;
+use App\Support\Catalogo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -144,7 +144,7 @@ class PrioridadIncidenteTest extends TestCase
 
     public function test_la_criticidad_del_activo_mapea_a_la_prioridad_sugerida(): void
     {
-        $mapa = ProcesoActivoController::MAPA_PRIORIDAD_SUGERIDA;
+        $mapa = Catalogo::prioridadSugeridaPorNivel();
 
         // La criticidad tiene 4 niveles y la prioridad 3: 'Crítica' cae en 'Alta'.
         $this->assertSame('Alta', $mapa['Crítica']);
@@ -152,8 +152,14 @@ class PrioridadIncidenteTest extends TestCase
         $this->assertSame('Media', $mapa['Media']);
         $this->assertSame('Baja', $mapa['Baja']);
 
+        // Y el mismo mapa responde al nombre real del nivel que guarda el activo (nivel_riesgo).
+        $this->assertSame('Alta', $mapa['Crítico']);
+        $this->assertSame('Alta', $mapa['Alto']);
+        $this->assertSame('Media', $mapa['Medio']);
+        $this->assertSame('Baja', $mapa['Bajo']);
+
         foreach ($mapa as $prioridadSugerida) {
-            $this->assertContains($prioridadSugerida, ProcesoActivoController::PRIORIDADES_INCIDENTE);
+            $this->assertContains($prioridadSugerida, Catalogo::nombres('prioridades_incidente'));
         }
     }
 }

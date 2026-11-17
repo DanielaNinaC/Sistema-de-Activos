@@ -29,6 +29,14 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Campo con error de validación (lo marca resources/js/errores-campos.js). Lleva
+   !important porque las reglas de arriba usan selectores con ID y le ganarían
+   a cualquier clase de Tailwind. */
+#main-content [aria-invalid="true"] {
+    border-color: #f43f5e !important; /* rose-500 */
+    box-shadow: 0 0 0 3px rgb(244 63 94 / 0.12);
+}
+
 #main-content input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="file"]):focus,
 #main-content select:focus,
 #main-content textarea:focus {

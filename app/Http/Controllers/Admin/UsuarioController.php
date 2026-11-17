@@ -8,8 +8,11 @@ use App\Models\Usuario;
 use App\Models\Rol;
 use App\Models\Log;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log as LogFacade;
 use App\Rules\ValidEmailDomain;
 use App\Services\EmailVerificationService;
+use App\Mail\CuentaHabilitadaMail;
 
 class UsuarioController extends Controller
 {
@@ -139,8 +142,29 @@ class UsuarioController extends Controller
     {
         $usuario = Usuario::findOrFail($id);
         $nuevoEstado = !$usuario->estado;
+
+        // Evita dejar el sistema sin quien administre usuarios.
+        if (!$nuevoEstado) {
+            if ($usuario->id_usuario === auth()->id()) {
+                return back()->with('error', 'No puedes desactivar tu propia cuenta.');
+            }
+
+            $administradoresActivos = Usuario::where('fk_id_rol', config('roles.admin'))->where('estado', true)->count();
+            if ($usuario->isAdmin() && $administradoresActivos <= 1) {
+                return back()->with('error', 'No puedes desactivar al único administrador activo del sistema.');
+            }
+        }
+
         $usuario->estado = $nuevoEstado;
         $usuario->save();
+
+        if ($nuevoEstado) {
+            try {
+                Mail::to($usuario->correo)->queue(new CuentaHabilitadaMail($usuario));
+            } catch (\Throwable $e) {
+                LogFacade::error('Error al encolar correo de cuenta habilitada: ' . $e->getMessage());
+            }
+        }
 
         $mensaje = $nuevoEstado ? 'Cuenta de usuario activada con éxito.' : 'Cuenta de usuario desactivada con éxito.';
 

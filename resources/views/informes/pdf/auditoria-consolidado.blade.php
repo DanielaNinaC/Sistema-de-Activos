@@ -1,9 +1,12 @@
 @extends('informes.pdf.layout')
 
-@section('titulo', 'Auditoría Consolidada del Sistema')
+@section('titulo', 'Resumen General de Activos')
 @section('subtitulo', 'Período: ' . \Carbon\Carbon::parse($resumen['periodo']['inicio'])->format('d/m/Y') . ' — ' . \Carbon\Carbon::parse($resumen['periodo']['fin'])->format('d/m/Y'))
 
 @section('contenido')
+
+<div class="seccion-titulo">Introducción</div>
+<p style="text-align: justify; line-height: 1.5;">{{ $introduccion }}</p>
 
 <div class="seccion-titulo">Resumen General de Indicadores y Métricas</div>
 <table>
@@ -79,5 +82,8 @@
         @endforelse
     </tbody>
 </table>
+
+<div class="seccion-titulo">Conclusión</div>
+<p style="text-align: justify; line-height: 1.5;">{{ $conclusion }}</p>
 
 @endsection

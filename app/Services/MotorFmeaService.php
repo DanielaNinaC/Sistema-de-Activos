@@ -11,103 +11,23 @@ use App\Models\ModoFalla;
 use App\Models\PesoAhp;
 use App\Models\PlanTratamientoRiesgo;
 use App\Models\Usuario;
+use App\Support\Catalogo;
 use Carbon\Carbon;
 
+/**
+ * Los parámetros del modelo (Tablas 8, 20, 21, 22 y 29 de la tesis: valores de
+ * severidad, MSR, dependencia, reglas de frecuencia, umbrales de nivel de
+ * riesgo y tratamiento sugerido) viven en la base de datos y se leen mediante
+ * App\Support\Catalogo; este servicio solo aplica las fórmulas.
+ */
 class MotorFmeaService
 {
-    /**
-     * Mapeo fijo de nivel de Severidad (Tabla 20 de la tesis) a valor numérico.
-     */
-    public const MAPA_SEVERIDAD = [
-        'muy_alta' => 10,
-        'alta' => 8,
-        'moderada' => 5,
-        'baja' => 3,
-        'insignificante' => 1,
-    ];
-
-    /**
-     * Mapeo fijo de nivel de Monitoreo/MSR (Tabla 22/29 de la tesis) a valor
-     * numérico. Incluye 'baja' => 7: nivel intermedio entre "no hay ninguna
-     * alerta" (muy_baja) y "hay logs pero requieren revisión manual"
-     * (moderada) — detección solo por inspección/reporte manual directo,
-     * sin registro ni alerta automática.
-     */
-    public const MAPA_MSR = [
-        'muy_baja' => 9,
-        'baja' => 7,
-        'moderada' => 6,
-        'alta' => 4,
-        'muy_alta' => 2,
-    ];
-
-    /**
-     * Escala de Dependencia Institucional (categorias.nivel_dependencia) a [1,10].
-     */
-    public const MAPA_DEPENDENCIA = [
-        'Alta' => 9,
-        'Media' => 5,
-        'Baja' => 2,
-    ];
-
-    /**
-     * Sugerencia de tratamiento por nivel de riesgo (columna "Acción del
-     * Sistema" de la Tabla 29 de la tesis). Solo Alto/Crítico generan
-     * borrador automático: la decisión de tratamiento (sobre todo
-     * "Aceptar") es institucional, no un cálculo técnico — el administrador
-     * confirma o ajusta lo que el sistema sugiere.
-     */
-    public const MAPA_TRATAMIENTO_SUGERIDO = [
-        'Crítico' => [
-            'estrategia' => 'Mitigar',
-            'accion_preventiva' => 'Priorizar atención inmediata; evaluar retiro temporal o intervención urgente del activo.',
-            'dias_plazo' => 3,
-        ],
-        'Alto' => [
-            'estrategia' => 'Mitigar',
-            'accion_preventiva' => 'Notificar al administrador, priorizar el mantenimiento e incluir el activo en el seguimiento de riesgos.',
-            'dias_plazo' => 15,
-        ],
-    ];
-
     /**
      * Nivel de riesgo según el Score calculado (Tabla 29 de la Tesis ISO 31000 / FMEA-MSR)
      */
     public function obtenerNivelYAlerta(float $score): array
     {
-        if ($score >= 8.00) {
-            return [
-                'nivel' => 'Crítico',
-                'tipo_alerta' => 'Roja',
-                'criticidad' => 'Crítica',
-                'color_hex' => '#ef4444',
-            ];
-        }
-
-        if ($score >= 6.00) {
-            return [
-                'nivel' => 'Alto',
-                'tipo_alerta' => 'Naranja',
-                'criticidad' => 'Alta',
-                'color_hex' => '#f97316',
-            ];
-        }
-
-        if ($score >= 3.00) {
-            return [
-                'nivel' => 'Medio',
-                'tipo_alerta' => 'Amarilla',
-                'criticidad' => 'Media',
-                'color_hex' => '#eab308',
-            ];
-        }
-
-        return [
-            'nivel' => 'Bajo',
-            'tipo_alerta' => 'Verde',
-            'criticidad' => 'Baja',
-            'color_hex' => '#22c55e',
-        ];
+        return Catalogo::nivelPorScore($score);
     }
 
     /**
@@ -195,6 +115,22 @@ class MotorFmeaService
     }
 
     /**
+     * Cálculo del Subscore Técnico de Nivel 2 (FMEA-MSR ponderado por AHP):
+     *   SubscoreTecnico = (S * w_severidad) + (F * w_frecuencia) + (MSR * w_msr)
+     * Pesos de la tesis: w_severidad = 0.648, w_frecuencia = 0.230, w_msr = 0.122.
+     */
+    public function calcularSubscoreTecnico(int $S, int $F, int $MSR): float
+    {
+        $pesos = PesoAhp::where('vigente', true)->first();
+
+        $wS = (float) ($pesos->peso_severidad ?? 0.648);
+        $wF = (float) ($pesos->peso_frecuencia ?? 0.230);
+        $wMSR = (float) ($pesos->peso_msr ?? 0.122);
+
+        return round(($S * $wS) + ($F * $wF) + ($MSR * $wMSR), 3);
+    }
+
+    /**
      * Único punto de cálculo del Score jerárquico de dos niveles:
      * Nivel 2 (riesgo técnico de falla, matriz Saaty ya validada, CR=0.32%):
      *   SubscoreTecnico = S*w_severidad + F*w_frecuencia + MSR*w_msr
@@ -207,13 +143,10 @@ class MotorFmeaService
     {
         $pesos = PesoAhp::where('vigente', true)->first();
 
-        $wS = (float) ($pesos->peso_severidad ?? 0.648);
-        $wF = (float) ($pesos->peso_frecuencia ?? 0.230);
-        $wMSR = (float) ($pesos->peso_msr ?? 0.122);
         $p1 = (float) ($pesos->peso_riesgo_tecnico ?? 0.750);
         $p2 = (float) ($pesos->peso_dependencia ?? 0.250);
 
-        $subscoreTecnico = ($S * $wS) + ($F * $wF) + ($MSR * $wMSR);
+        $subscoreTecnico = $this->calcularSubscoreTecnico($S, $F, $MSR);
 
         return round(($p1 * $subscoreTecnico) + ($p2 * $D), 2);
     }
@@ -231,12 +164,12 @@ class MotorFmeaService
      */
     public function crearMantenimientoSiMitiga(PlanTratamientoRiesgo $tratamiento): void
     {
-        if ($tratamiento->estrategia !== 'Mitigar' || !$tratamiento->evaluacion) {
+        if (!Catalogo::estrategiaGeneraMantenimiento($tratamiento->estrategia) || !$tratamiento->evaluacion) {
             return;
         }
 
         $yaExiste = Mantenimiento::where('id_evaluacion_origen', $tratamiento->fk_id_evaluacion)
-            ->whereIn('estado_mantenimiento', ['Programado', 'Pendiente', 'En ejecución'])
+            ->whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoAbiertos())
             ->exists();
 
         if ($yaExiste) {
@@ -253,13 +186,13 @@ class MotorFmeaService
         // Correctivo si la falla ya se manifestó (incidente real abierto);
         // Preventivo si el tratamiento se origina solo por desgaste/criticidad.
         $tieneIncidentesAbiertos = Incidente::where('fk_id_activo', $idActivo)
-            ->whereNotIn('estado_incidente', ['Resuelto', 'Cerrado', 'resuelto', 'cerrado'])
+            ->whereNotIn('estado_incidente', Catalogo::estadosIncidenteCerrados())
             ->exists();
 
         Mantenimiento::create([
             'fk_id_activo' => $idActivo,
             'fk_id_usuario_asignado' => $idUsuario,
-            'fk_id_origen' => 2, // Evaluación de riesgos
+            'fk_id_origen' => Catalogo::origenMantenimientoId('Evaluación de riesgos'),
             'id_evaluacion_origen' => $tratamiento->fk_id_evaluacion,
             'tipo_mantenimiento' => $tieneIncidentesAbiertos ? 'Correctivo' : 'Preventivo',
             'fecha_programada' => $tratamiento->fecha_compromiso ?? now()->addDays(7)->toDateString(),
@@ -330,7 +263,7 @@ class MotorFmeaService
 
         // Dependencia institucional (Nivel 1) según la categoría del activo
         $nivelDependencia = $activo->categoria->nivel_dependencia ?? 'Media';
-        $D = self::MAPA_DEPENDENCIA[$nivelDependencia] ?? 5;
+        $D = Catalogo::valorDependencia($nivelDependencia) ?? Catalogo::valorDependencia('Media') ?? 5;
 
         // Cierre del ciclo: si ya hubo un mantenimiento ejecutado, solo
         // cuentan como "recurrencia" los incidentes posteriores a esa
@@ -341,6 +274,12 @@ class MotorFmeaService
             : $activo->incidentes;
 
         $evaluacionesRealizadas = [];
+        $pesos = PesoAhp::where('vigente', true)->first();
+        $wS = (float) ($pesos->peso_severidad ?? 0.648);
+        $wF = (float) ($pesos->peso_frecuencia ?? 0.230);
+        $wMSR = (float) ($pesos->peso_msr ?? 0.122);
+        $p1 = (float) ($pesos->peso_riesgo_tecnico ?? 0.750);
+        $p2 = (float) ($pesos->peso_dependencia ?? 0.250);
 
         foreach ($modosFalla as $modo) {
             // Contar incidentes relevantes del activo para este modo de falla o totales
@@ -358,20 +297,19 @@ class MotorFmeaService
             $S = $modo->valor_severidad_base ?? 5;
             $MSR = $modo->valor_msr_base ?? 4;
 
-            // Frecuencia (F) Dinámica - Tabla 21
-            if ($porcentajeDesgaste >= 80 && $incidentesHistoricos > 2) {
-                $F = 9; // Muy Alta
-            } elseif ($porcentajeDesgaste >= 40 || $incidentesHistoricos >= 1) {
-                $F = 6; // Moderada
-            } else {
-                $F = 2; // Baja
-            }
+            // Frecuencia (F) Dinámica - Tabla 21 (reglas en niveles_frecuencia)
+            $F = Catalogo::frecuencia($porcentajeDesgaste, $incidentesHistoricos);
 
-            // FASE 3: Cálculo Jerárquico del Score (Nivel 2 + Nivel 1)
+            // FASE 3 & 4: Subscore Técnico AHP e Integración Institucional
+            $subscoreTecnico = $this->calcularSubscoreTecnico($S, $F, $MSR);
             $score = $this->calcularScore($S, $F, $MSR, $D);
+            $indicePreliminar = $F * $S;
 
-            // FASE 4: Clasificación y Alerta (El Semáforo)
+            // FASE 5: Clasificación y Alerta (El Semáforo)
             $infoClasificacion = $this->obtenerNivelYAlerta($score);
+            $infoS = Catalogo::infoSeveridad($S);
+            $infoF = Catalogo::infoFrecuencia($porcentajeDesgaste, $incidentesHistoricos);
+            $infoMsr = Catalogo::infoMsr($MSR);
 
             // Evaluación anterior vigente de este (activo, modo_falla), si existe,
             // para decidir si corresponde generar una alerta nueva (idempotencia).
@@ -387,6 +325,7 @@ class MotorFmeaService
                 ->where('vigente', true)
                 ->update(['vigente' => false]);
 
+            $fechaAhora = now();
             $evaluacion = EvaluacionRiesgo::create([
                 'fk_id_activo' => $activo->id_activo,
                 'fk_id_modo_falla' => $modo->id_modo_falla,
@@ -396,7 +335,7 @@ class MotorFmeaService
                 'score_calculado' => $score,
                 'nivel_riesgo' => $infoClasificacion['nivel'],
                 'vigente' => true,
-                'fecha_evaluacion' => now(),
+                'fecha_evaluacion' => $fechaAhora,
                 'conteo_generico' => $conteoGenerico,
             ]);
 
@@ -406,7 +345,7 @@ class MotorFmeaService
                 Alerta::create([
                     'fk_id_evaluacion' => $evaluacion->id_evaluacion,
                     'tipo_alerta' => $infoClasificacion['tipo_alerta'],
-                    'fecha_generacion' => now(),
+                    'fecha_generacion' => $fechaAhora,
                     'notificacion_enviada' => true,
                 ]);
             }
@@ -414,8 +353,9 @@ class MotorFmeaService
             // Sugerencia de tratamiento (Alto/Crítico): borrador automático,
             // solo si no hay ya uno activo para este (activo, modo_falla) —
             // evita duplicar borradores en cada corrida de "Evaluar Todos".
-            if (isset(self::MAPA_TRATAMIENTO_SUGERIDO[$infoClasificacion['nivel']])) {
-                $tieneTratamientoActivo = PlanTratamientoRiesgo::whereIn('estado_tratamiento', ['Pendiente', 'En Proceso'])
+            $sugerencia = Catalogo::tratamientoSugerido($infoClasificacion['nivel']);
+            if ($sugerencia !== null) {
+                $tieneTratamientoActivo = PlanTratamientoRiesgo::whereIn('estado_tratamiento', Catalogo::estadosTratamientoAbiertos())
                     ->whereHas('evaluacion', function ($q) use ($activo, $modo) {
                         $q->where('fk_id_activo', $activo->id_activo)
                           ->where('fk_id_modo_falla', $modo->id_modo_falla);
@@ -423,11 +363,13 @@ class MotorFmeaService
                     ->exists();
 
                 if (!$tieneTratamientoActivo) {
-                    $sugerencia = self::MAPA_TRATAMIENTO_SUGERIDO[$infoClasificacion['nivel']];
                     $tratamientoSugerido = PlanTratamientoRiesgo::create([
                         'fk_id_evaluacion' => $evaluacion->id_evaluacion,
                         'estrategia' => $sugerencia['estrategia'],
+                        'estrategia_sugerida' => $sugerencia['estrategia'],
                         'accion_preventiva' => $sugerencia['accion_preventiva'],
+                        'accion_sugerida' => $sugerencia['accion_preventiva'],
+                        'indicador_seguimiento' => $modo->indicador_seguimiento,
                         'estado_tratamiento' => 'Pendiente',
                         'origen' => 'automatico',
                         'fecha_compromiso' => now()->addDays($sugerencia['dias_plazo'])->toDateString(),
@@ -438,15 +380,83 @@ class MotorFmeaService
             }
 
             $evaluacionesRealizadas[] = [
+                'id_modo_falla' => $modo->id_modo_falla,
                 'modo_falla' => $modo->nombre_modo_falla,
                 'severidad' => $S,
                 'frecuencia' => $F,
                 'msr' => $MSR,
                 'dependencia' => $D,
+                'indice_preliminar' => $indicePreliminar,
+                'subscore_tecnico' => $subscoreTecnico,
                 'score' => $score,
                 'nivel' => $infoClasificacion['nivel'],
                 'tipo_alerta' => $infoClasificacion['tipo_alerta'],
+                'color_hex' => $infoClasificacion['color_hex'],
+                'recalculado' => true,
+                'fecha_evaluacion' => $fechaAhora->format('d/m/Y H:i'),
+                'etiqueta_severidad' => $infoS['etiqueta'],
+                'criterio_severidad' => $modo->justificacion_severidad ?: $infoS['descripcion'],
+                'etiqueta_frecuencia' => $infoF['etiqueta'],
+                'criterio_frecuencia' => $infoF['descripcion'],
+                'regla_frecuencia' => $infoF['regla'],
+                'etiqueta_msr' => $infoMsr['etiqueta'],
+                'criterio_msr' => $modo->justificacion_msr ?: $infoMsr['descripcion'],
+                'estrategia' => $sugerencia['estrategia'] ?? null,
+                'accion_preventiva' => $sugerencia['accion_preventiva'] ?? null,
             ];
+        }
+
+        // Incorporar modos de falla conservados (no recalculados en esta corrida)
+        // para dar visibilidad completa al estado de riesgo del activo.
+        $idsEvaluados = $modosFalla->pluck('id_modo_falla')->all();
+        $modosConservados = $modosCategoria->whereNotIn('id_modo_falla', $idsEvaluados);
+
+        foreach ($modosConservados as $modoCons) {
+            $evaluacionVigente = EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)
+                ->where('fk_id_modo_falla', $modoCons->id_modo_falla)
+                ->where('vigente', true)
+                ->orderByDesc('fecha_evaluacion')
+                ->first();
+
+            if ($evaluacionVigente) {
+                $sCons = (int) $evaluacionVigente->valor_severidad;
+                $fCons = (int) $evaluacionVigente->valor_frecuencia;
+                $msrCons = (int) $evaluacionVigente->valor_msr;
+                $subCons = $this->calcularSubscoreTecnico($sCons, $fCons, $msrCons);
+                $scoreCons = (float) $evaluacionVigente->score_calculado;
+                $indCons = $fCons * $sCons;
+                $infoCons = $this->obtenerNivelYAlerta($scoreCons);
+                $infoSCons = Catalogo::infoSeveridad($sCons);
+                $infoFCons = Catalogo::infoFrecuencia($porcentajeDesgaste, $incidentesRelevantes->count());
+                $infoMsrCons = Catalogo::infoMsr($msrCons);
+                $sugCons = Catalogo::tratamientoSugerido($evaluacionVigente->nivel_riesgo);
+
+                $evaluacionesRealizadas[] = [
+                    'id_modo_falla' => $modoCons->id_modo_falla,
+                    'modo_falla' => $modoCons->nombre_modo_falla,
+                    'severidad' => $sCons,
+                    'frecuencia' => $fCons,
+                    'msr' => $msrCons,
+                    'dependencia' => $D,
+                    'indice_preliminar' => $indCons,
+                    'subscore_tecnico' => $subCons,
+                    'score' => $scoreCons,
+                    'nivel' => $evaluacionVigente->nivel_riesgo,
+                    'tipo_alerta' => $infoCons['tipo_alerta'],
+                    'color_hex' => $infoCons['color_hex'],
+                    'recalculado' => false,
+                    'fecha_evaluacion' => Carbon::parse($evaluacionVigente->fecha_evaluacion)->format('d/m/Y H:i'),
+                    'etiqueta_severidad' => $infoSCons['etiqueta'],
+                    'criterio_severidad' => $modoCons->justificacion_severidad ?: $infoSCons['descripcion'],
+                    'etiqueta_frecuencia' => $infoFCons['etiqueta'],
+                    'criterio_frecuencia' => $infoFCons['descripcion'],
+                    'regla_frecuencia' => $infoFCons['regla'],
+                    'etiqueta_msr' => $infoMsrCons['etiqueta'],
+                    'criterio_msr' => $modoCons->justificacion_msr ?: $infoMsrCons['descripcion'],
+                    'estrategia' => $sugCons['estrategia'] ?? null,
+                    'accion_preventiva' => $sugCons['accion_preventiva'] ?? null,
+                ];
+            }
         }
 
         // FASE 5: Score Global del Activo — calculado al vuelo sobre las
@@ -457,11 +467,9 @@ class MotorFmeaService
         $maxScore = $maxScoreVigente !== null ? (float) $maxScoreVigente : 1.0;
         $infoGlobal = $this->obtenerNivelYAlerta($maxScore);
 
-        // Cache de solo lectura para las vistas de inventario que aún
-        // muestran este campo (ver comentario en el modelo ActivoTecnologico).
-        $activo->update([
-            'criticidad_institucional' => $infoGlobal['criticidad'],
-        ]);
+        // Actualizar nivel_riesgo del activo según la regla de evaluaciones vigentes:
+        // si tiene 4 o más riesgos vigentes se promedia, sino el último nivel de riesgo.
+        $nivelFinal = $this->actualizarNivelRiesgoActivo($activo);
 
         return [
             'activo' => $activo,
@@ -469,9 +477,22 @@ class MotorFmeaService
             'vida_util_meses' => $vidaUtilMeses,
             'porcentaje_desgaste' => $porcentajeDesgaste,
             'total_incidentes' => $activo->incidentes->count(),
+            'incidentes_relevantes' => $incidentesRelevantes->count(),
+            'fecha_ultimo_mantenimiento' => $fechaMantenimiento ? $fechaMantenimiento->format('d/m/Y') : null,
+            'dependencia_nivel' => $nivelDependencia,
+            'dependencia_valor' => $D,
+            'pesos_ahp' => [
+                'peso_severidad' => $wS,
+                'peso_frecuencia' => $wF,
+                'peso_msr' => $wMSR,
+                'peso_riesgo_tecnico' => $p1,
+                'peso_dependencia' => $p2,
+            ],
             'max_score' => $maxScore,
-            'criticidad_global' => $infoGlobal['criticidad'],
+            'criticidad_global' => $nivelFinal ?? $infoGlobal['criticidad'],
+            'nivel_riesgo' => $nivelFinal,
             'alerta_global' => $infoGlobal['tipo_alerta'],
+            'color_global' => $infoGlobal['color_hex'],
             'evaluaciones' => $evaluacionesRealizadas,
             'sin_modos_falla' => false,
             // Contexto de la selección granular: permite a la vista explicar
@@ -484,6 +505,164 @@ class MotorFmeaService
     }
 
     /**
+     * Obtiene el desglose completo de inferencia FMEA-MSR para un activo
+     * a partir de sus evaluaciones vigentes registradas, sin recalcular
+     * ni alterar la base de datos (para consulta directa en pantalla).
+     */
+    public function obtenerInferenciaActivo(int $idActivo): ?array
+    {
+        $activo = ActivoTecnologico::with(['categoria.modosFalla', 'incidentes', 'mantenimientos'])->find($idActivo);
+        if (!$activo || !$activo->categoria) {
+            return null;
+        }
+
+        $antiguedadMeses = $this->calcularAntiguedadMesesActivo($activo);
+        $vidaUtilMeses = max(1, $activo->categoria->vida_util_meses ?? 60);
+        $porcentajeDesgaste = min(100, round(($antiguedadMeses / $vidaUtilMeses) * 100, 2));
+
+        $modosCategoria = $activo->categoria->modosFalla ?? collect();
+        if ($modosCategoria->isEmpty()) {
+            return [
+                'activo' => $activo,
+                'antiguedad_meses' => $antiguedadMeses,
+                'vida_util_meses' => $vidaUtilMeses,
+                'porcentaje_desgaste' => $porcentajeDesgaste,
+                'total_incidentes' => $activo->incidentes->count(),
+                'incidentes_relevantes' => 0,
+                'fecha_ultimo_mantenimiento' => null,
+                'dependencia_nivel' => $activo->categoria->nivel_dependencia ?? 'Media',
+                'dependencia_valor' => 5,
+                'pesos_ahp' => [
+                    'peso_severidad' => 0.648,
+                    'peso_frecuencia' => 0.230,
+                    'peso_msr' => 0.122,
+                    'peso_riesgo_tecnico' => 0.750,
+                    'peso_dependencia' => 0.250,
+                ],
+                'max_score' => null,
+                'criticidad_global' => null,
+                'nivel_riesgo' => null,
+                'alerta_global' => null,
+                'color_global' => '#94a3b8',
+                'evaluaciones' => [],
+                'sin_modos_falla' => true,
+                'evaluacion_parcial' => false,
+                'modos_categoria' => 0,
+                'modos_conservados' => 0,
+            ];
+        }
+
+        $nivelDependencia = $activo->categoria->nivel_dependencia ?? 'Media';
+        $D = Catalogo::valorDependencia($nivelDependencia) ?? Catalogo::valorDependencia('Media') ?? 5;
+        $fechaMantenimiento = $activo->fechaUltimoMantenimientoCompletado();
+        $incidentesRelevantes = $fechaMantenimiento
+            ? $activo->incidentes->filter(fn ($inc) => Carbon::parse($inc->fecha_incidente)->greaterThan($fechaMantenimiento))
+            : $activo->incidentes;
+
+        $pesos = PesoAhp::where('vigente', true)->first();
+        $wS = (float) ($pesos->peso_severidad ?? 0.648);
+        $wF = (float) ($pesos->peso_frecuencia ?? 0.230);
+        $wMSR = (float) ($pesos->peso_msr ?? 0.122);
+        $p1 = (float) ($pesos->peso_riesgo_tecnico ?? 0.750);
+        $p2 = (float) ($pesos->peso_dependencia ?? 0.250);
+
+        $evaluacionesRealizadas = [];
+
+        foreach ($modosCategoria as $modo) {
+            $evalVigente = EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)
+                ->where('fk_id_modo_falla', $modo->id_modo_falla)
+                ->where('vigente', true)
+                ->orderByDesc('fecha_evaluacion')
+                ->first();
+
+            if ($evalVigente) {
+                $S = (int) $evalVigente->valor_severidad;
+                $F = (int) $evalVigente->valor_frecuencia;
+                $MSR = (int) $evalVigente->valor_msr;
+                $subscoreTecnico = $this->calcularSubscoreTecnico($S, $F, $MSR);
+                $score = (float) $evalVigente->score_calculado;
+                $fechaEv = Carbon::parse($evalVigente->fecha_evaluacion)->format('d/m/Y H:i');
+                $nivel = $evalVigente->nivel_riesgo;
+            } else {
+                $S = (int) ($modo->valor_severidad_base ?? 5);
+                $F = Catalogo::frecuencia($porcentajeDesgaste, $incidentesRelevantes->count());
+                $MSR = (int) ($modo->valor_msr_base ?? 4);
+                $subscoreTecnico = $this->calcularSubscoreTecnico($S, $F, $MSR);
+                $score = $this->calcularScore($S, $F, $MSR, $D);
+                $fechaEv = 'Sin registrar';
+                $nivel = Catalogo::nivelPorScore($score)['nivel'];
+            }
+
+            $infoClasificacion = $this->obtenerNivelYAlerta($score);
+            $infoS = Catalogo::infoSeveridad($S);
+            $infoF = Catalogo::infoFrecuencia($porcentajeDesgaste, $incidentesRelevantes->count());
+            $infoMsr = Catalogo::infoMsr($MSR);
+            $sugerencia = Catalogo::tratamientoSugerido($nivel);
+
+            $evaluacionesRealizadas[] = [
+                'id_modo_falla' => $modo->id_modo_falla,
+                'modo_falla' => $modo->nombre_modo_falla,
+                'severidad' => $S,
+                'frecuencia' => $F,
+                'msr' => $MSR,
+                'dependencia' => $D,
+                'indice_preliminar' => $F * $S,
+                'subscore_tecnico' => $subscoreTecnico,
+                'score' => $score,
+                'nivel' => $nivel,
+                'tipo_alerta' => $infoClasificacion['tipo_alerta'],
+                'color_hex' => $infoClasificacion['color_hex'],
+                'recalculado' => false,
+                'fecha_evaluacion' => $fechaEv,
+                'etiqueta_severidad' => $infoS['etiqueta'],
+                'criterio_severidad' => $modo->justificacion_severidad ?: $infoS['descripcion'],
+                'etiqueta_frecuencia' => $infoF['etiqueta'],
+                'criterio_frecuencia' => $infoF['descripcion'],
+                'regla_frecuencia' => $infoF['regla'],
+                'etiqueta_msr' => $infoMsr['etiqueta'],
+                'criterio_msr' => $modo->justificacion_msr ?: $infoMsr['descripcion'],
+                'estrategia' => $sugerencia['estrategia'] ?? null,
+                'accion_preventiva' => $sugerencia['accion_preventiva'] ?? null,
+            ];
+        }
+
+        $maxScoreVigente = EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)
+            ->where('vigente', true)
+            ->max('score_calculado');
+        $maxScore = $maxScoreVigente !== null ? (float) $maxScoreVigente : ($evaluacionesRealizadas ? max(array_column($evaluacionesRealizadas, 'score')) : 1.0);
+        $infoGlobal = $this->obtenerNivelYAlerta($maxScore);
+
+        return [
+            'activo' => $activo,
+            'antiguedad_meses' => $antiguedadMeses,
+            'vida_util_meses' => $vidaUtilMeses,
+            'porcentaje_desgaste' => $porcentajeDesgaste,
+            'total_incidentes' => $activo->incidentes->count(),
+            'incidentes_relevantes' => $incidentesRelevantes->count(),
+            'fecha_ultimo_mantenimiento' => $fechaMantenimiento ? $fechaMantenimiento->format('d/m/Y') : null,
+            'dependencia_nivel' => $nivelDependencia,
+            'dependencia_valor' => $D,
+            'pesos_ahp' => [
+                'peso_severidad' => $wS,
+                'peso_frecuencia' => $wF,
+                'peso_msr' => $wMSR,
+                'peso_riesgo_tecnico' => $p1,
+                'peso_dependencia' => $p2,
+            ],
+            'max_score' => $maxScore,
+            'criticidad_global' => $activo->nivel_riesgo ?? $infoGlobal['criticidad'],
+            'nivel_riesgo' => $activo->nivel_riesgo ?? $infoGlobal['nivel'],
+            'alerta_global' => $infoGlobal['tipo_alerta'],
+            'color_global' => $infoGlobal['color_hex'],
+            'evaluaciones' => $evaluacionesRealizadas,
+            'sin_modos_falla' => false,
+            'evaluacion_parcial' => false,
+            'modos_categoria' => $modosCategoria->count(),
+            'modos_conservados' => 0,
+        ];
+    }
+
+    /**
      * Evalúa todos los activos tecnológicos del inventario y devuelve un
      * resumen del lote (para mostrar en pantalla qué hizo realmente el motor).
      */
@@ -492,7 +671,8 @@ class MotorFmeaService
         $activos = ActivoTecnologico::all();
 
         $detalle = [];
-        $conteoPorCriticidad = ['Crítica' => 0, 'Alta' => 0, 'Media' => 0, 'Baja' => 0];
+        // De la criticidad más alta a la más baja (el catálogo está en orden ascendente).
+        $conteoPorCriticidad = array_fill_keys(array_reverse(Catalogo::nombres('niveles_riesgo', 'criticidad')), 0);
         $sinModosFalla = 0;
         $alertasGeneradas = 0;
         $tratamientosGenerados = 0;
@@ -537,5 +717,40 @@ class MotorFmeaService
             'tratamientos_generados' => $tratamientosGenerados,
             'detalle' => $detalle,
         ];
+    }
+
+    /**
+     * Actualiza el campo nivel_riesgo del activo según sus evaluaciones FMEA vigentes.
+     * Si tiene 4 o más riesgos vigentes, se promedia su score y se asigna el nivel resultante.
+     * Si tiene menos de 4 (pero al menos 1), toma el nivel de riesgo de la última evaluación vigente.
+     * Si no tiene evaluaciones vigentes, queda en null.
+     */
+    public function actualizarNivelRiesgoActivo(ActivoTecnologico|int $activo): ?string
+    {
+        if (is_int($activo)) {
+            $activo = ActivoTecnologico::findOrFail($activo);
+        }
+
+        $evaluacionesVigentes = EvaluacionRiesgo::where('fk_id_activo', $activo->id_activo)
+            ->where('vigente', true)
+            ->orderByDesc('fecha_evaluacion')
+            ->orderByDesc('id_evaluacion')
+            ->get();
+
+        $conteo = $evaluacionesVigentes->count();
+
+        if ($conteo >= 4) {
+            $scorePromedio = (float) $evaluacionesVigentes->avg('score_calculado');
+            $infoPromedio = $this->obtenerNivelYAlerta($scorePromedio);
+            $nivelFinal = $infoPromedio['nivel'];
+        } elseif ($conteo > 0) {
+            $nivelFinal = $evaluacionesVigentes->first()->nivel_riesgo;
+        } else {
+            $nivelFinal = null;
+        }
+
+        $activo->update(['nivel_riesgo' => $nivelFinal]);
+
+        return $nivelFinal;
     }
 }

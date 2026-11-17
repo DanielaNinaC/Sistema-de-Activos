@@ -25,15 +25,6 @@
         </a>
     </div>
 
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="text-sm font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
     {{-- Ficha del activo --}}
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -72,7 +63,7 @@
             <table class="w-full divide-y divide-gray-200">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="w-12 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="w-12 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">N°</th>
                         <th class="w-28 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha / Hora</th>
                         <th class="px-3 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Descripción de la Falla</th>
                         <th class="px-3 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Reportado Por</th>
@@ -84,7 +75,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($incidentes as $incidente)
                         <tr class="hover:bg-slate-50/50 transition">
-                            <td class="w-12 px-3 py-4 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $incidente->id_incidente }}</td>
+                            <td class="w-12 px-3 py-4 text-center text-sm text-slate-700 font-mono font-medium whitespace-nowrap">{{ ($incidentes->firstItem() ?? 1) + $loop->index }}</td>
                             <td class="w-28 px-3 py-4 text-center text-sm whitespace-nowrap">
                                 <div class="font-semibold text-slate-900 font-mono text-sm">{{ \Carbon\Carbon::parse($incidente->fecha_incidente)->format('d/m/Y') }}</div>
                                 <div class="text-xs text-slate-500 font-mono">{{ \Carbon\Carbon::parse($incidente->fecha_incidente)->format('H:i') }} hs</div>
@@ -170,11 +161,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Nuevo Estado <span class="text-rose-500">*</span></label>
                     <select id="update_estado_incidente" name="estado_incidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Reportado">Reportado</option>
-                        <option value="En proceso">En proceso</option>
-                        <option value="En espera">En espera</option>
-                        <option value="Resuelto">Resuelto</option>
-                        <option value="Cerrado">Cerrado</option>
+                        @foreach(\App\Support\Catalogo::filas('estados_incidente') as $estado)
+                            <option value="{{ $estado->nombre }}">{{ \App\Support\Catalogo::etiqueta($estado) }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>

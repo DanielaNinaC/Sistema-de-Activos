@@ -124,6 +124,7 @@
             <table class="w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-slate-50">
                     <tr>
+                        <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">N°</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo Tecnológico</th>
                         <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Modo de Falla</th>
@@ -137,6 +138,9 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($evaluaciones as $evaluacion)
                         <tr class="hover:bg-slate-50/50 transition">
+                            <td class="w-16 px-6 py-4 text-center text-sm font-mono text-slate-700 font-medium">
+                                {{ ($evaluaciones->firstItem() ?? 1) + $loop->index }}
+                            </td>
                             <td class="px-6 py-4 text-center text-xs font-mono text-slate-600 whitespace-nowrap">
                                 {{ \Carbon\Carbon::parse($evaluacion->fecha_evaluacion)->format('d/m/Y H:i') }}
                             </td>
@@ -177,7 +181,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center text-slate-500 text-sm">
+                            <td colspan="9" class="px-6 py-12 text-center text-slate-500 text-sm">
                                 @if(request('buscar'))
                                     No se encontraron evaluaciones de riesgo que coincidan con la búsqueda.
                                 @else

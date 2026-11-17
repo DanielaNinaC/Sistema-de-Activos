@@ -43,14 +43,6 @@
         </div>
     </div>
 
-    @if(session('success'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl flex items-center justify-between text-sm shadow-sm">
-            <div class="flex items-center gap-2">
-                <span class="font-bold">✓</span> {{ session('success') }}
-            </div>
-        </div>
-    @endif
-
     {{-- Banner Resumen y Línea de Tiempo de Seguimiento --}}
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
@@ -289,11 +281,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1.5">Estado del Incidente <span class="text-rose-500">*</span></label>
                     <select id="update_estado_incidente" name="estado_incidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                        <option value="Reportado">Reportado</option>
-                        <option value="En proceso">En proceso</option>
-                        <option value="En espera">En espera</option>
-                        <option value="Resuelto">Resuelto</option>
-                        <option value="Cerrado">Cerrado</option>
+                        @foreach(\App\Support\Catalogo::filas('estados_incidente') as $estado)
+                            <option value="{{ $estado->nombre }}">{{ \App\Support\Catalogo::etiqueta($estado) }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>

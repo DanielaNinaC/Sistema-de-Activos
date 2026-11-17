@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
     <style>
         /* Turbo Navigation — Progress bar */
@@ -108,7 +109,7 @@
                     </div>
                     <div class="submenu hidden mt-1 pl-3" data-submenu-panel="activos">
                         <a href="{{ route('admin.activos.registrar') }}" class="block p-2 rounded hover:bg-white/5">Registrar Activo</a>
-                        <a href="{{ route('admin.activos.inventario') }}" class="block p-2 rounded hover:bg-white/5">Inventario</a>
+                        <a href="{{ route('admin.activos.inventario') }}" class="block p-2 rounded hover:bg-white/5">Lista de activos</a>
                         <a href="{{ route('admin.activos.categorias') }}" class="block p-2 rounded hover:bg-white/5">Categorías</a>
                         <a href="{{ route('admin.activos.ubicaciones') }}" class="block p-2 rounded hover:bg-white/5">Ubicaciones</a>
                     </div>
@@ -146,7 +147,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="submenu-arrow h-5 w-5 transform transition-transform text-white/90" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 8l4 4 4-4" clip-rule="evenodd" /></svg>
                     </div>
                     <div class="submenu hidden mt-1 pl-3" data-submenu-panel="riesgos">
-                        <a href="{{ route('admin.riesgos.evaluacion') }}" class="block p-2 rounded hover:bg-white/5">Evaluación FMEA</a>
+                        <a href="{{ route('admin.riesgos.evaluacion') }}" class="block p-2 rounded hover:bg-white/5">Evaluar Activo</a>
                         <a href="{{ route('admin.riesgos.riesgo') }}" class="block p-2 rounded hover:bg-white/5">Historial de Riesgos</a>
                         <a href="{{ route('admin.riesgos.alertas') }}" class="block p-2 rounded hover:bg-white/5">Alertas</a>
                         {{-- Modos de Falla y Score dejaron de ser accesos sueltos:
@@ -189,13 +190,27 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="submenu-arrow h-5 w-5 transform transition-transform text-white/90" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 8l4 4 4-4" clip-rule="evenodd" /></svg>
                     </div>
                     <div class="submenu hidden mt-1 pl-3" data-submenu-panel="informes">
+                        <a href="{{ route('admin.informes.auditoria-ti.ra01') }}" class="block p-2 rounded hover:bg-white/5">Inventario General</a>
+                        <a href="{{ route('admin.informes.estado-activos') }}" class="block p-2 rounded hover:bg-white/5">Estado de Activos</a>
+                        
+                        <a href="{{ route('admin.informes.activos-baja') }}" class="block p-2 rounded hover:bg-white/5">Activos Dados de Baja</a>
+                        
+                        <a href="{{ route('admin.informes.auditoria-ti.ra02') }}" class="block p-2 rounded hover:bg-white/5">Plan de Mantenimiento</a>
+                        <a href="{{ route('admin.informes.auditoria-ti.ra03') }}" class="block p-2 rounded hover:bg-white/5">Registro de Incidentes</a>
+                        <!-- <a href="{{ route('admin.informes.historial-tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Historial de Tratamiento</a> -->
                         <!-- <a href="{{ route('admin.informes.evolucion-score') }}" class="block p-2 rounded hover:bg-white/5">Evolución de Score</a> -->
                         <a href="{{ route('admin.informes.modos-falla') }}" class="block p-2 rounded hover:bg-white/5">Modos de Falla Frecuentes</a>
-                        <a href="{{ route('admin.informes.mantenimiento-tipo') }}" class="block p-2 rounded hover:bg-white/5">Preventivo vs. Correctivo</a>
+                        <!-- <a href="{{ route('admin.informes.mantenimiento-tipo') }}" class="block p-2 rounded hover:bg-white/5">Preventivo vs. Correctivo</a> -->
                         <a href="{{ route('admin.informes.sin-tratamiento') }}" class="block p-2 rounded hover:bg-white/5">Sin Tratamiento</a>
                         <!-- <a href="{{ route('admin.informes.trazabilidad') }}" class="block p-2 rounded hover:bg-white/5">Trazabilidad de Usuarios</a> -->
-                         <a href="{{ route('admin.informes.vida-util') }}" class="block p-2 rounded hover:bg-white/5">Vida Útil Remanente</a>
-                        <a href="{{ route('admin.informes.auditoria') }}" class="block p-2 rounded hover:bg-white/5">Informe General</a>
+                        <a href="{{ route('admin.informes.vida-util') }}" class="block p-2 rounded hover:bg-white/5">Vida Útil</a>
+                        
+                        <!-- <a href="{{ route('admin.informes.auditoria-ti.ra04') }}" class="block p-2 rounded hover:bg-white/5">RA-04 Clasificación por Criticidad</a> -->
+                        <!-- <a href="{{ route('admin.informes.auditoria-ti.ra05') }}" class="block p-2 rounded hover:bg-white/5">RA-05 Roles y Permisos</a> -->
+                        <!-- <a href="{{ route('admin.informes.auditoria-ti.ra06') }}" class="block p-2 rounded hover:bg-white/5">Verificación Física (CPD)</a> -->
+                        <!-- <a href="{{ route('admin.informes.auditoria-ti.ra07') }}" class="block p-2 rounded hover:bg-white/5">Activos de Red</a> -->
+                        <!-- <a href="{{ route('admin.informes.auditoria') }}" class="block p-2 rounded hover:bg-white/5">Informe General</a> -->
+                        <a href="{{ route('admin.auditoria-interna.index') }}" class="block p-2 rounded hover:bg-white/5">Auditoría Interna de TI</a>
                     </div>
                 </div>
             @endif
@@ -387,6 +402,13 @@
 
         {{-- Contenido dinámico — solo esta parte se actualiza en la navegación SPA --}}
         <main id="main-content" class="flex-1 p-8 overflow-y-auto">
+            {{-- Errores de validación por campo: los coloca junto a cada campo resources/js/errores-campos.js
+                 (los del perfil van en su propia bolsa 'perfil' y se muestran en su modal). --}}
+            {{-- Va en un atributo data- y no en un <script>: turbo-nav recrea los <script> copiando solo su texto. --}}
+            @if($errors->getBag('default')->any())
+                <div id="errores-validacion" class="hidden" data-errores="{{ json_encode($errors->getBag('default')->messages(), JSON_UNESCAPED_UNICODE) }}"></div>
+            @endif
+
             @if(session('success'))
                 <div class="mb-6 flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-sm shadow-xs animate-fade-in">
                     <div class="flex items-center gap-3">
@@ -443,9 +465,9 @@
             </button>
         </div>
 
-        @if($errors->any())
+        @if($errors->perfil->any())
             <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs space-y-1">
-                @foreach($errors->all() as $error)
+                @foreach($errors->perfil->all() as $error)
                     <div class="flex items-center gap-1.5">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -502,6 +524,40 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal de Advertencia por Inactividad (30 min) -->
+<div id="inactivityWarningModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs transition-opacity duration-300">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100 transform transition-all duration-300 scale-95 opacity-0 text-center space-y-5" id="inactivityWarningCard">
+        <!-- Icono con animación -->
+        <div class="mx-auto w-16 h-16 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shadow-inner border border-amber-100/80">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+
+        <div class="space-y-2">
+            <h3 class="text-xl font-extrabold text-slate-900">¿Sigues ahí?</h3>
+            <p class="text-sm text-slate-500 leading-relaxed">
+                Por seguridad institucional, tu sesión en SIATEC expirará en:
+            </p>
+            <div class="inline-block px-5 py-2 bg-amber-50 text-amber-700 font-mono font-extrabold text-2xl rounded-xl border border-amber-200" id="inactivityTimerText">
+                02:00
+            </div>
+            <p class="text-xs text-slate-400">
+                El tiempo de espera máximo permitido está configurado en 30 minutos.
+            </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button type="button" onclick="cerrarSesionPorInactividad()" class="w-full sm:w-1/2 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition order-2 sm:order-1">
+                Cerrar Sesión
+            </button>
+            <button type="button" onclick="mantenerSesionActiva()" class="w-full sm:w-1/2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-bold text-white shadow-md hover:shadow-indigo-200 transition order-1 sm:order-2">
+                Continuar
+            </button>
+        </div>
     </div>
 </div>
 
@@ -700,7 +756,7 @@
         }
     };
 
-    @if($errors->any())
+    @if($errors->perfil->any())
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof window.openProfileEditModal === 'function') {
@@ -713,6 +769,157 @@
         }
     }
     @endif
+</script>
+
+<script>
+    // ── GESTOR DE INACTIVIDAD Y TIEMPO DE ESPERA (30 MINUTOS) ──
+    (function () {
+        'use strict';
+
+        const TIEMPO_LIMITE_MS = 30 * 60 * 1000;       // 30 minutos límite total
+        const TIEMPO_AVISO_MS = 28 * 60 * 1000;        // Aviso al minuto 28 (2 minutos restantes)
+        const INTERVALO_REFRESCO_MS = 5 * 60 * 1000;   // Cada 5 min de uso activo refresca sesión
+
+        let ultimaActividad = Date.now();
+        let ultimoRefresco = Date.now();
+        let modalVisible = false;
+        let temporizador = null;
+
+        // Registrar interacción del usuario
+        function registrarActividad() {
+            ultimaActividad = Date.now();
+
+            // Si el usuario está activo y han pasado al menos 5 min desde el último refresco,
+            // renovar silenciosamente la sesión y token CSRF en segundo plano
+            if (Date.now() - ultimoRefresco >= INTERVALO_REFRESCO_MS) {
+                refrescarSesionSilenciosa();
+            }
+        }
+
+        // Refrescar el token y la sesión activa en el servidor
+        function refrescarSesionSilenciosa() {
+            ultimoRefresco = Date.now();
+            fetch("{{ route('csrf.refresh') }}", {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data && data.authenticated === false) {
+                    // Si el servidor detectó que la sesión expiró, redirigir limpiamente
+                    window.location.href = "{{ route('login') }}?inactividad=1";
+                    return;
+                }
+                if (data && data.token) {
+                    var meta = document.querySelector('meta[name="csrf-token"]');
+                    if (meta) meta.setAttribute('content', data.token);
+                    document.querySelectorAll('input[name="_token"]').forEach(function (inp) {
+                        inp.value = data.token;
+                    });
+                }
+            })
+            .catch(function () { /* Silencioso ante pérdidas transitorias de conexión */ });
+        }
+
+        // Mostrar u ocultar modal de advertencia
+        function mostrarModalAviso(tiempoRestanteSeg) {
+            var modal = document.getElementById('inactivityWarningModal');
+            var card = document.getElementById('inactivityWarningCard');
+            var timerText = document.getElementById('inactivityTimerText');
+
+            if (!modal || !card) return;
+
+            var minutos = Math.floor(tiempoRestanteSeg / 60);
+            var segundos = tiempoRestanteSeg % 60;
+            var minStr = minutos < 10 ? '0' + minutos : minutos;
+            var segStr = segundos < 10 ? '0' + segundos : segundos;
+
+            if (timerText) {
+                timerText.innerText = minStr + ':' + segStr;
+            }
+
+            if (!modalVisible) {
+                modalVisible = true;
+                modal.classList.remove('hidden');
+                setTimeout(function () {
+                    card.classList.remove('scale-95', 'opacity-0');
+                    card.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+        }
+
+        function ocultarModalAviso() {
+            var modal = document.getElementById('inactivityWarningModal');
+            var card = document.getElementById('inactivityWarningCard');
+            if (modal && card) {
+                card.classList.remove('scale-100', 'opacity-100');
+                card.classList.add('scale-95', 'opacity-0');
+                setTimeout(function () {
+                    modal.classList.add('hidden');
+                    modalVisible = false;
+                }, 200);
+            } else {
+                modalVisible = false;
+            }
+        }
+
+        // Funciones expuestas a botones de la interfaz
+        window.mantenerSesionActiva = function () {
+            ultimaActividad = Date.now();
+            refrescarSesionSilenciosa();
+            ocultarModalAviso();
+        };
+
+        window.cerrarSesionPorInactividad = function () {
+            window.location.href = "{{ route('login') }}?inactividad=1";
+        };
+
+        // Monitoreo cada 1 segundo
+        function verificarInactividad() {
+            var inactivoMs = Date.now() - ultimaActividad;
+
+            // Superó los 30 minutos de inactividad
+            if (inactivoMs >= TIEMPO_LIMITE_MS) {
+                clearInterval(temporizador);
+                window.location.href = "{{ route('login') }}?inactividad=1";
+                return;
+            }
+
+            // Entre 28 y 30 minutos (quedan <= 2 minutos)
+            if (inactivoMs >= TIEMPO_AVISO_MS) {
+                var segRestantes = Math.max(0, Math.ceil((TIEMPO_LIMITE_MS - inactivoMs) / 1000));
+                mostrarModalAviso(segRestantes);
+            } else if (modalVisible) {
+                ocultarModalAviso();
+            }
+        }
+
+        // Detección de actividad del usuario con throttle para máximo rendimiento
+        var throttleTimeout = null;
+        function onUserActivity() {
+            if (!throttleTimeout) {
+                registrarActividad();
+                throttleTimeout = setTimeout(function () {
+                    throttleTimeout = null;
+                }, 3000); // Máximo una actualización cada 3 segundos
+            }
+        }
+
+        ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'].forEach(function (evento) {
+            window.addEventListener(evento, onUserActivity, { passive: true });
+        });
+
+        // Iniciar temporizador de verificación
+        temporizador = setInterval(verificarInactividad, 1000);
+
+        // Cuando la pestaña recupera foco (tras suspensión o cambio de pestaña)
+        window.addEventListener('focus', function () {
+            verificarInactividad();
+            if (Date.now() - ultimaActividad < TIEMPO_AVISO_MS) {
+                refrescarSesionSilenciosa();
+            }
+        });
+    })();
 </script>
 
 @stack('scripts')

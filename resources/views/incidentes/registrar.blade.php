@@ -15,28 +15,6 @@
         </div>
     </div>
 
-    {{-- Alerta Éxito --}}
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="text-sm font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
-    {{-- Errores de Validación --}}
-    @if ($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 space-y-1 shadow-sm">
-            <div class="font-semibold text-sm">Por favor corrige los siguientes errores:</div>
-            <ul class="list-disc list-inside text-xs space-y-0.5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     {{-- Formulario Principal estilo Card igual a registrar-activo --}}
     <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
         <h3 class="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-3">Formulario de Registro</h3>
@@ -81,6 +59,7 @@
                 <input 
                     type="text" 
                     name="usuario_reporta_nombre"
+                    data-error-de="fk_id_usuario_reporta"
                     id="inputUsuarioReporta"
                     list="listUsuarios" 
                     value="{{ old('usuario_reporta_nombre') }}"
@@ -112,9 +91,10 @@
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Estado Inicial *</label>
                 <select name="estado_incidente" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" required>
-                    <option value="Reportado" {{ old('estado_incidente', 'Reportado') == 'Reportado' ? 'selected' : '' }}>Reportado (Nuevo incidente registrado)</option>
-                    <option value="En proceso" {{ old('estado_incidente') == 'En proceso' ? 'selected' : '' }}>En proceso (En revisión o diagnóstico)</option>
-                    <option value="En espera" {{ old('estado_incidente') == 'En espera' ? 'selected' : '' }}>En espera (Pendiente de repuestos o soporte externo)</option>
+                    @php $estadosIniciales = \App\Support\Catalogo::estadosIncidenteAbiertos(); @endphp
+                    @foreach($estadosIniciales as $estado)
+                        <option value="{{ $estado->nombre }}" {{ old('estado_incidente', $estadosIniciales[0]->nombre) == $estado->nombre ? 'selected' : '' }}>{{ \App\Support\Catalogo::etiqueta($estado) }}</option>
+                    @endforeach
                 </select>
             </div>
 

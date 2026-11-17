@@ -15,6 +15,7 @@ use App\Models\Rol;
 use App\Models\Ubicacion;
 use App\Models\Usuario;
 use App\Services\MotorFmeaService;
+use App\Support\Catalogo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -168,10 +169,10 @@ class MotorFmeaServiceTest extends TestCase
         $this->assertEquals(100, $resultado['porcentaje_desgaste']);
         $this->assertFalse($resultado['sin_modos_falla']);
         $this->assertSame(8.91, $resultado['max_score']);
-        $this->assertSame('Crítica', $resultado['criticidad_global']);
+        $this->assertSame('Crítico', $resultado['criticidad_global']);
         $this->assertSame('Roja', $resultado['alerta_global']);
 
-        $this->assertSame('Crítica', $activo->fresh()->criticidad_institucional);
+        $this->assertSame('Crítico', $activo->fresh()->criticidad_institucional);
 
         $this->assertDatabaseHas('evaluacion_riesgo', [
             'fk_id_activo' => $activo->id_activo,
@@ -350,7 +351,7 @@ class MotorFmeaServiceTest extends TestCase
         $this->assertSame(1, PlanTratamientoRiesgo::count());
 
         $plan = PlanTratamientoRiesgo::firstOrFail();
-        $sugerencia = MotorFmeaService::MAPA_TRATAMIENTO_SUGERIDO['Crítico'];
+        $sugerencia = Catalogo::tratamientoSugerido('Crítico');
 
         $this->assertSame($sugerencia['estrategia'], $plan->estrategia);
         $this->assertSame($sugerencia['accion_preventiva'], $plan->accion_preventiva);

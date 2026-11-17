@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Services\MotorFmeaService;
+use App\Support\Catalogo;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -231,8 +231,8 @@ class ModosFallaSeeder extends Seeder
                     [
                         'nivel_severidad' => $severidad,
                         'nivel_msr' => $msr,
-                        'valor_severidad_base' => MotorFmeaService::MAPA_SEVERIDAD[$severidad],
-                        'valor_msr_base' => MotorFmeaService::MAPA_MSR[$msr],
+                        'valor_severidad_base' => Catalogo::valorSeveridad($severidad),
+                        'valor_msr_base' => Catalogo::valorMsr($msr),
                         'justificacion_severidad' => $justSeveridad,
                         'justificacion_msr' => $justMsr,
                     ]

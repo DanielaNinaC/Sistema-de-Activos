@@ -18,28 +18,6 @@
         </div>
     </div>
 
-    {{-- Alerta de Éxito --}}
-    @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-3 shadow-sm transition text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="font-medium">{{ session('success') }}</span>
-        </div>
-    @endif
-
-    {{-- Errores de Validación --}}
-    @if($errors->any())
-        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 shadow-sm text-xs space-y-1">
-            <div class="font-bold">Error en los datos ingresados:</div>
-            <ul class="list-disc list-inside space-y-0.5">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     {{-- Barra de Búsqueda --}}
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
         <form method="GET" action="{{ route('admin.riesgos.alertas') }}" class="flex flex-col sm:flex-row gap-3">
@@ -94,7 +72,7 @@
             <table class="w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">N°</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha Generación</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo Tecnológico</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Tipo de Alerta</th>
@@ -104,7 +82,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($alertas as $alerta)
                         <tr class="hover:bg-slate-50/50 transition">
-                            <td class="w-16 px-6 py-4 text-center text-sm text-slate-700 font-mono">{{ $alerta->id_alerta }}</td>
+                            <td class="w-16 px-6 py-4 text-center text-sm text-slate-700 font-mono font-medium">{{ ($alertas->firstItem() ?? 1) + $loop->index }}</td>
                             <td class="px-6 py-4 text-center text-xs font-mono text-slate-600 whitespace-nowrap">
                                 {{ \Carbon\Carbon::parse($alerta->fecha_generacion)->format('d/m/Y H:i') }} hs
                             </td>

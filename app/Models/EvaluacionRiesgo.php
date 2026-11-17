@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Catalogo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -54,9 +55,9 @@ class EvaluacionRiesgo extends Model
     public function scopeSinTratamiento($query)
     {
         return $query->where('vigente', true)
-            ->whereIn('nivel_riesgo', ['Alto', 'Crítico'])
+            ->whereIn('nivel_riesgo', Catalogo::nivelesQueRequierenTratamiento())
             ->whereDoesntHave('planesTratamiento', function ($q) {
-                $q->whereIn('estado_tratamiento', ['Pendiente', 'En Proceso', 'Completado']);
+                $q->whereIn('estado_tratamiento', Catalogo::nombres('estados_tratamiento'));
             });
     }
 }

@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use App\Rules\ValidEmailDomain;
+use App\Mail\RegistroUsuarioMail;
 
 class AuthController extends Controller
 {
@@ -18,13 +21,16 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
-        // Generar o asegurar que exista un código de cache activo
+        // Generar código de seguridad activo y prepararlo directamente para evitar petición HTTP extra
         $sessionKey = 'login_cache_code_' . session()->getId();
-        if (!Cache::has($sessionKey)) {
-            $this->generateNewCacheCode();
+        $code = Cache::get($sessionKey);
+        if (!$code) {
+            $code = $this->generateNewCacheCode();
         }
 
-        return view('auth.login');
+        $captchaDataUri = 'data:image/svg+xml;base64,' . base64_encode($this->renderCaptchaSvg($code));
+
+        return view('auth.login', compact('captchaDataUri'));
     }
 
     /**
@@ -219,7 +225,7 @@ SVG;
         }
 
         // Crear el usuario con estado deshabilitado (0) y rol por defecto (2 = Soporte)
-        \App\Models\Usuario::create([
+        $nuevoUsuario = \App\Models\Usuario::create([
             'nombre' => $nombre,
             'apellido' => $apellido,
             'correo' => $request->correo,
@@ -227,6 +233,13 @@ SVG;
             'fk_id_rol' => 2,
             'estado' => 0,
         ]);
+
+        // Enviar correo de notificación al usuario registrado
+        try {
+            Mail::to($nuevoUsuario->correo)->queue(new RegistroUsuarioMail($nuevoUsuario));
+        } catch (\Throwable $e) {
+            Log::error('Error al encolar correo de bienvenida/registro: ' . $e->getMessage());
+        }
 
         $this->generateNewCacheCode();
 

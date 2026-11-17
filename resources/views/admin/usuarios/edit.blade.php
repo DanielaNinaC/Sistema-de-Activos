@@ -11,6 +11,7 @@
         <h2 class="text-2xl font-semibold text-slate-900">Editar Usuario</h2>
     </div>
 
+
     <form method="POST" action="{{ route('admin.usuarios.update', $usuario->id_usuario) }}" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
         @csrf
         @method('PUT')
@@ -20,7 +21,8 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Nombre <span class="text-rose-500">*</span></label>
-                <input name="nombre" value="{{ old('nombre', $usuario->nombre) }}" class="w-full border border-gray-200 px-4 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50" required />
+                <input name="nombre" value="{{ old('nombre', $usuario->nombre) }}" class="w-full border @error('nombre') border-rose-500 @else border-gray-200 @enderror px-4 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50" required />
+                @error('nombre')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Apellido</label>
@@ -29,6 +31,7 @@
             <div>
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Correo <span class="text-rose-500">*</span></label>
                 <input id="inputCorreoEdit" name="correo" type="email" value="{{ old('correo', $usuario->correo) }}" class="w-full border border-gray-200 px-4 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50" required />
+                @error('correo')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
                 <div id="emailDnsFeedbackEdit" class="mt-1 text-xs transition-all duration-200"></div>
             </div>
             <div>
@@ -41,7 +44,8 @@
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Contraseña (dejar en blanco para no cambiar)</label>
-                <input name="contrasena" type="password" placeholder="••••••••" class="w-full max-w-md border border-gray-200 px-4 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50" />
+                <input name="contrasena" type="password" placeholder="••••••••" class="w-full max-w-md border @error('contrasena') border-rose-500 @else border-gray-200 @enderror px-4 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50" />
+                @error('contrasena')<p class="mt-1 text-xs text-rose-600">{{ $message }}</p>@enderror
             </div>
 
             {{-- Sección de Permisos por Módulo --}}

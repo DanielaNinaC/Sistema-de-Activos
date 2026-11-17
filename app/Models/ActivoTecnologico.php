@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Catalogo;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,9 +33,30 @@ class ActivoTecnologico extends Model
         'fecha_adquisicion',
         'estado_operativo',
         'etapa_ciclo_vida',
-        'criticidad_institucional',
+        'nivel_riesgo',
         'observaciones',
+        'fecha_baja',
+        'motivo_baja',
+        'estado_previo_baja',
+        'fk_id_usuario_baja',
     ];
+
+    protected $casts = [
+        'fecha_baja' => 'date',
+    ];
+
+    /**
+     * Accesor y mutador de compatibilidad histórica para 'criticidad_institucional'.
+     */
+    public function getCriticidadInstitucionalAttribute(): ?string
+    {
+        return $this->attributes['nivel_riesgo'] ?? null;
+    }
+
+    public function setCriticidadInstitucionalAttribute(?string $value): void
+    {
+        $this->attributes['nivel_riesgo'] = $value;
+    }
 
     public function categoria()
     {
@@ -44,6 +66,11 @@ class ActivoTecnologico extends Model
     public function ubicacion()
     {
         return $this->belongsTo(Ubicacion::class, 'fk_id_ubicacion', 'id_ubicacion');
+    }
+
+    public function usuarioBaja()
+    {
+        return $this->belongsTo(Usuario::class, 'fk_id_usuario_baja', 'id_usuario');
     }
 
     public function detalleComputadora()
@@ -78,14 +105,13 @@ class ActivoTecnologico extends Model
 
     /**
      * Fecha del mantenimiento más reciente ya ejecutado sobre este activo.
-     * 'Finalizado' es el valor real usado en estado_mantenimiento en todo
-     * el módulo de mantenimiento (ver resources/views/mantenimiento/*.blade.php);
-     * 'Completado' nunca se usa como valor persistido.
+     * "Ejecutado" lo define el catálogo estados_mantenimiento (bandera
+     * es_finalizado, hoy solo 'Finalizado').
      */
     public function fechaUltimoMantenimientoCompletado(): ?Carbon
     {
         $fecha = $this->mantenimientos()
-            ->where('estado_mantenimiento', 'Finalizado')
+            ->whereIn('estado_mantenimiento', Catalogo::estadosMantenimientoFinalizados())
             ->whereNotNull('fecha_ejecucion')
             ->max('fecha_ejecucion');
 

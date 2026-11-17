@@ -20,6 +20,12 @@ class Incidente extends Model
         'fk_id_modo_falla',
         'estado_incidente',
         'prioridad',
+        'fecha_cierre',
+    ];
+
+    protected $casts = [
+        'fecha_incidente' => 'datetime',
+        'fecha_cierre' => 'datetime',
     ];
 
     public function activo()
@@ -35,5 +41,10 @@ class Incidente extends Model
     public function modoFalla()
     {
         return $this->belongsTo(ModoFalla::class, 'fk_id_modo_falla', 'id_modo_falla');
+    }
+
+    public function mantenimientos()
+    {
+        return $this->hasMany(Mantenimiento::class, 'fk_id_incidente', 'id_incidente');
     }
 }

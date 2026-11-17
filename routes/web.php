@@ -8,19 +8,20 @@ use App\Http\Controllers\InicioController;
 Route::get('/', [InicioController::class, 'index'])->name('inicio');
 
 // Rutas para usuarios no autenticados (Invitados)
-Route::middleware(['web'])->group(function () {
-    // Endpoint para refrescar el token CSRF (evita errores 419 por inactividad)
-    Route::get('/csrf-token', function () {
-        return response()->json(['token' => csrf_token()]);
-    })->name('csrf.refresh');
+// Endpoint para refrescar el token CSRF (evita errores 419 por inactividad)
+Route::get('/csrf-token', function () {
+    return response()->json([
+        'token' => csrf_token(),
+        'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+    ]);
+})->name('csrf.refresh');
 
-    Route::middleware('guest')->group(function () {
-        Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-        Route::post('/login', [AuthController::class, 'login']);
-        Route::post('/register', [AuthController::class, 'register'])->name('register');
-    });
-    Route::get('/captcha-image', [AuthController::class, 'generateCaptchaImage'])->name('captcha.image');
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register'])->name('register');
 });
+Route::get('/captcha-image', [AuthController::class, 'generateCaptchaImage'])->name('captcha.image');
 
 // Rutas protegidas (Requieren sesión activa)
 Route::middleware('auth')->group(function () {
@@ -41,6 +42,7 @@ Route::middleware('auth')->group(function () {
             Route::middleware('modulo:activos')->group(function () {
                 Route::get('/activos/inventario', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'index'])->name('activos.inventario');
                 Route::get('/activos/detalles/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'show'])->name('activos.show');
+                Route::post('/activos/{id}/historial', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'storeHistorial'])->name('activos.historial.store');
                 Route::get('/activos/editar/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'edit'])->name('activos.edit');
                 Route::put('/activos/actualizar/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'update'])->name('activos.update');
                 Route::get('/activos/registrar-activo', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'create'])->name('activos.registrar');
@@ -54,6 +56,8 @@ Route::middleware('auth')->group(function () {
                 Route::get('/activos/ubicaciones/{id}/equipos', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'activosPorUbicacion'])->name('activos.ubicaciones.equipos');
                 Route::post('/activos/ubicaciones', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'storeUbicacion'])->name('activos.ubicaciones.store');
                 Route::put('/activos/ubicaciones/{id}', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'updateUbicacion'])->name('activos.ubicaciones.update');
+                Route::get('/activos/inventario/excel', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'exportExcel'])->name('activos.inventario.excel');
+                Route::get('/activos/inventario/pdf', [App\Http\Controllers\Admin\ActivoTecnologicoController::class, 'exportPdf'])->name('activos.inventario.pdf');
             });
 
             // ── Incidentes ──
@@ -75,6 +79,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/mantenimiento/historial', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoHistorial'])->name('mantenimiento.historial');
                 Route::get('/mantenimiento/detalles/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoShow'])->name('mantenimiento.show');
                 Route::put('/mantenimiento/{id}', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoUpdate'])->name('mantenimiento.update');
+                Route::post('/mantenimiento/{id}/realizar', [App\Http\Controllers\Admin\ProcesoActivoController::class, 'mantenimientoRealizar'])->name('mantenimiento.realizar');
             });
 
             // ── Gestión de Usuarios (requiere permiso_usuarios) ──
@@ -129,6 +134,65 @@ Route::middleware('auth')->group(function () {
 
                 Route::get('/auditoria-consolidado', [App\Http\Controllers\Admin\InformesController::class, 'auditoriaConsolidado'])->name('auditoria');
                 Route::get('/auditoria-consolidado/pdf', [App\Http\Controllers\Admin\InformesController::class, 'auditoriaConsolidadoPdf'])->name('auditoria.pdf');
+
+                Route::get('/estado-activos', [App\Http\Controllers\Admin\InformesController::class, 'estadoActivos'])->name('estado-activos');
+                Route::get('/estado-activos/pdf', [App\Http\Controllers\Admin\InformesController::class, 'estadoActivosPdf'])->name('estado-activos.pdf');
+                Route::get('/estado-activos/excel', [App\Http\Controllers\Admin\InformesController::class, 'estadoActivosExcel'])->name('estado-activos.excel');
+
+                Route::get('/activos-baja', [App\Http\Controllers\Admin\InformesController::class, 'activosDeBaja'])->name('activos-baja');
+                Route::get('/activos-baja/pdf', [App\Http\Controllers\Admin\InformesController::class, 'activosDeBajaPdf'])->name('activos-baja.pdf');
+                Route::get('/activos-baja/excel', [App\Http\Controllers\Admin\InformesController::class, 'activosDeBajaExcel'])->name('activos-baja.excel');
+
+                Route::get('/historial-tratamiento', [App\Http\Controllers\Admin\InformesController::class, 'historialTratamiento'])->name('historial-tratamiento');
+
+                // ── Reportes para Auditoría de TI (RA-01..RA-07) ──
+                Route::prefix('auditoria-ti')->name('auditoria-ti.')->group(function () {
+                    Route::get('/ra-01-inventario', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra01Inventario'])->name('ra01');
+                    Route::get('/ra-01-inventario/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra01InventarioPdf'])->name('ra01.pdf');
+                    Route::get('/ra-01-inventario/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra01InventarioExcel'])->name('ra01.excel');
+
+                    Route::get('/ra-02-mantenimiento', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra02Mantenimiento'])->name('ra02');
+                    Route::get('/ra-02-mantenimiento/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra02MantenimientoPdf'])->name('ra02.pdf');
+                    Route::get('/ra-02-mantenimiento/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra02MantenimientoExcel'])->name('ra02.excel');
+
+                    Route::get('/ra-03-incidentes', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra03Incidentes'])->name('ra03');
+                    Route::get('/ra-03-incidentes/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra03IncidentesPdf'])->name('ra03.pdf');
+                    Route::get('/ra-03-incidentes/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra03IncidentesExcel'])->name('ra03.excel');
+
+                    Route::get('/ra-04-criticidad', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra04Criticidad'])->name('ra04');
+                    Route::get('/ra-04-criticidad/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra04CriticidadPdf'])->name('ra04.pdf');
+                    Route::get('/ra-04-criticidad/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra04CriticidadExcel'])->name('ra04.excel');
+
+                    Route::get('/ra-05-roles-permisos', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra05RolesPermisos'])->name('ra05');
+                    Route::get('/ra-05-roles-permisos/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra05RolesPermisosPdf'])->name('ra05.pdf');
+                    Route::get('/ra-05-roles-permisos/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra05RolesPermisosExcel'])->name('ra05.excel');
+
+                    Route::get('/ra-06-verificacion', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra06Verificacion'])->name('ra06');
+                    Route::get('/ra-06-verificacion/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra06VerificacionPdf'])->name('ra06.pdf');
+
+                    Route::get('/ra-07-activos-red', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra07ActivosRed'])->name('ra07');
+                    Route::get('/ra-07-activos-red/pdf', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra07ActivosRedPdf'])->name('ra07.pdf');
+                    Route::get('/ra-07-activos-red/excel', [App\Http\Controllers\Admin\AuditoriaReportesController::class, 'ra07ActivosRedExcel'])->name('ra07.excel');
+                });
+            });
+
+            // ── Auditoría Interna de TI (asistente) ──
+            Route::middleware('modulo:informes')->prefix('auditoria-interna')->name('auditoria-interna.')->group(function () {
+                Route::get('/', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'index'])->name('index');
+                Route::get('/crear', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'create'])->name('create');
+                Route::post('/', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'store'])->name('store');
+                Route::get('/{id}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'show'])->name('show');
+                Route::put('/{id}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'update'])->name('update');
+                Route::post('/{id}/generar-textos', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'generarTextos'])->name('generar-textos');
+                Route::get('/{id}/pdf', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'exportarPdf'])->name('pdf');
+                Route::get('/{id}/excel', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'exportarExcel'])->name('excel');
+                Route::post('/{id}/muestra/generar', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'generarMuestra'])->name('muestra.generar');
+                Route::put('/{id}/muestra/{muestraId}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'verificarMuestra'])->name('muestra.verificar');
+                Route::post('/{id}/hallazgos', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'hallazgoStore'])->name('hallazgos.store');
+                Route::put('/hallazgos/{hallazgoId}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'hallazgoUpdate'])->name('hallazgos.update');
+                Route::put('/seguimiento/{hallazgoId}', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'seguimientoUpdate'])->name('seguimiento.update');
+                Route::post('/{id}/enviar-revision', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'enviarRevision'])->name('enviar-revision');
+                Route::post('/{id}/aprobar', [App\Http\Controllers\Admin\AuditoriaInternaController::class, 'aprobar'])->name('aprobar');
             });
         });
 });
