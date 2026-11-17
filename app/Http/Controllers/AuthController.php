@@ -21,13 +21,16 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
-        // Generar o asegurar que exista un código de cache activo
+        // Generar código de seguridad activo y prepararlo directamente para evitar petición HTTP extra
         $sessionKey = 'login_cache_code_' . session()->getId();
-        if (!Cache::has($sessionKey)) {
-            $this->generateNewCacheCode();
+        $code = Cache::get($sessionKey);
+        if (!$code) {
+            $code = $this->generateNewCacheCode();
         }
 
-        return view('auth.login');
+        $captchaDataUri = 'data:image/svg+xml;base64,' . base64_encode($this->renderCaptchaSvg($code));
+
+        return view('auth.login', compact('captchaDataUri'));
     }
 
     /**

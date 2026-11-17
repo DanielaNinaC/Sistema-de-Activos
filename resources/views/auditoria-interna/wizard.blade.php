@@ -40,6 +40,7 @@
             @if($puedeEditar)
                 <form method="POST" action="{{ route('admin.auditoria-interna.generar-textos', $auditoria->id) }}" class="flex items-center justify-between gap-3 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
                     @csrf
+                    <input type="hidden" name="_tab" value="datos">
                     <p class="text-xs text-indigo-800">
                         Objetivo, alcance, antecedentes, metodología, limitaciones, buenas prácticas y conclusiones se
                         generan por PLN a partir de los datos del sistema (muestra, indicadores, semáforo, hallazgos).
@@ -51,8 +52,9 @@
             <form method="POST" action="{{ route('admin.auditoria-interna.update', $auditoria->id) }}" class="space-y-4">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="_tab" value="datos">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                    <div><span class="text-xs text-slate-500 uppercase">Auditor</span><p class="font-semibold">{{ trim($auditoria->auditor->nombre . ' ' . ($auditoria->auditor->apellido ?? '')) }}</p></div>
+                    <div><span class="text-xs text-slate-500 uppercase">AUDITOR</span><p id="auditor-header-display" class="font-semibold">{{ $auditoria->nombre_auditor ?: 'Carlos Apaza' }}</p></div>
                     <div><span class="text-xs text-slate-500 uppercase">Período</span><p class="font-semibold">{{ $auditoria->fecha_inicio->format('d/m/Y') }} — {{ $auditoria->fecha_fin->format('d/m/Y') }}</p></div>
                     <div><span class="text-xs text-slate-500 uppercase">Auditoría Anterior</span><p class="font-semibold">{{ $auditoria->auditoriaAnterior->codigo ?? 'No aplica' }}</p></div>
                 </div>
@@ -62,13 +64,24 @@
                         Responsable de TI y Dirección deben quedar asignados antes de exportar el informe o aprobarlo.
                     </div>
                 @endif
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">AUDITOR</label>
+                        <input type="text"
+                               id="input-auditor-nombre"
+                               name="auditor"
+                               value="{{ old('auditor', $auditoria->nombre_auditor ?: 'Carlos Apaza') }}"
+                               {{ $puedeEditar ? '' : 'disabled' }}
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition disabled:opacity-60"
+                               placeholder="Ingrese el nombre completo del auditor"
+                               required />
+                    </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Responsable de TI</label>
                         <select name="fk_id_responsable_ti" {{ $puedeEditar ? '' : 'disabled' }} class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:opacity-60">
                             <option value="">Sin asignar</option>
                             @foreach($usuarios as $u)
-                                <option value="{{ $u->id_usuario }}" {{ $auditoria->fk_id_responsable_ti == $u->id_usuario ? 'selected' : '' }}>{{ trim($u->nombre . ' ' . ($u->apellido ?? '')) }}</option>
+                                <option value="{{ $u->id_usuario }}" {{ old('fk_id_responsable_ti', $auditoria->fk_id_responsable_ti) == $u->id_usuario ? 'selected' : '' }}>{{ trim($u->nombre . ' ' . ($u->apellido ?? '')) }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -77,7 +90,7 @@
                         <select name="fk_id_director" {{ $puedeEditar ? '' : 'disabled' }} class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:opacity-60">
                             <option value="">Sin asignar</option>
                             @foreach($usuarios as $u)
-                                <option value="{{ $u->id_usuario }}" {{ $auditoria->fk_id_director == $u->id_usuario ? 'selected' : '' }}>{{ trim($u->nombre . ' ' . ($u->apellido ?? '')) }}</option>
+                                <option value="{{ $u->id_usuario }}" {{ old('fk_id_director', $auditoria->fk_id_director) == $u->id_usuario ? 'selected' : '' }}>{{ trim($u->nombre . ' ' . ($u->apellido ?? '')) }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -85,7 +98,7 @@
                 @foreach(['objetivo' => 'Objetivo', 'alcance' => 'Alcance', 'antecedentes' => 'Antecedentes', 'participantes' => 'Participantes'] as $campo => $label)
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">{{ $label }}</label>
-                        <textarea name="{{ $campo }}" rows="2" {{ $puedeEditar ? '' : 'disabled' }} class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:opacity-60">{{ $auditoria->{$campo} }}</textarea>
+                        <textarea name="{{ $campo }}" rows="2" {{ $puedeEditar ? '' : 'disabled' }} class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:opacity-60 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">{{ old($campo, $auditoria->{$campo}) }}</textarea>
                     </div>
                 @endforeach
                 @if($puedeEditar)
@@ -390,6 +403,7 @@
             @if($puedeEditar)
                 <form method="POST" action="{{ route('admin.auditoria-interna.generar-textos', $auditoria->id) }}" class="flex items-center justify-between gap-3 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
                     @csrf
+                    <input type="hidden" name="_tab" value="conclusiones">
                     <p class="text-xs text-indigo-800">
                         Metodología, limitaciones, buenas prácticas y conclusiones también se generan por PLN a partir
                         de la muestra verificada y los hallazgos registrados hasta ahora.
@@ -400,13 +414,14 @@
             <form method="POST" action="{{ route('admin.auditoria-interna.update', $auditoria->id) }}" class="space-y-4">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="_tab" value="conclusiones">
                 @foreach(['metodologia' => 'Metodología', 'limitaciones' => 'Limitaciones', 'buenas_practicas' => 'Buenas Prácticas', 'conclusiones' => 'Conclusiones'] as $campo => $label)
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">{{ $label }}</label>
-                        <textarea name="{{ $campo }}" rows="2" {{ $puedeEditar ? '' : 'disabled' }} class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:opacity-60">{{ $auditoria->{$campo} }}</textarea>
+                        <textarea name="{{ $campo }}" rows="{{ $campo === 'conclusiones' ? '4' : '3' }}" {{ $puedeEditar ? '' : 'disabled' }} class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:opacity-60 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">{{ old($campo, $auditoria->{$campo}) }}</textarea>
                     </div>
                 @endforeach
-                <p class="text-sm text-slate-700">Opinión calculada (solo lectura): <strong>{{ $auditoria->opinion_calculada ?? $opinionCalculada . ' (provisional)' }}</strong></p>
+                <p class="text-sm text-slate-700">Opinión calculada (solo lectura): <strong>{{ str_replace('_', ' ', $auditoria->opinion_calculada ?? ($opinionCalculada . ' (provisional)')) }}</strong></p>
                 @if($puedeEditar)
                     <div class="flex justify-end"><button type="submit" class="btn btn-secondary">Guardar</button></div>
                 @endif
@@ -453,18 +468,49 @@
 
         tabs.forEach(function (btn) {
             btn.dataset.audiInit = '1';
-            btn.addEventListener('click', function () { activar(btn.dataset.audiTab); });
+            btn.addEventListener('click', function () {
+                var tab = btn.dataset.audiTab;
+                activar(tab);
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', '#' + tab);
+                }
+            });
         });
 
-        activar('datos');
+        var hashTab = window.location.hash ? window.location.hash.substring(1) : '';
+        var serverTab = '{{ session("audi_tab", request("tab")) }}';
+        var tabInicial = serverTab || hashTab || 'datos';
+        if (document.querySelector('[data-audi-panel="' + tabInicial + '"]')) {
+            activar(tabInicial);
+        } else {
+            activar('datos');
+        }
+    }
+
+    function initAuditorSync() {
+        var inputAuditor = document.getElementById('input-auditor-nombre');
+        var headerDisplay = document.getElementById('auditor-header-display');
+        if (inputAuditor && headerDisplay) {
+            inputAuditor.addEventListener('input', function () {
+                var val = this.value.trim();
+                headerDisplay.textContent = val ? val : 'Sin asignar';
+            });
+        }
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTabs);
+        document.addEventListener('DOMContentLoaded', function () {
+            initTabs();
+            initAuditorSync();
+        });
     } else {
         initTabs();
+        initAuditorSync();
     }
-    document.addEventListener('turbo:load', initTabs);
+    document.addEventListener('turbo:load', function () {
+        initTabs();
+        initAuditorSync();
+    });
 })();
 </script>
 @endsection

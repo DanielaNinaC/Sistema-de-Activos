@@ -141,7 +141,7 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-slate-50">
                 <tr>
-                    <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                    <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">N°</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Categoría del Activo</th>
                     <th class="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Modo de Falla</th>
                     <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Severidad</th>
@@ -157,7 +157,7 @@
                     $labelMsr = $modo->nivel_msr ? ucwords(str_replace('_', ' ', $modo->nivel_msr)) : null;
                 @endphp
                 <tr class="hover:bg-slate-50/50 transition">
-                    <td class="w-16 px-6 py-4 text-center text-sm text-slate-700 font-mono">{{ $modo->id_modo_falla }}</td>
+                    <td class="w-16 px-6 py-4 text-center text-sm text-slate-700 font-mono font-medium">{{ $loop->iteration }}</td>
                     <td class="px-6 py-4 text-center text-sm text-slate-900 font-semibold">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-100">
                             {{ $modo->categoria->nombre_categoria ?? '-' }}

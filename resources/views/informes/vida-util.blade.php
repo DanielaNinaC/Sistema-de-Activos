@@ -196,6 +196,10 @@
                     @endforeach
                 </select>
             </div>
+            <div class="flex-1">
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Auditor / Responsable</label>
+                <input type="text" name="auditor" value="{{ request('auditor', 'Carlos Apaza') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" placeholder="Carlos Apaza" />
+            </div>
             <div class="flex items-center gap-2">
                 <button type="submit" class="btn btn-dark">Filtrar</button>
                 @if(request()->filled('fk_id_categoria') || request()->filled('fk_id_ubicacion'))

@@ -12,7 +12,7 @@
                 <span aria-hidden="true">&#8592;</span>
             </a>
             <div>
-                <h2 class="text-2xl font-bold text-slate-900">Evaluación FMEA </h2>
+                <h2 class="text-2xl font-bold text-slate-900">Evaluación de Activos </h2>
                 <p class="text-xs text-slate-500">Cálculo automatizado de Severidad, Frecuencia dinámicas y MSR según estándares FMEA-MSR y pesos AHP</p>
             </div>
         </div>
@@ -28,12 +28,12 @@
                 </button>
             </form>
 
-            <!-- <button onclick="toggleManualForm()" id="btnToggleManual" class="btn btn-dark">
+            <button type="button" onclick="toggleManualForm()" id="btnToggleManual" class="btn btn-outline border-slate-300 text-slate-700 hover:bg-slate-100">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
                 Evaluación Manual
-            </button> -->
+            </button>
         </div>
     </div>
 
@@ -132,7 +132,159 @@
         </div>
     @endif
 
-    {{-- DESGLOSE DE EJECUCIÓN DEL MOTOR (Fases 1 a 5 + Matriz 10x10 + Detalle) --}}
+    {{-- =========================================================================
+         1. FORMULARIO DE EVALUACIÓN DE RIESGOS (SECCIÓN PRINCIPAL - SIEMPRE VISIBLE)
+         ========================================================================= --}}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4" id="seccion-formulario-evaluacion">
+        <div class="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-blue-100 text-blue-800 border border-blue-200">
+                        Sección Principal
+                    </span>
+                    <h3 class="text-lg font-bold text-slate-900">Formulario de Evaluación de Riesgos</h3>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Seleccione un activo tecnológico del inventario para iniciar una nueva evaluación bajo la normativa ISO 31000 y pesos AHP</p>
+            </div>
+            <span class="text-xs font-mono bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100 font-semibold self-start sm:self-auto">
+                Normativa ISO 31000 & AHP
+            </span>
+        </div>
+
+        <form method="POST" action="{{ route('admin.riesgos.evaluar.activo') }}" class="space-y-4" id="formEvaluarActivo">
+            @csrf
+            <div class="flex flex-col sm:flex-row gap-4 items-end">
+                <div class="flex-1 space-y-1">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Seleccionar Activo Tecnológico <span class="text-rose-500">*</span></label>
+                    <select name="fk_id_activo" id="selectActivoEvaluar" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar activo del inventario..." required>
+                        <option value="">-- Seleccionar Activo del Inventario --</option>
+                        @foreach($activos as $activo)
+                            <option value="{{ $activo->id_activo }}"
+                                    data-categoria="{{ $activo->fk_id_categoria }}"
+                                    data-sin-modos="{{ $activo->sin_modos_falla ? '1' : '0' }}"
+                                    {{ old('fk_id_activo', (isset($res['activo']) ? $res['activo']->id_activo : ($resultadoInferencia['activo']->id_activo ?? ''))) == $activo->id_activo ? 'selected' : '' }}>
+                                [{{ $activo->codigo_patrimonial }}] {{ $activo->nombre_equipo }} — Categoría: {{ $activo->categoria->nombre_categoria ?? 'Sin Cat.' }} (Antigüedad: {{ $activo->antiguedad_meses }}m, Desgaste: {{ $activo->porcentaje_desgaste }}%){{ $activo->sin_modos_falla ? ' — ⚠ Sin modos de falla definidos' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="submit" class="btn btn-primary" id="btnEjecutarEvaluacion">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Ejecutar Evaluación
+                    </button>
+                    <a href="#" id="btnConsultarInferencia" class="btn btn-outline" title="Ver inferencia actual sin recalcular">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Ver Inferencia
+                    </a>
+                </div>
+            </div>
+
+            {{-- Selección granular de modos de falla --}}
+            <div id="bloqueModosEvaluar" class="border-t border-slate-100 pt-4 space-y-3 hidden">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Modos de falla a evaluar</label>
+
+                <input type="hidden" name="modo_evaluacion" value="especificos">
+                <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="chkTodosModos" name="modo_evaluacion" value="todos" checked
+                           class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
+                    <span class="text-sm font-semibold text-slate-800">
+                        Todos los modos de falla de la categoría
+                        <span id="conteoModosCategoria" class="font-mono text-xs text-slate-500"></span>
+                    </span>
+                </label>
+
+                <div id="listaModosEvaluar" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6 opacity-50 pointer-events-none transition">
+                    @foreach($modos as $modo)
+                        <label class="opcion-modo inline-flex items-start gap-2 cursor-pointer select-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                               data-categoria="{{ $modo->fk_id_categoria }}">
+                            <input type="checkbox" name="modos_falla_ids[]" value="{{ $modo->id_modo_falla }}"
+                                   class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
+                            <span class="text-xs text-slate-700 leading-snug">{{ $modo->nombre_modo_falla }}</span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <p id="avisoSinModosEvaluar" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    ⚠ La categoría de este activo no tiene modos de falla registrados. No se puede ejecutar la evaluación hasta definir al menos uno.
+                </p>
+            </div>
+        </form>
+    </div>
+
+    {{-- Formulario de Evaluación Manual Ad-Hoc (Colapsable) --}}
+    <div id="manualFormCard" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300" style="display: none;">
+        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Evaluación Manual Ad-Hoc</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Ingreso directo de parámetros personalizados de Severidad, Frecuencia y MSR</p>
+            </div>
+            <div class="text-xs text-slate-500 font-mono">
+                Pesos: S {{ $ultimoPeso->peso_severidad ?? 0.648 }} | F {{ $ultimoPeso->peso_frecuencia ?? 0.230 }} | M {{ $ultimoPeso->peso_msr ?? 0.122 }}
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('admin.riesgos.evaluacion.store') }}" class="p-6">
+            @csrf
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Activo <span class="text-rose-500">*</span></label>
+                    <select name="fk_id_activo" id="selectActivoManual" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" data-searchable data-search-placeholder="Buscar activo..." required>
+                        <option value="">Seleccione un activo</option>
+                        @foreach($activos as $activo)
+                            <option value="{{ $activo->id_activo }}" data-categoria="{{ $activo->fk_id_categoria }}" data-categoria-nombre="{{ $activo->categoria->nombre_categoria ?? '' }}">{{ $activo->codigo_patrimonial }} - {{ $activo->nombre_equipo }} ({{ $activo->categoria->nombre_categoria ?? 'Sin Cat.' }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Modo de Falla <span class="text-rose-500">*</span></label>
+                    <select name="fk_id_modo_falla" id="selectModoManual" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" data-searchable data-search-placeholder="Buscar modo de falla..." required>
+                        <option value="">Seleccione un modo</option>
+                        @foreach($modos as $modo)
+                            <option value="{{ $modo->id_modo_falla }}" data-categoria="{{ $modo->fk_id_categoria }}">{{ $modo->nombre_modo_falla }} ({{ $modo->categoria->nombre_categoria ?? '-' }})</option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-slate-400 mt-1" id="avisoFiltroModo">Seleccione primero un activo para filtrar sus modos de falla.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Severidad (1-10) <span class="text-rose-500">*</span></label>
+                    <input name="valor_severidad" type="number" min="1" max="10" value="5" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition font-mono" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Frecuencia (1-10) <span class="text-rose-500">*</span></label>
+                    <input name="valor_frecuencia" type="number" min="1" max="10" value="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition font-mono" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">MSR / Control (1-10) <span class="text-rose-500">*</span></label>
+                    <input name="valor_msr" type="number" min="1" max="10" value="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition font-mono" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Fecha de Evaluación <span class="text-rose-500">*</span></label>
+                    <input name="fecha_evaluacion" type="datetime-local" value="{{ date('Y-m-d\TH:i') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition font-mono" required />
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
+                <button type="button" onclick="toggleManualForm()" class="btn btn-secondary">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-dark">
+                    Guardar Evaluación Manual
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {{-- =========================================================================
+         2. RESULTADO DE LA ÚLTIMA EVALUACIÓN (DEBAJO DEL FORMULARIO)
+         ========================================================================= --}}
     @php
         $res = session('resultadoMotor') ?? ($resultadoInferencia ?? null);
     @endphp
@@ -150,18 +302,59 @@
             ];
         @endphp
 
-        <div class="bg-white rounded-2xl shadow-sm p-6 text-slate-900 space-y-6 border border-slate-200" id="seccion-resultado-inferencia">
+        <div class="space-y-4" id="seccion-resultado-inferencia">
 
-            {{-- 1. Encabezado de Inferencia del Activo --}}
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 pb-5">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-blue-100 text-blue-800 border border-blue-200">
-                            Modelo de Inferencia FMEA-MSR
-                        </span>
-                        <span class="text-xs text-slate-400 font-mono">ISO 31000 & AHP Jerárquico</span>
+            {{-- Banner informativo si corresponde a una Consulta Histórica --}}
+            @if($esConsultaHistorica ?? false)
+                <div class="rounded-2xl border border-indigo-200 bg-indigo-50/90 p-4 text-indigo-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 border border-indigo-200">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-indigo-200 text-indigo-900">
+                                    Consulta Histórica
+                                </span>
+                                <span class="text-xs text-indigo-800 font-medium">Visualizando resultados guardados del activo (no se ha generado una nueva evaluación).</span>
+                            </div>
+                            <p class="text-xs text-indigo-600 mt-0.5 font-medium">
+                                Activo: <strong>{{ $res['activo']->nombre_equipo }}</strong> ({{ $res['activo']->codigo_patrimonial }}).
+                            </p>
+                        </div>
                     </div>
-                    <h3 class="text-2xl font-bold text-slate-900 mt-1">Resultado de Inferencia: {{ $res['activo']->nombre_equipo }}</h3>
+                    <a href="{{ route('admin.riesgos.evaluacion') }}" class="btn btn-outline text-xs bg-white hover:bg-indigo-100 text-indigo-700 border-indigo-300 shrink-0 font-semibold">
+                        &larr; Volver a Última Evaluación
+                    </a>
+                </div>
+            @endif
+
+            <div class="bg-white rounded-2xl shadow-sm p-6 text-slate-900 space-y-6 border border-slate-200">
+
+                {{-- 1. Encabezado de Inferencia del Activo --}}
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 pb-5">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            @if($esConsultaHistorica ?? false)
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                    Inferencia Histórica
+                                </span>
+                            @elseif(session('resultadoMotor'))
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    ✓ Evaluación Recién Ejecutada
+                                </span>
+                            @else
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-blue-100 text-blue-800 border border-blue-200">
+                                    Resultado de la Última Evaluación
+                                </span>
+                            @endif
+                            <span class="text-xs text-slate-400 font-mono">ISO 31000 & AHP Jerárquico</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-slate-900 mt-1">
+                            {{ ($esConsultaHistorica ?? false) ? 'Inferencia Guardada' : 'Resultado de la Última Evaluación' }}: {{ $res['activo']->nombre_equipo }}
+                        </h3>
                     <div class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500 font-mono">
                         <span class="font-semibold text-slate-700">{{ $res['activo']->codigo_patrimonial }}</span>
                         <span>•</span>
@@ -531,7 +724,7 @@
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-slate-200/80 pb-3">
                     <div>
                         <h4 class="text-base font-bold text-slate-900">Matriz de Riesgos: Frecuencia vs. Severidad</h4>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Producto bidimensional <strong class="text-slate-700">R = F × S</strong> (1 a 100). El riesgo más alto se concentra en la esquina superior derecha.</p>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Producto bidimensional preliminar <strong class="text-slate-700">R = F × S</strong> (1 a 100). Los 4 colores representan la magnitud preliminar, diferenciándose del Score Final AHP y de las alertas oficiales.</p>
                     </div>
                     <div class="bg-white px-3 py-2 rounded-xl border border-slate-300 shadow-xs shrink-0 flex items-center gap-3">
                         <div class="space-y-0.5">
@@ -597,13 +790,11 @@
                                         @for($s = 1; $s <= 10; $s++)
                                             @php
                                                 $r = $f * $s;
-                                                if ($r <= 12) {
-                                                    $claseColor = 'bg-emerald-100/80 text-emerald-900 border-emerald-200 hover:bg-emerald-200';
-                                                } elseif ($r <= 25) {
-                                                    $claseColor = 'bg-lime-100/90 text-lime-900 border-lime-200 hover:bg-lime-200';
-                                                } elseif ($r <= 45) {
+                                                if ($r <= 25) {
+                                                    $claseColor = 'bg-emerald-100/90 text-emerald-950 border-emerald-200 hover:bg-emerald-200';
+                                                } elseif ($r <= 50) {
                                                     $claseColor = 'bg-amber-100 text-amber-950 border-amber-200 hover:bg-amber-200';
-                                                } elseif ($r <= 65) {
+                                                } elseif ($r <= 75) {
                                                     $claseColor = 'bg-orange-100 text-orange-950 border-orange-200 hover:bg-orange-200';
                                                 } else {
                                                     $claseColor = 'bg-rose-100 text-rose-950 border-rose-200 hover:bg-rose-200';
@@ -648,23 +839,25 @@
                             </div>
                         </div>
 
-                        {{-- Leyenda compacta --}}
-                        <div class="mt-2 pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[10px] font-mono text-slate-500">
-                            <span class="font-bold text-slate-600 text-[10px] mr-1">Leyenda:</span>
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>1–12
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-lime-100 text-lime-800 border border-lime-200">
-                                <span class="h-1.5 w-1.5 rounded-full bg-lime-600"></span>13–25
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
-                                <span class="h-1.5 w-1.5 rounded-full bg-amber-600"></span>26–45
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-100 text-orange-900 border border-orange-200">
-                                <span class="h-1.5 w-1.5 rounded-full bg-orange-600"></span>46–65
-                            </span>
-                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-100 text-rose-900 border border-rose-200">
-                                <span class="h-1.5 w-1.5 rounded-full bg-rose-600"></span>66–100
+                        {{-- Leyenda compacta de 4 colores --}}
+                        <div class="mt-2.5 pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[10px] text-slate-500">
+                            <div class="flex flex-wrap items-center gap-1.5 font-mono">
+                                <span class="font-bold text-slate-600 text-[10px] mr-1">Magnitud Preliminar (R):</span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-200" title="Rango Preliminar: 1 a 25">
+                                    <span class="h-2 w-2 rounded-full bg-emerald-600"></span>Verde: 1–25
+                                </span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-950 border border-amber-200" title="Rango Preliminar: 26 a 50">
+                                    <span class="h-2 w-2 rounded-full bg-amber-500"></span>Amarillo: 26–50
+                                </span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-100 text-orange-950 border border-orange-200" title="Rango Preliminar: 51 a 75">
+                                    <span class="h-2 w-2 rounded-full bg-orange-500"></span>Naranja: 51–75
+                                </span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 text-rose-950 border border-rose-200" title="Rango Preliminar: 76 a 100">
+                                    <span class="h-2 w-2 rounded-full bg-rose-600"></span>Rojo: 76–100
+                                </span>
+                            </div>
+                            <span class="text-[9px] text-slate-400 font-sans italic">
+                                * Escala preliminar R = F × S. El nivel definitivo y las alertas se rigen por el Score Final AHP (1 a 10).
                             </span>
                         </div>
                     </div>
@@ -683,230 +876,155 @@
                 evaluaciones: @json($evaluacionesInferencia)
             };
         </script>
-    @endif
-
-    {{-- TARJETA 1: Ejecutar Inferencia Automatizada en un Activo Específico --}}
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-        <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
-            <div>
-                <h3 class="text-base font-bold text-slate-900">Ejecución del Motor Automatizado por Activo</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Seleccione un activo tecnológico para aplicar las 5 fases de inferencia matemática FMEA-MSR</p>
+    </div>
+    @else
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center space-y-3">
+            <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto border border-slate-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
             </div>
-            <span class="text-xs font-mono bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100 font-semibold">
-                Normativa ISO 31000
-            </span>
-        </div>
-
-        <form method="POST" action="{{ route('admin.riesgos.evaluar.activo') }}" class="space-y-4" id="formEvaluarActivo">
-            @csrf
-            <div class="flex flex-col sm:flex-row gap-4 items-end">
-                <div class="flex-1 space-y-1">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Seleccionar Activo Tecnológico <span class="text-rose-500">*</span></label>
-                    <select name="fk_id_activo" id="selectActivoEvaluar" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" data-searchable data-search-placeholder="Buscar activo del inventario..." required>
-                        <option value="">-- Seleccionar Activo del Inventario --</option>
-                        @foreach($activos as $activo)
-                            <option value="{{ $activo->id_activo }}"
-                                    data-categoria="{{ $activo->fk_id_categoria }}"
-                                    data-sin-modos="{{ $activo->sin_modos_falla ? '1' : '0' }}"
-                                    {{ old('fk_id_activo') == $activo->id_activo ? 'selected' : '' }}>
-                                [{{ $activo->codigo_patrimonial }}] {{ $activo->nombre_equipo }} — Categoría: {{ $activo->categoria->nombre_categoria ?? 'Sin Cat.' }} (Antigüedad: {{ $activo->antiguedad_meses }}m, Desgaste: {{ $activo->porcentaje_desgaste }}%){{ $activo->sin_modos_falla ? ' — ⚠ Sin modos de falla definidos' : '' }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="flex items-center gap-2 shrink-0">
-                    <button type="submit" class="btn btn-primary" id="btnEjecutarEvaluacion">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Ejecutar Evaluación
-                    </button>
-                    <a href="#" id="btnConsultarInferencia" class="btn btn-outline" title="Ver inferencia actual sin recalcular">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        Ver Inferencia
-                    </a>
-                </div>
-            </div>
-
-            {{-- Selección granular de modos de falla --}}
-            <div id="bloqueModosEvaluar" class="border-t border-slate-100 pt-4 space-y-3 hidden">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Modos de falla a evaluar</label>
-
-                {{-- El oculto define el valor cuando el checkbox va desmarcado:
-                     sin él, el navegador no enviaría el campo y el request lo
-                     interpretaría como "todos". --}}
-                <input type="hidden" name="modo_evaluacion" value="especificos">
-                <label class="inline-flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" id="chkTodosModos" name="modo_evaluacion" value="todos" checked
-                           class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
-                    <span class="text-sm font-semibold text-slate-800">
-                        Todos los modos de falla de la categoría
-                        <span id="conteoModosCategoria" class="font-mono text-xs text-slate-500"></span>
-                    </span>
-                </label>
-
-                {{-- Lista filtrada en cliente por la categoría del activo, con el
-                     mismo patrón data-categoria/hidden que ya usa esta vista. --}}
-                <div id="listaModosEvaluar" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6 opacity-50 pointer-events-none transition">
-                    @foreach($modos as $modo)
-                        <label class="opcion-modo inline-flex items-start gap-2 cursor-pointer select-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
-                               data-categoria="{{ $modo->fk_id_categoria }}">
-                            <input type="checkbox" name="modos_falla_ids[]" value="{{ $modo->id_modo_falla }}"
-                                   class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500">
-                            <span class="text-xs text-slate-700 leading-snug">{{ $modo->nombre_modo_falla }}</span>
-                        </label>
-                    @endforeach
-                </div>
-
-                <p id="avisoSinModosEvaluar" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                    ⚠ La categoría de este activo no tiene modos de falla registrados. No se puede ejecutar la evaluación hasta definir al menos uno.
+            <div class="space-y-1 max-w-md mx-auto">
+                <h4 class="text-base font-bold text-slate-800">Resultado de la Última Evaluación</h4>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    Aún no se ha realizado ninguna evaluación de riesgo en el sistema. Seleccione un activo en el formulario superior y presione <strong class="text-slate-700">"Ejecutar Evaluación"</strong> para calcular el desglose FMEA-MSR y pesos AHP.
                 </p>
             </div>
-        </form>
-    </div>
-
-    {{-- TARJETA 2: Formulario de Evaluación Manual (Colapsable) --}}
-    <div id="manualFormCard" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300" style="display: none;">
-        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-            <div>
-                <h3 class="text-base font-bold text-slate-900">Evaluación Manual Ad-Hoc</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Ingreso directo de parámetros personalizados de Severidad, Frecuencia y MSR</p>
-            </div>
-            <div class="text-xs text-slate-500 font-mono">
-                Pesos: S {{ $ultimoPeso->peso_severidad ?? 0.648 }} | F {{ $ultimoPeso->peso_frecuencia ?? 0.230 }} | M {{ $ultimoPeso->peso_msr ?? 0.122 }}
-            </div>
-        </div>
-
-        <form method="POST" action="{{ route('admin.riesgos.evaluacion.store') }}" class="p-6">
-            @csrf
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Activo <span class="text-rose-500">*</span></label>
-                    <select name="fk_id_activo" id="selectActivoManual" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" data-searchable data-search-placeholder="Buscar activo..." required>
-                        <option value="">Seleccione un activo</option>
-                        @foreach($activos as $activo)
-                            <option value="{{ $activo->id_activo }}" data-categoria="{{ $activo->fk_id_categoria }}" data-categoria-nombre="{{ $activo->categoria->nombre_categoria ?? '' }}">{{ $activo->codigo_patrimonial }} - {{ $activo->nombre_equipo }} ({{ $activo->categoria->nombre_categoria ?? 'Sin Cat.' }})</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Modo de Falla <span class="text-rose-500">*</span></label>
-                    <select name="fk_id_modo_falla" id="selectModoManual" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" data-searchable data-search-placeholder="Buscar modo de falla..." required>
-                        <option value="">Seleccione un modo</option>
-                        @foreach($modos as $modo)
-                            <option value="{{ $modo->id_modo_falla }}" data-categoria="{{ $modo->fk_id_categoria }}">{{ $modo->nombre_modo_falla }} ({{ $modo->categoria->nombre_categoria ?? '-' }})</option>
-                        @endforeach
-                    </select>
-                    <p class="text-[11px] text-slate-400 mt-1" id="avisoFiltroModo">Seleccione primero un activo para filtrar sus modos de falla.</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Severidad (1-10) <span class="text-rose-500">*</span></label>
-                    <input name="valor_severidad" type="number" min="1" max="10" value="5" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition font-mono" required />
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Frecuencia (1-10) <span class="text-rose-500">*</span></label>
-                    <input name="valor_frecuencia" type="number" min="1" max="10" value="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition font-mono" required />
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">MSR / Control (1-10) <span class="text-rose-500">*</span></label>
-                    <input name="valor_msr" type="number" min="1" max="10" value="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition font-mono" required />
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Fecha de Evaluación <span class="text-rose-500">*</span></label>
-                    <input name="fecha_evaluacion" type="datetime-local" value="{{ date('Y-m-d\TH:i') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition font-mono" required />
-                </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
-                <button type="button" onclick="toggleManualForm()" class="btn btn-secondary">
-                    Cancelar
-                </button>
-                <button type="submit" class="btn btn-dark">
-                    Guardar Evaluación Manual
-                </button>
-            </div>
-        </form>
-    </div>
-
-    {{-- TARJETA 3: Historial de Evaluaciones Vigentes del Sistema --}}
-    @if(isset($evaluaciones) && is_object($evaluaciones) && method_exists($evaluaciones, 'count') && $evaluaciones->count() > 0)
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-            <div class="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                    <h3 class="text-base font-bold text-slate-900">Historial de Evaluaciones Vigentes en Inventario</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">Últimas evaluaciones vigentes calculadas bajo el motor ISO 31000 / FMEA-MSR</p>
-                </div>
-                <span class="text-xs font-mono text-slate-500">Mostrando {{ $evaluaciones->count() }} de {{ $evaluaciones->total() }} registros</span>
-            </div>
-
-            <div class="overflow-x-auto rounded-xl border border-slate-200">
-                <table class="w-full text-xs text-left">
-                    <thead class="bg-slate-50 text-slate-500">
-                        <tr>
-                            <th class="px-4 py-2.5">Activo</th>
-                            <th class="px-4 py-2.5">Modo de Falla</th>
-                            <th class="px-3 py-2.5 text-center">S</th>
-                            <th class="px-3 py-2.5 text-center">F</th>
-                            <th class="px-3 py-2.5 text-center">MSR</th>
-                            <th class="px-3 py-2.5 text-center">R (F×S)</th>
-                            <th class="px-3 py-2.5 text-center">Score Final</th>
-                            <th class="px-4 py-2.5 text-center">Nivel</th>
-                            <th class="px-4 py-2.5 text-center">Fecha</th>
-                            <th class="px-4 py-2.5 text-center">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-slate-700 bg-white">
-                        @foreach($evaluaciones as $evItem)
-                            <tr class="hover:bg-slate-50 transition">
-                                <td class="px-4 py-3 font-semibold text-slate-900">
-                                    {{ $evItem->activo->nombre_equipo ?? 'Activo no encontrado' }}
-                                    <span class="block text-[10px] font-mono text-slate-400 font-normal">{{ $evItem->activo->codigo_patrimonial ?? '' }}</span>
-                                </td>
-                                <td class="px-4 py-3 text-slate-800">{{ $evItem->modoFalla->nombre_modo_falla ?? 'Modo eliminado' }}</td>
-                                <td class="px-3 py-3 text-center font-mono font-bold text-rose-600">{{ $evItem->valor_severidad }}</td>
-                                <td class="px-3 py-3 text-center font-mono font-bold text-amber-600">{{ $evItem->valor_frecuencia }}</td>
-                                <td class="px-3 py-3 text-center font-mono font-bold text-blue-600">{{ $evItem->valor_msr }}</td>
-                                <td class="px-3 py-3 text-center font-mono font-black text-amber-900 bg-amber-50/50">
-                                    {{ $evItem->valor_frecuencia * $evItem->valor_severidad }}
-                                </td>
-                                <td class="px-3 py-3 text-center font-mono font-bold text-slate-900">{{ number_format($evItem->score_calculado, 2) }}</td>
-                                <td class="px-4 py-3 text-center">
-                                    @if($evItem->nivel_riesgo === 'Crítico')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">🔴 Crítico</span>
-                                    @elseif($evItem->nivel_riesgo === 'Alto')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">🟠 Alto</span>
-                                    @elseif($evItem->nivel_riesgo === 'Medio')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">🟡 Medio</span>
-                                    @else
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">🟢 Bajo</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-center text-slate-500 font-mono text-[11px]">
-                                    {{ \Illuminate\Support\Carbon::parse($evItem->fecha_evaluacion)->format('d/m/Y H:i') }}
-                                </td>
-                                <td class="px-4 py-3 text-center">
-                                    <a href="{{ route('admin.riesgos.evaluacion', ['activo_id' => $evItem->fk_id_activo]) }}#seccion-resultado-inferencia"
-                                       class="btn btn-outline text-[11px] py-1 px-2.5 rounded-lg hover:bg-blue-600 hover:text-white transition inline-flex items-center gap-1">
-                                        <span>Ver Inferencia</span>
-                                        <span aria-hidden="true">&rarr;</span>
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="pt-2">
-                {{ $evaluaciones->links() }}
-            </div>
         </div>
     @endif
+
+    {{-- =========================================================================
+         3. HISTORIAL DE EVALUACIONES DE RIESGOS (ACORDEÓN DESPLEGABLE)
+         ========================================================================= --}}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300" id="seccion-historial-evaluaciones">
+        {{-- Encabezado clickeable del acordeón --}}
+        <button type="button"
+                onclick="toggleHistorialAcordeon()"
+                class="w-full px-6 py-4.5 flex items-center justify-between text-left hover:bg-slate-50/80 transition focus:outline-none"
+                id="btnToggleHistorial"
+                aria-expanded="{{ request()->has('page') ? 'true' : 'false' }}"
+                aria-controls="contenidoHistorialAcordeon">
+            <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-base font-bold text-slate-900">Historial de Evaluaciones de Riesgos</h3>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 font-mono">
+                            {{ $totalEvaluacionesHistorico ?? ($evaluaciones->total() ?? 0) }} registradas
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">Evaluaciones anteriores vigentes calculadas bajo el motor ISO 31000 / FMEA-MSR</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-400 font-medium hidden sm:inline" id="textoEstadoHistorial">
+                    {{ request()->has('page') ? 'Haga clic para contraer' : 'Haga clic para ver historial' }}
+                </span>
+                <div class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition" id="iconoChevronHistorial">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform duration-200 {{ request()->has('page') ? 'rotate-180' : '' }}" id="chevronHistorialSvg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+        </button>
+
+        {{-- Contenido colapsable (contraído por defecto, salvo paginación activa) --}}
+        <div id="contenidoHistorialAcordeon" class="{{ request()->has('page') ? '' : 'hidden' }} border-t border-slate-100 p-6 space-y-4">
+            @if(isset($evaluaciones) && is_object($evaluaciones) && method_exists($evaluaciones, 'count') && $evaluaciones->count() > 0)
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-1">
+                    <p class="text-xs text-slate-500">
+                        Mostrando {{ $evaluaciones->count() }} de {{ $evaluaciones->total() }} registros anteriores
+                        @if(isset($res['activo']))
+                            <span class="text-slate-400 font-medium">(las evaluaciones vigentes del activo <strong>{{ $res['activo']->nombre_equipo }}</strong> se presentan en la sección superior)</span>
+                        @endif
+                    </p>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="w-12 px-3 py-2.5 text-center">N°</th>
+                                <th class="px-4 py-2.5">Activo</th>
+                                <th class="px-4 py-2.5">Modo de Falla</th>
+                                <th class="px-3 py-2.5 text-center">S</th>
+                                <th class="px-3 py-2.5 text-center">F</th>
+                                <th class="px-3 py-2.5 text-center">MSR</th>
+                                <th class="px-3 py-2.5 text-center">R (F×S)</th>
+                                <th class="px-3 py-2.5 text-center">Score Final</th>
+                                <th class="px-4 py-2.5 text-center">Nivel</th>
+                                <th class="px-4 py-2.5 text-center">Fecha</th>
+                                <th class="px-4 py-2.5 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700 bg-white">
+                            @foreach($evaluaciones as $evItem)
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="w-12 px-3 py-3 text-center font-mono font-medium text-slate-600">
+                                        {{ ($evaluaciones->firstItem() ?? 1) + $loop->index }}
+                                    </td>
+                                    <td class="px-4 py-3 font-semibold text-slate-900">
+                                        {{ $evItem->activo->nombre_equipo ?? 'Activo no encontrado' }}
+                                        <span class="block text-[10px] font-mono text-slate-400 font-normal">{{ $evItem->activo->codigo_patrimonial ?? '' }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-800">{{ $evItem->modoFalla->nombre_modo_falla ?? 'Modo eliminado' }}</td>
+                                    <td class="px-3 py-3 text-center font-mono font-bold text-rose-600">{{ $evItem->valor_severidad }}</td>
+                                    <td class="px-3 py-3 text-center font-mono font-bold text-amber-600">{{ $evItem->valor_frecuencia }}</td>
+                                    <td class="px-3 py-3 text-center font-mono font-bold text-blue-600">{{ $evItem->valor_msr }}</td>
+                                    <td class="px-3 py-3 text-center font-mono font-black text-amber-900 bg-amber-50/50">
+                                        {{ $evItem->valor_frecuencia * $evItem->valor_severidad }}
+                                    </td>
+                                    <td class="px-3 py-3 text-center font-mono font-bold text-slate-900">{{ number_format($evItem->score_calculado, 2) }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if($evItem->nivel_riesgo === 'Crítico')
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">🔴 Crítico</span>
+                                        @elseif($evItem->nivel_riesgo === 'Alto')
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">🟠 Alto</span>
+                                        @elseif($evItem->nivel_riesgo === 'Medio')
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">🟡 Medio</span>
+                                        @else
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">🟢 Bajo</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-slate-500 font-mono text-[11px]">
+                                        {{ \Illuminate\Support\Carbon::parse($evItem->fecha_evaluacion)->format('d/m/Y H:i') }}
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <a href="{{ route('admin.riesgos.evaluacion', ['activo_id' => $evItem->fk_id_activo]) }}"
+                                           class="btn btn-outline text-[11px] py-1 px-2.5 rounded-lg hover:bg-blue-600 hover:text-white transition inline-flex items-center gap-1"
+                                           title="Consultar inferencia de este activo">
+                                            <span>Ver Inferencia</span>
+                                            <span aria-hidden="true">&rarr;</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pt-2">
+                    {{ $evaluaciones->links() }}
+                </div>
+            @else
+                <div class="p-6 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                    <p class="text-xs font-bold text-slate-700">No hay otras evaluaciones anteriores en el historial</p>
+                    <p class="text-[11px] text-slate-400">
+                        @if(isset($res['activo']))
+                            Todas las evaluaciones vigentes registradas corresponden al activo <strong>{{ $res['activo']->nombre_equipo }}</strong>, visible en la sección superior.
+                        @else
+                            No se han registrado evaluaciones en el inventario aún.
+                        @endif
+                    </p>
+                </div>
+            @endif
+        </div>
+    </div>
 
 </div>
 
@@ -1033,6 +1151,28 @@
         });
     }
 
+    // Control del acordeón de Historial de Evaluaciones de Riesgos
+    function toggleHistorialAcordeon() {
+        var contenido = document.getElementById('contenidoHistorialAcordeon');
+        var chevron = document.getElementById('chevronHistorialSvg');
+        var texto = document.getElementById('textoEstadoHistorial');
+        var btn = document.getElementById('btnToggleHistorial');
+        if (!contenido) return;
+
+        var estaOculto = contenido.classList.contains('hidden');
+        if (estaOculto) {
+            contenido.classList.remove('hidden');
+            if (chevron) chevron.classList.add('rotate-180');
+            if (texto) texto.textContent = 'Haga clic para contraer';
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+        } else {
+            contenido.classList.add('hidden');
+            if (chevron) chevron.classList.remove('rotate-180');
+            if (texto) texto.textContent = 'Haga clic para ver historial';
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        }
+    }
+
     function sincronizarBotonConsultar() {
         var sel = document.getElementById('selectActivoEvaluar');
         var btn = document.getElementById('btnConsultarInferencia');
@@ -1041,7 +1181,7 @@
         function actualizarHref() {
             var val = sel.value;
             if (val) {
-                btn.href = "{{ route('admin.riesgos.evaluacion') }}?activo_id=" + encodeURIComponent(val) + "#seccion-resultado-inferencia";
+                btn.href = "{{ route('admin.riesgos.evaluacion') }}?activo_id=" + encodeURIComponent(val);
                 btn.classList.remove('opacity-50', 'pointer-events-none');
             } else {
                 btn.href = "#";

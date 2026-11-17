@@ -70,7 +70,7 @@
             <table class="w-full divide-y divide-gray-200">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="w-12 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="w-12 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">N°</th>
                         <th class="w-28 px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha / Hora</th>
                         <th class="px-3 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo Tecnológico</th>
                         <th class="px-3 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Reportado Por</th>
@@ -82,7 +82,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($incidentes as $incidente)
                         <tr class="hover:bg-slate-50/50 transition">
-                            <td class="w-12 px-3 py-4 text-center text-sm text-slate-700 font-mono whitespace-nowrap">{{ $incidente->id_incidente }}</td>
+                            <td class="w-12 px-3 py-4 text-center text-sm text-slate-700 font-mono font-medium whitespace-nowrap">{{ ($incidentes->firstItem() ?? 1) + $loop->index }}</td>
                             <td class="w-28 px-3 py-4 text-center text-sm whitespace-nowrap">
                                 <div class="font-semibold text-slate-900 font-mono text-sm">{{ \Carbon\Carbon::parse($incidente->fecha_incidente)->format('d/m/Y') }}</div>
                                 <div class="text-xs text-slate-500 font-mono">{{ \Carbon\Carbon::parse($incidente->fecha_incidente)->format('H:i') }} hs</div>

@@ -10,7 +10,7 @@
     <p class="text-xs text-slate-500">Criterio de referencia: {{ implode(' · ', (array) $criterio) }}</p>
     <p class="text-xs text-slate-400">
         Fecha de corte: <strong class="text-slate-600">{{ \Carbon\Carbon::parse($filtros['fecha_corte'])->format('d/m/Y') }}</strong>
-        &middot; Generado por: <strong class="text-slate-600">{{ trim((auth()->user()->nombre ?? '') . ' ' . (auth()->user()->apellido ?? '')) ?: 'Sistema SIATEC' }}</strong>
+        &middot; Auditor: <strong class="text-slate-600">{{ $filtros['auditor'] ?? 'Carlos Apaza' }}</strong>
         &middot; {{ now()->format('d/m/Y H:i') }}
     </p>
 </div>

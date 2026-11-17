@@ -95,7 +95,7 @@
 
 {{-- 6. Equipo auditor, participantes, fechas --}}
 <div class="seccion-titulo">6. Equipo Auditor, Participantes y Fechas</div>
-<p><strong>Auditor:</strong> {{ trim($auditoria->auditor->nombre . ' ' . ($auditoria->auditor->apellido ?? '')) }}</p>
+<p><strong>Auditor:</strong> {{ $auditoria->nombre_auditor }}</p>
 <p><strong>Responsable de TI:</strong> {{ $auditoria->responsableTi ? trim($auditoria->responsableTi->nombre . ' ' . ($auditoria->responsableTi->apellido ?? '')) : 'No asignado' }}</p>
 <p><strong>Participantes:</strong> {{ $auditoria->participantes ?: '—' }}</p>
 <p><strong>Período de ejecución:</strong> {{ $auditoria->fecha_inicio->format('d/m/Y') }} — {{ $auditoria->fecha_fin->format('d/m/Y') }}</p>
@@ -189,7 +189,7 @@
     <tr style="border: none;">
         <td style="border: none; width: 33%; text-align: center;">
             <div class="firma">
-                <strong>{{ trim($auditoria->auditor->nombre . ' ' . ($auditoria->auditor->apellido ?? '')) }}</strong><br>
+                <strong>{{ $auditoria->nombre_auditor }}</strong><br>
                 <span style="color: #64748b;">Auditor</span>
             </div>
         </td>

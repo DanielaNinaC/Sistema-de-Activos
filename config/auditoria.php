@@ -8,6 +8,9 @@ return [
     // Prefijo del código autogenerado del Informe General: INF-AUD-TI-AAAA-NN.
     'codigo_prefijo' => env('AUDITORIA_CODIGO_PREFIJO', 'INF-AUD-TI'),
 
+    // Nombre del auditor por defecto para informes y reportes (editable en cada reporte)
+    'auditor_defecto' => env('AUDITORIA_NOMBRE_DEFECTO', 'Carlos Apaza'),
+
     // Tamaño de la muestra de verificación física del inventario.
     'muestra' => [
         'porcentaje' => (int) env('AUDITORIA_MUESTRA_PORCENTAJE', 10),

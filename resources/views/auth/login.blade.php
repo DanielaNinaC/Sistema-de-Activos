@@ -299,7 +299,7 @@
                     <!-- Muestra visual de la imagen del código -->
                     <div class="flex items-center gap-2">
                         <img id="captcha-img"
-                             src="{{ route('captcha.image') }}"
+                             src="{{ $captchaDataUri ?? route('captcha.image') }}"
                              alt="Código de seguridad"
                              class="h-10 rounded-lg cursor-pointer hover:opacity-90 transition"
                              title="Haz clic para generar un nuevo código"

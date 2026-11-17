@@ -121,17 +121,20 @@ class ProcesoRiesgoController extends Controller
         }
 
         $modos = ModoFalla::with('categoria')->orderBy('id_modo_falla')->get();
-        $evaluaciones = EvaluacionRiesgo::with(['activo', 'modoFalla'])->where('vigente', true)->orderByDesc('fecha_evaluacion')->paginate(15);
         $ultimoPeso = PesoAhp::where('vigente', true)->first();
 
         // Resultado de inferencia: de sesión (recién evaluado) o cargado por activo_id / activo más reciente
         $resultadoInferencia = session('resultadoMotor');
         $esConsultaHistorica = false;
-        if (!$resultadoInferencia) {
-            $idActivoParaInferencia = $request->input('activo_id');
-            if ($idActivoParaInferencia) {
+        $idActivoParaInferencia = null;
+
+        if ($resultadoInferencia && isset($resultadoInferencia['activo'])) {
+            $idActivoParaInferencia = $resultadoInferencia['activo']->id_activo;
+        } else {
+            if ($request->filled('activo_id')) {
+                $idActivoParaInferencia = (int) $request->input('activo_id');
                 $esConsultaHistorica = true;
-                $resultadoInferencia = $service->obtenerInferenciaActivo((int) $idActivoParaInferencia);
+                $resultadoInferencia = $service->obtenerInferenciaActivo($idActivoParaInferencia);
             } else {
                 $idActivoParaInferencia = EvaluacionRiesgo::where('vigente', true)->orderByDesc('fecha_evaluacion')->value('fk_id_activo');
                 if ($idActivoParaInferencia) {
@@ -140,7 +143,15 @@ class ProcesoRiesgoController extends Controller
             }
         }
 
-        return view('riesgos.evaluacion-fmea', compact('activos', 'modos', 'evaluaciones', 'ultimoPeso', 'resultadoInferencia', 'esConsultaHistorica'));
+        // Historial de evaluaciones: se excluyen las del activo mostrado arriba para no duplicar datos
+        $queryHistorial = EvaluacionRiesgo::with(['activo', 'modoFalla'])->where('vigente', true);
+        if ($idActivoParaInferencia) {
+            $queryHistorial->where('fk_id_activo', '!=', $idActivoParaInferencia);
+        }
+        $evaluaciones = $queryHistorial->orderByDesc('fecha_evaluacion')->paginate(15)->withQueryString();
+        $totalEvaluacionesHistorico = EvaluacionRiesgo::where('vigente', true)->count();
+
+        return view('riesgos.evaluacion-fmea', compact('activos', 'modos', 'evaluaciones', 'ultimoPeso', 'resultadoInferencia', 'esConsultaHistorica', 'totalEvaluacionesHistorico'));
     }
 
     public function evaluarActivo(EvaluarActivoRequest $request, MotorFmeaService $service)

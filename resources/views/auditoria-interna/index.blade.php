@@ -37,7 +37,7 @@
                     <tr class="hover:bg-slate-50/50">
                         <td class="px-4 py-3 font-mono text-xs">{{ $a->codigo }}</td>
                         <td class="px-4 py-3 text-center">{{ $a->gestion }}</td>
-                        <td class="px-4 py-3">{{ trim($a->auditor->nombre . ' ' . ($a->auditor->apellido ?? '')) }}</td>
+                        <td class="px-4 py-3">{{ $a->nombre_auditor }}</td>
                         <td class="px-4 py-3 text-center">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
                                 {{ $a->estado === 'APROBADO' ? 'bg-emerald-100 text-emerald-800' : ($a->estado === 'EN_REVISION' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700') }}">

@@ -61,6 +61,12 @@
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Baja Hasta</label>
                     <input type="date" name="fecha_fin" value="{{ request('fecha_fin') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" />
                 </div>
+
+                {{-- Auditor / Responsable --}}
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Auditor / Responsable</label>
+                    <input type="text" name="auditor" value="{{ request('auditor', 'Carlos Apaza') }}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 transition" placeholder="Carlos Apaza" />
+                </div>
             </div>
 
             <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">

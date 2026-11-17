@@ -25,9 +25,18 @@
         un registro dedicado de inicio de sesión.
     </p>
 
-    <div class="flex justify-end gap-2">
-        <a href="{{ route('admin.informes.auditoria-ti.ra05.pdf', $filtros) }}" class="btn btn-secondary" target="_blank">Exportar PDF</a>
-        <a href="{{ route('admin.informes.auditoria-ti.ra05.excel', $filtros) }}" class="btn btn-secondary">Exportar Excel</a>
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+        <form method="GET" action="{{ route('admin.informes.auditoria-ti.ra05') }}" class="flex flex-wrap gap-3 items-end">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Auditor</label>
+                <input type="text" name="auditor" value="{{ $filtros['auditor'] ?? 'Carlos Apaza' }}" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800" placeholder="Carlos Apaza" />
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="submit" class="btn btn-dark">Filtrar</button>
+                <a href="{{ route('admin.informes.auditoria-ti.ra05.pdf', $filtros) }}" class="btn btn-secondary" target="_blank">Exportar PDF</a>
+                <a href="{{ route('admin.informes.auditoria-ti.ra05.excel', $filtros) }}" class="btn btn-secondary">Exportar Excel</a>
+            </div>
+        </form>
     </div>
 
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">

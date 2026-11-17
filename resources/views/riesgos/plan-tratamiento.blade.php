@@ -180,7 +180,7 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Evaluación</th>
+                        <th class="w-16 px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">N°</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activo</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estrategia</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
@@ -192,7 +192,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($tratamientos as $tratamiento)
                         <tr>
-                            <td class="px-6 py-4 text-sm text-gray-700">#{{ $tratamiento->evaluacion->id_evaluacion ?? '-' }}</td>
+                            <td class="w-16 px-6 py-4 text-center text-sm font-mono text-gray-700 font-medium">{{ ($tratamientos->firstItem() ?? 1) + $loop->index }}</td>
                             <td class="px-6 py-4 text-sm text-gray-700">{{ $tratamiento->evaluacion->activo->nombre_equipo ?? '-' }}</td>
                             <td class="px-6 py-4 text-sm text-gray-700">{{ $tratamiento->estrategia }}</td>
                             <td class="px-6 py-4 text-sm text-gray-700">

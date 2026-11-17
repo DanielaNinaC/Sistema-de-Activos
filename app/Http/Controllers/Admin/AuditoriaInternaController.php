@@ -74,6 +74,7 @@ class AuditoriaInternaController extends Controller
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
             'fecha_corte' => 'required|date',
             'participantes' => 'nullable|string',
+            'fk_id_auditor' => 'nullable|integer|exists:usuarios,id_usuario',
             'fk_id_responsable_ti' => 'nullable|integer|exists:usuarios,id_usuario',
             'fk_id_director' => 'nullable|integer|exists:usuarios,id_usuario',
         ]);
@@ -83,7 +84,7 @@ class AuditoriaInternaController extends Controller
         $auditoria = AuditoriaInterna::create(array_merge($data, [
             'codigo' => $this->servicio->generarCodigoAuditoria((int) $data['gestion']),
             'estado' => 'BORRADOR',
-            'fk_id_auditor' => auth()->id(),
+            'fk_id_auditor' => $data['fk_id_auditor'] ?? auth()->id(),
             'fk_id_auditoria_anterior' => $anteriorAprobada?->id,
         ]));
 
@@ -148,6 +149,7 @@ class AuditoriaInternaController extends Controller
             'participantes' => 'nullable|string',
             'buenas_practicas' => 'nullable|string',
             'conclusiones' => 'nullable|string',
+            'fk_id_auditor' => 'nullable|integer|exists:usuarios,id_usuario',
             'fk_id_responsable_ti' => 'nullable|integer|exists:usuarios,id_usuario',
             'fk_id_director' => 'nullable|integer|exists:usuarios,id_usuario',
         ]);

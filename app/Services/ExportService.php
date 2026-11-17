@@ -20,8 +20,17 @@ class ExportService
 {
     public function exportarPdf(string $vistaBlade, array $datos, string $nombreArchivo): Response
     {
+        $institucionales = $this->buildDatosInstitucionales();
+
+        // Si se envió un auditor o responsable explícito en $datos, prevalece
+        if (!empty($datos['auditor'])) {
+            $institucionales['responsable'] = $datos['auditor'];
+        } elseif (!empty($datos['responsable'])) {
+            $institucionales['responsable'] = $datos['responsable'];
+        }
+
         // Inyectar variables institucionales comunes a todos los PDF
-        $datos = array_merge($this->buildDatosInstitucionales(), $datos);
+        $datos = array_merge($institucionales, $datos);
 
         $pdf = Pdf::loadView($vistaBlade, $datos)
             ->setOption(['isPhpEnabled' => true, 'isRemoteEnabled' => true]);
@@ -31,7 +40,7 @@ class ExportService
 
     /**
      * Genera las variables comunes del encabezado institucional:
-     * logo base64, logo SIATEC base64, nombre del responsable y fecha de generación.
+     * logo base64, logo SIATEC base64, nombre del responsable/auditor y fecha de generación.
      */
     public function buildDatosInstitucionales(): array
     {
@@ -47,15 +56,29 @@ class ExportService
             $siatecBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($siatecPath));
         }
 
-        $usuario = auth()->user();
-        $nombreResponsable = $usuario
-            ? trim(($usuario->nombre ?? '') . ' ' . ($usuario->apellido ?? ''))
-            : 'Sistema SIATEC';
+        // Auditor / Responsable editable enviado por request (GET o POST)
+        $auditorParam = request()->input('auditor') ?: request()->input('responsable');
+        if (!empty($auditorParam)) {
+            $nombreResponsable = trim($auditorParam);
+        } else {
+            $usuario = auth()->user();
+            $nombreUsuario = $usuario
+                ? trim(($usuario->nombre ?? '') . ' ' . ($usuario->apellido ?? ''))
+                : '';
+
+            // Por requerimiento institucional: no mostrar 'Daniela Nina', usar 'Carlos Apaza'
+            if (empty($nombreUsuario) || stripos($nombreUsuario, 'Daniela') !== false) {
+                $nombreResponsable = 'Carlos Apaza';
+            } else {
+                $nombreResponsable = $nombreUsuario;
+            }
+        }
 
         return [
             'logoBase64'      => $logoBase64,
             'siatecBase64'    => $siatecBase64,
-            'responsable'     => $nombreResponsable ?: 'Sistema SIATEC',
+            'responsable'     => $nombreResponsable ?: 'Carlos Apaza',
+            'auditor'         => $nombreResponsable ?: 'Carlos Apaza',
             'fechaGeneracion' => now()->format('d/m/Y H:i'),
         ];
     }

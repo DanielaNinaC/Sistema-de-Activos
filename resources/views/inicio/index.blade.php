@@ -8,6 +8,10 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="{{ asset('css/inicio.css') }}">
+
+    <!-- Precarga inteligente para navegación instantánea hacia SIATEC -->
+    <link rel="prefetch" href="{{ route('login') }}">
+    <link rel="prefetch" href="{{ asset('imagenes/servidor.png') }}">
 </head>
 <body>
 

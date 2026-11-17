@@ -48,7 +48,16 @@
             <input type="date" name="fecha_corte" value="{{ old('fecha_corte', now()->toDateString()) }}" class="w-full sm:w-1/3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm" required />
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">AUDITOR</label>
+                <input type="text"
+                       name="auditor"
+                       value="{{ old('auditor', 'Carlos Apaza') }}"
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                       placeholder="Ingrese el nombre completo del auditor"
+                       required />
+            </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Responsable de TI</label>
                 <select name="fk_id_responsable_ti" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">

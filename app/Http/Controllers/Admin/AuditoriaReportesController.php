@@ -50,11 +50,19 @@ class AuditoriaReportesController extends Controller
 
     private function filtros(Request $request): array
     {
+        $auditor = $request->input('auditor');
+        if (empty($auditor)) {
+            $usuario = auth()->user();
+            $nombre = $usuario ? trim(($usuario->nombre ?? '') . ' ' . ($usuario->apellido ?? '')) : '';
+            $auditor = (empty($nombre) || stripos($nombre, 'Daniela') !== false) ? 'Carlos Apaza' : $nombre;
+        }
+
         return [
             'gestion' => (int) $request->input('gestion', now()->year),
             'fecha_corte' => $request->input('fecha_corte', now()->toDateString()),
             'fk_id_categoria' => $request->filled('fk_id_categoria') ? (int) $request->input('fk_id_categoria') : null,
             'fk_id_ubicacion' => $request->filled('fk_id_ubicacion') ? (int) $request->input('fk_id_ubicacion') : null,
+            'auditor' => $auditor,
         ];
     }
 

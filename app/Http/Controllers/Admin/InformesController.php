@@ -507,11 +507,18 @@ class InformesController extends Controller
         $fechaInicio = $request->input('fecha_inicio', now()->startOfMonth()->toDateString());
         $fechaFin = $request->input('fecha_fin', now()->toDateString());
 
+        $auditor = $request->input('auditor');
+        if (empty($auditor)) {
+            $usuario = auth()->user();
+            $nombre = $usuario ? trim(($usuario->nombre ?? '') . ' ' . ($usuario->apellido ?? '')) : '';
+            $auditor = (empty($nombre) || stripos($nombre, 'Daniela') !== false) ? 'Carlos Apaza' : $nombre;
+        }
+
         // La Introducción/Conclusión por PLN solo se muestran en el PDF (ver
         // auditoriaConsolidadoPdf()), no en pantalla — no se calculan aquí.
         $resumen = $this->calcularResumenAuditoria($fechaInicio, $fechaFin);
 
-        return view('informes.auditoria-consolidado', compact('resumen', 'fechaInicio', 'fechaFin'));
+        return view('informes.auditoria-consolidado', compact('resumen', 'fechaInicio', 'fechaFin', 'auditor'));
     }
 
     private function calcularResumenAuditoria(string $fechaInicio, string $fechaFin): array
@@ -558,13 +565,26 @@ class InformesController extends Controller
         $fechaInicio = $request->input('fecha_inicio', now()->startOfMonth()->toDateString());
         $fechaFin = $request->input('fecha_fin', now()->toDateString());
 
+        $auditor = $request->input('auditor');
+        if (empty($auditor)) {
+            $usuario = auth()->user();
+            $nombre = $usuario ? trim(($usuario->nombre ?? '') . ' ' . ($usuario->apellido ?? '')) : '';
+            $auditor = (empty($nombre) || stripos($nombre, 'Daniela') !== false) ? 'Carlos Apaza' : $nombre;
+        }
+
         $resumen = $this->calcularResumenAuditoria($fechaInicio, $fechaFin);
         $introduccion = $this->generarIntroduccionAuditoria($resumen);
         $conclusion = $this->generarConclusionAuditoria($resumen);
 
         return $this->exportService->exportarPdf(
             'informes.pdf.auditoria-consolidado',
-            ['resumen' => $resumen, 'introduccion' => $introduccion, 'conclusion' => $conclusion],
+            [
+                'resumen' => $resumen,
+                'introduccion' => $introduccion,
+                'conclusion' => $conclusion,
+                'auditor' => $auditor,
+                'responsable' => $auditor,
+            ],
             'resumen-general-activos'
         );
     }

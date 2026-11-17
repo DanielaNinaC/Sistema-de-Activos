@@ -45,6 +45,10 @@
                     @endforeach
                 </select>
             </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Auditor</label>
+                <input type="text" name="auditor" value="{{ $filtros['auditor'] ?? 'Carlos Apaza' }}" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800" placeholder="Carlos Apaza" />
+            </div>
             <div class="flex items-center gap-2">
                 <button type="submit" class="btn btn-dark">Filtrar</button>
                 <a href="{{ route('admin.informes.auditoria-ti.ra01.pdf', $filtros) }}" class="btn btn-secondary" target="_blank">Exportar PDF</a>

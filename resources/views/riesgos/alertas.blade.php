@@ -72,7 +72,7 @@
             <table class="w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">N°</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha Generación</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Activo Tecnológico</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Tipo de Alerta</th>
@@ -82,7 +82,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($alertas as $alerta)
                         <tr class="hover:bg-slate-50/50 transition">
-                            <td class="w-16 px-6 py-4 text-center text-sm text-slate-700 font-mono">{{ $alerta->id_alerta }}</td>
+                            <td class="w-16 px-6 py-4 text-center text-sm text-slate-700 font-mono font-medium">{{ ($alertas->firstItem() ?? 1) + $loop->index }}</td>
                             <td class="px-6 py-4 text-center text-xs font-mono text-slate-600 whitespace-nowrap">
                                 {{ \Carbon\Carbon::parse($alerta->fecha_generacion)->format('d/m/Y H:i') }} hs
                             </td>

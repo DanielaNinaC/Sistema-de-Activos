@@ -339,7 +339,7 @@
             <table class="w-full divide-y divide-gray-200">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+                        <th class="w-16 px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">N°</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Fecha de Cambio</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Severidad (P_S)</th>
                         <th class="px-6 py-3.5 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Frecuencia (P_F)</th>
@@ -352,7 +352,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($pesos as $peso)
                         <tr class="hover:bg-slate-50/50 transition">
-                            <td class="w-16 px-6 py-4 text-center text-sm text-slate-700 font-mono">{{ $peso->id_config }}</td>
+                            <td class="w-16 px-6 py-4 text-center text-sm font-mono text-slate-700 font-medium">{{ $loop->iteration }}</td>
                             <td class="px-6 py-4 text-center text-sm font-mono font-semibold text-slate-800 whitespace-nowrap">
                                 {{ \Carbon\Carbon::parse($peso->fecha_actualizacion)->format('d/m/Y H:i') }} hs
                             </td>

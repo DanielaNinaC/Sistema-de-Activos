@@ -8,22 +8,20 @@ use App\Http\Controllers\InicioController;
 Route::get('/', [InicioController::class, 'index'])->name('inicio');
 
 // Rutas para usuarios no autenticados (Invitados)
-Route::middleware(['web'])->group(function () {
-    // Endpoint para refrescar el token CSRF (evita errores 419 por inactividad)
-    Route::get('/csrf-token', function () {
-        return response()->json([
-            'token' => csrf_token(),
-            'authenticated' => \Illuminate\Support\Facades\Auth::check(),
-        ]);
-    })->name('csrf.refresh');
+// Endpoint para refrescar el token CSRF (evita errores 419 por inactividad)
+Route::get('/csrf-token', function () {
+    return response()->json([
+        'token' => csrf_token(),
+        'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+    ]);
+})->name('csrf.refresh');
 
-    Route::middleware('guest')->group(function () {
-        Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-        Route::post('/login', [AuthController::class, 'login']);
-        Route::post('/register', [AuthController::class, 'register'])->name('register');
-    });
-    Route::get('/captcha-image', [AuthController::class, 'generateCaptchaImage'])->name('captcha.image');
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register'])->name('register');
 });
+Route::get('/captcha-image', [AuthController::class, 'generateCaptchaImage'])->name('captcha.image');
 
 // Rutas protegidas (Requieren sesión activa)
 Route::middleware('auth')->group(function () {

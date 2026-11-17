@@ -259,7 +259,7 @@
                 <h1 class="inst-titulo-documento">@yield('titulo', 'Reporte Institucional')</h1>
                 <div class="inst-subtitulo">@yield('subtitulo')</div>
                 <div class="inst-meta">
-                    <strong>Responsable:</strong> {{ $responsable ?? 'Sistema SIATEC' }}
+                    <strong>Auditor / Responsable:</strong> {{ $responsable ?? 'Carlos Apaza' }}
                 </div>
                 <div class="inst-meta-sec">
                     <strong>Fecha:</strong> {{ $fechaGeneracion ?? now()->format('d/m/Y H:i') }}
